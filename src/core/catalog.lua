@@ -9,14 +9,16 @@ local function byName(a, b)
 end
 
 -- Returns { systems = {sorted system entries}, bySystem = { [id] = { owned = {...}, locked = {...} } } }.
-function catalog.build(backend, state)
+-- `include(systemId)` optionally limits which systems appear.
+function catalog.build(backend, state, include)
   local result = { systems = {}, bySystem = {} }
   for _, system in ipairs(backend.listSystems()) do
+    local games = (not include or include(system.id)) and backend.listGames(system.id) or {}
     local owned, locked = {}, {}
-    for _, game in ipairs(backend.listGames(system.id)) do
+    for _, game in ipairs(games) do
       table.insert(state.owned[game.id] and owned or locked, game)
     end
-    if #owned + #locked > 0 then
+    if #games > 0 then
       table.sort(owned, byName)
       table.sort(locked, byName)
       table.insert(result.systems, system)

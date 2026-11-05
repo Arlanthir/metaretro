@@ -17,11 +17,12 @@ local BUTTONS = {
 -- SDL names face buttons by position (Xbox layout); Nintendo-style devices print A/B and X/Y swapped.
 local NINTENDO_BUTTONS = { a = "b", b = "a", x = "y", y = "x" }
 
-local REPEATABLE ={ up = true, down = true, left = true, right = true }
+local REPEATABLE = { up = true, down = true, left = true, right = true }
 local REPEAT_DELAY = 0.35
 local REPEAT_INTERVAL = 0.08
 
 local held = {}
+local down = {}
 local handler = function() end
 local clock = love and love.timer and love.timer.getTime or os.clock
 local ignoreUntil = 0
@@ -33,6 +34,7 @@ end
 -- Drops presses for a while, e.g. ones queued while the app was blocked loading.
 function input.ignoreFor(seconds)
   held = {}
+  down = {}
   ignoreUntil = clock() + seconds
 end
 
@@ -44,6 +46,7 @@ end
 
 local function press(action)
   if not action or clock() < ignoreUntil then return end
+  down[action] = true
   if REPEATABLE[action] then
     held[action] = REPEAT_DELAY
   end
@@ -53,7 +56,12 @@ end
 local function release(action)
   if action then
     held[action] = nil
+    down[action] = nil
   end
+end
+
+function input.isDown(action)
+  return down[action] == true
 end
 
 function input.keypressed(key) press(KEYS[key]) end

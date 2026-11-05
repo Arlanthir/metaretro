@@ -31,8 +31,7 @@ while true; do
   $GPTOKEYB "$LOVE_GPTK" &
   gptokeyb_pid=$!
   pm_platform_helper "$LOVE_BINARY"
-  # TEMP: starter pack limited to GBA while testing launches; remove once launching is verified.
-  $LOVE_RUN "$GAMEDIR/metaretro.love" --layout nintendo --starter-systems gba
+  $LOVE_RUN "$GAMEDIR/metaretro.love" --layout nintendo
   echo "[metaretro.sh] metaretro exited with status $?"
   kill "$gptokeyb_pid" 2>/dev/null
   [ -f "$SAVEDIR/launch.txt" ] || break

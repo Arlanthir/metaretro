@@ -54,6 +54,12 @@ describe("catalog", function()
     assert.equal("gba", owned[1].id)
   end)
 
+  it("leaves out systems the include filter rejects", function()
+    local built = catalog.build(backend, save.defaults(), function(id) return id ~= "gba" end)
+    assert.same({ "Super Nintendo" }, { built.systems[1].name, built.systems[2] and built.systems[2].name })
+    assert.is_nil(built.bySystem.gba)
+  end)
+
   it("flattens all games", function()
     assert.equal(4, #catalog.allGames(backend))
   end)

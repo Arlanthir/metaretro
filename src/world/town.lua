@@ -1,0 +1,85 @@
+-- Town map logic. Legend for the rows in world/townmap.lua:
+--   .  grass        =  path        T  tree        ~  water        @  player start (path)
+--   B  building     H  home door   D  console dealer door
+--   1-9, a-z  doors of store lots, in the order they get filled
+-- Every door sits on the bottom row of a 4x3 building, one tile from its left edge.
+local town = {}
+
+town.BUILDING_WIDTH, town.BUILDING_HEIGHT = 4, 3
+
+local LOT_LABELS = "123456789abcdefghijklmnopqrstuvwxyz"
+local WALKABLE = { ["."] = true, ["="] = true, ["@"] = true }
+local FIXED = { H = "home", D = "dealer" }
+
+function town.parse(rows)
+  local map = { rows = rows, width = #rows[1], height = #rows, fixed = {}, lots = {} }
+  for y, row in ipairs(rows) do
+    for x = 1, #row do
+      local tile = row:sub(x, x)
+      local lot = LOT_LABELS:find(tile, 1, true)
+      if tile == "@" then
+        map.start = { x = x, y = y }
+      elseif FIXED[tile] then
+        table.insert(map.fixed, { kind = FIXED[tile], door = { x = x, y = y } })
+      elseif lot then
+        map.lots[lot] = { door = { x = x, y = y } }
+      end
+    end
+  end
+  return map
+end
+
+function town.tile(map, x, y)
+  local row = map.rows[y]
+  return row and x >= 1 and x <= #row and row:sub(x, x) or "T"
+end
+
+function town.isWalkable(map, x, y)
+  return WALKABLE[town.tile(map, x, y)] == true
+end
+
+-- Top-left tile of the building whose door is at `door`.
+function town.footprint(door)
+  return door.x - 1, door.y - town.BUILDING_HEIGHT + 1
+end
+
+-- Gives each owned console without a store the first free lot; existing stores never move.
+function town.assignLots(state, timeline, lotCount)
+  local taken = {}
+  for _, index in pairs(state.lots) do
+    taken[index] = true
+  end
+  for _, console in ipairs(timeline) do
+    if state.ownedConsoles[console.id] and not state.lots[console.id] then
+      for index = 1, lotCount do
+        if not taken[index] then
+          state.lots[console.id] = index
+          taken[index] = true
+          break
+        end
+      end
+    end
+  end
+end
+
+-- Every building on the map: home, dealer, stores for owned consoles, and empty lots.
+function town.layout(map, state, timeline)
+  local byLot = {}
+  for _, console in ipairs(timeline) do
+    local index = state.lots[console.id]
+    if index and state.ownedConsoles[console.id] then
+      byLot[index] = console
+    end
+  end
+  local buildings = {}
+  for _, building in ipairs(map.fixed) do
+    table.insert(buildings, { kind = building.kind, door = building.door })
+  end
+  for index, lot in ipairs(map.lots) do
+    local console = byLot[index]
+    table.insert(buildings, { kind = console and "store" or "lot", door = lot.door, console = console })
+  end
+  return buildings
+end
+
+return town

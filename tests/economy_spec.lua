@@ -47,16 +47,30 @@ describe("economy.achievementEarnings", function()
 end)
 
 describe("economy.buy", function()
-  it("deducts the price and marks the game owned", function()
+  local function stateOwning(...)
     local state = save.defaults()
+    for _, system in ipairs({ ... }) do
+      state.ownedConsoles[system] = true
+    end
+    return state
+  end
+
+  it("deducts the price and marks the game owned", function()
+    local state = stateOwning("nes")
     local g = game({ system = "nes" })
     assert.is_true(economy.buy(state, g))
     assert.equal(economy.STARTER_WALLET - 40, state.wallet)
     assert.is_true(state.owned[g.id])
   end)
 
+  it("refuses games for consoles the player doesn't own", function()
+    local state = stateOwning("nes")
+    assert.same({ false, "console not owned" }, { economy.buy(state, game({ system = "snes" })) })
+    assert.equal(economy.STARTER_WALLET, state.wallet)
+  end)
+
   it("refuses owned games and insufficient funds", function()
-    local state = save.defaults()
+    local state = stateOwning("nes", "psx")
     local g = game({ system = "nes" })
     state.owned[g.id] = true
     assert.same({ false, "already owned" }, { economy.buy(state, g) })
@@ -64,6 +78,29 @@ describe("economy.buy", function()
     state.wallet = 10
     assert.same({ false, "not enough coins" }, { economy.buy(state, game({ system = "psx" })) })
     assert.equal(10, state.wallet)
+  end)
+end)
+
+describe("economy.buyConsole", function()
+  local snes = { id = "snes", generation = 4 }
+
+  it("prices consoles by generation", function()
+    assert.equal(4 * economy.CONSOLE_PRICE_PER_GENERATION, economy.consolePrice(snes))
+  end)
+
+  it("deducts the price and marks the console owned", function()
+    local state = save.defaults()
+    state.wallet = 1000
+    assert.is_true(economy.buyConsole(state, snes))
+    assert.equal(1000 - economy.consolePrice(snes), state.wallet)
+    assert.is_true(state.ownedConsoles.snes)
+    assert.same({ false, "already owned" }, { economy.buyConsole(state, snes) })
+  end)
+
+  it("refuses when the player can't afford it", function()
+    local state = save.defaults()
+    assert.same({ false, "not enough coins" }, { economy.buyConsole(state, snes) })
+    assert.is_nil(state.ownedConsoles.snes)
   end)
 end)
 

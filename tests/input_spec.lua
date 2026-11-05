@@ -35,6 +35,13 @@ describe("input", function()
     assert.same({ "b" }, actions)
   end)
 
+  it("tracks which actions are held", function()
+    input.keypressed("up")
+    assert.is_true(input.isDown("up"))
+    input.keyreleased("up")
+    assert.is_false(input.isDown("up"))
+  end)
+
   it("keeps the keyboard unaffected", function()
     input.setNintendoLayout(true)
     input.keypressed("z")

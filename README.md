@@ -18,6 +18,7 @@ Built with [LÖVE](https://love2d.org) 11.x and distributed as a PortMaster port
 - Run on desktop: `love src` (uses the mock backend; force one with `love src --backend mock`).
 - Controls on keyboard: arrows, `Z`/`Enter` = A, `X`/`Esc` = B, `Q`/`W` = L/R, `Tab` = toggle FPS.
 - Tests: `luarocks install busted`, then `busted` from the repo root.
+- Screenshot: `love src --screenshot 2` saves `screenshot.png` to the LÖVE save folder after 2 seconds and quits.
 
 # Metaretro
 

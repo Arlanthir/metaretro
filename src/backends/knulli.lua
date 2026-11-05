@@ -1,3 +1,4 @@
+local consoles = require("core.consoles")
 local gamelist = require("backends.gamelist")
 local log = require("core.log")
 
@@ -8,13 +9,6 @@ local knulli = {
   confPath = os.getenv("METARETRO_BATOCERA_CONF") or "/userdata/system/batocera.conf",
 }
 
-local SYSTEM_NAMES = {
-  atari2600 = "Atari 2600", nes = "Nintendo Entertainment System", snes = "Super Nintendo",
-  n64 = "Nintendo 64", gb = "Game Boy", gbc = "Game Boy Color", gba = "Game Boy Advance",
-  nds = "Nintendo DS", mastersystem = "Master System", megadrive = "Mega Drive",
-  gamegear = "Game Gear", saturn = "Saturn", dreamcast = "Dreamcast", pcengine = "PC Engine",
-  neogeo = "Neo Geo", psx = "PlayStation", psp = "PlayStation Portable",
-}
 local IGNORED = { ports = true }
 
 local function readFile(path)
@@ -48,7 +42,7 @@ function knulli.listSystems()
   local listing = io.popen("ls -1 " .. shellQuote(knulli.romsDir) .. " 2>/dev/null")
   for id in listing:lines() do
     if not IGNORED[id] and exists(knulli.romsDir .. "/" .. id .. "/gamelist.xml") then
-      table.insert(systems, { id = id, name = SYSTEM_NAMES[id] or id })
+      table.insert(systems, { id = id, name = consoles.get(id) and consoles.get(id).name or id })
     end
   end
   listing:close()

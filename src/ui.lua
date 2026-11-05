@@ -44,7 +44,8 @@ function ui.footer(hint)
   love.graphics.printf(hint, ui.MARGIN, ui.HEIGHT - 22, ui.WIDTH - ui.MARGIN * 2, "center")
 end
 
--- Draws a scrolling list of labels; returns the scroll offset to keep the cursor visible.
+-- Draws a scrolling list; `label(item)` returns the text and an optional right-aligned value.
+-- Returns the scroll offset that keeps the cursor visible.
 function ui.list(items, cursor, scroll, x, y, width, height, label)
   local rowHeight = 24
   local visible = math.floor(height / rowHeight)
@@ -60,7 +61,11 @@ function ui.list(items, cursor, scroll, x, y, width, height, label)
     else
       ui.setColor("text")
     end
-    love.graphics.printf(label(items[index]), x + 8, rowY + 4, width - 16, "left")
+    local text, value = label(items[index])
+    love.graphics.printf(text, x + 8, rowY + 4, width - 16, "left")
+    if value then
+      love.graphics.printf(value, x + 8, rowY + 4, width - 16, "right")
+    end
   end
   return scroll
 end

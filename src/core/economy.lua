@@ -40,17 +40,33 @@ function economy.achievementEarnings(points, hardcore)
   return math.max(0, points) * economy.COINS_PER_RA_POINT * multiplier
 end
 
-function economy.buy(state, game)
-  if state.owned[game.id] then
+economy.CONSOLE_PRICE_PER_GENERATION = 100
+
+function economy.consolePrice(console)
+  return console.generation * economy.CONSOLE_PRICE_PER_GENERATION
+end
+
+local function purchase(state, ownedSet, id, cost)
+  if ownedSet[id] then
     return false, "already owned"
   end
-  local cost = economy.price(game)
   if state.wallet < cost then
     return false, "not enough coins"
   end
   state.wallet = state.wallet - cost
-  state.owned[game.id] = true
+  ownedSet[id] = true
   return true
+end
+
+function economy.buy(state, game)
+  if not state.ownedConsoles[game.system] then
+    return false, "console not owned"
+  end
+  return purchase(state, state.owned, game.id, economy.price(game))
+end
+
+function economy.buyConsole(state, console)
+  return purchase(state, state.ownedConsoles, console.id, economy.consolePrice(console))
 end
 
 -- Prefers games the player has already played; fills the rest randomly.

@@ -1,8 +1,6 @@
 local catalog = require("core.catalog")
-local log = require("core.log")
 local scenes = require("core.scenes")
 local ui = require("ui")
-local Confirm = require("scenes.confirm")
 local GameDetail = require("scenes.gamedetail")
 
 local Collection = {}
@@ -14,7 +12,10 @@ end
 
 function Collection:enter()
   self.systems = catalog.ownedSystems(self.app.catalog)
+  self.tab = math.max(1, math.min(self.tab, #self.systems))
 end
+
+Collection.resume = Collection.enter
 
 function Collection:games()
   local system = self.systems[self.tab]
@@ -39,21 +40,19 @@ function Collection:action(name)
     self.cursor = self.cursor % #games + 1
   elseif name == "a" and games[self.cursor] then
     scenes.push(GameDetail.new(self.app, games[self.cursor]))
-  elseif name == "start" then
-    scenes.push(Confirm.new("Quit Metaretro?", function()
-      log("quit confirmed by player")
-      love.event.quit()
-    end))
+  elseif name == "b" then
+    scenes.pop()
   end
 end
 
 function Collection:draw()
-  ui.header("Collection", self.app.state.wallet)
+  ui.header("Home", self.app.state.wallet)
   local system = self.systems[self.tab]
   if not system then
     love.graphics.setFont(ui.fonts.body)
     ui.setColor("muted")
-    love.graphics.printf("Your collection is empty. Visit a shop!", 0, 220, ui.WIDTH, "center")
+    love.graphics.printf("Your collection is empty. Visit a store in town!", 0, 220, ui.WIDTH, "center")
+    ui.footer("B: leave")
     return
   end
 
@@ -80,8 +79,7 @@ function Collection:draw()
       coverX, listTop + 230, ui.WIDTH - coverX - ui.MARGIN, "center")
   end
 
-  local earned = self.app.earned > 0 and ("+%d coins from play   "):format(self.app.earned) or ""
-  ui.footer(earned .. "L/R: console   A: details   Start: quit")
+  ui.footer("L/R: console   A: details   B: leave")
 end
 
 return Collection

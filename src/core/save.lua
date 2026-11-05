@@ -12,6 +12,8 @@ function save.defaults()
     initialized = false,
     wallet = economy.STARTER_WALLET,
     owned = {},
+    ownedConsoles = {},
+    lots = {},
     seenAchievements = {},
     creditedGametime = {},
     consumedSessions = 0,

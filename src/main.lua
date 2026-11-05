@@ -1,20 +1,35 @@
 local backend = require("backends.backend")
 local catalog = require("core.catalog")
+local consoles = require("core.consoles")
 local economy = require("core.economy")
 local input = require("core.input")
 local log = require("core.log")
 local playtime = require("services.playtime")
+local progression = require("core.progression")
 local save = require("core.save")
 local scenes = require("core.scenes")
 local ui = require("ui")
-local Collection = require("scenes.collection")
+local town = require("world.town")
 local Loading = require("scenes.loading")
+local Town = require("scenes.town")
 
-local app = {}
+local app = { town = town.parse(require("world.townmap")) }
 local showFps = false
+local screenshotIn -- dev aid: `--screenshot <seconds>` saves screenshot.png to the save dir, then quits
 
 function app:persist()
   save.write(love.filesystem, self.state)
+end
+
+local function isConsole(systemId)
+  return consoles.get(systemId) ~= nil
+end
+
+-- Rebuilds everything derived from the save after it changes, then saves it.
+function app:refresh()
+  self.catalog = catalog.build(self.backend, self.state, isConsole)
+  town.assignLots(self.state, progression.timeline(self.catalog.systems), #self.town.lots)
+  self:persist()
 end
 
 local function argValue(args, flag)
@@ -23,15 +38,6 @@ local function argValue(args, flag)
       return args[i + 1]
     end
   end
-end
-
-local function setOf(commaSeparated)
-  if not commaSeparated then return nil end
-  local set = {}
-  for value in commaSeparated:gmatch("[^,]+") do
-    set[value] = true
-  end
-  return set
 end
 
 local function loadLibrary(args)
@@ -43,16 +49,22 @@ local function loadLibrary(args)
   log("backend=%s systems=%d games=%d parsed in %.2fs%s",
     app.backend.name, #app.backend.listSystems(), #games, love.timer.getTime() - started,
     timings and (" (read %.2fs, find %.2fs, parse %.2fs)"):format(timings.read, timings.find, timings.parse) or "")
+  app:refresh()
   if not app.state.initialized then
-    economy.grantStarterPack(app.state, games, nil, setOf(argValue(args, "--starter-systems")))
+    -- New players start with the oldest console in their library and a few of its games.
+    local starter = progression.timeline(app.catalog.systems)[1]
+    if starter then
+      app.state.ownedConsoles[starter.id] = true
+      economy.grantStarterPack(app.state, games, nil, { [starter.id] = true })
+    end
     app.state.initialized = true
   end
+  progression.syncOwnedConsoles(app.state, games)
   local sessions = playtime.parseLog(love.filesystem.read(playtime.LOG))
   app.earned = playtime.credit(app.state, app.backend, games, sessions)
-  app:persist()
-  app.catalog = catalog.build(app.backend, app.state)
+  app:refresh()
   input.ignoreFor(0.5)
-  scenes.switch(Collection.new(app))
+  scenes.switch(Town.new(app))
 end
 
 function love.quit()
@@ -63,6 +75,7 @@ function love.load(args)
   love.graphics.setDefaultFilter("nearest", "nearest")
   ui.load()
 
+  screenshotIn = tonumber(argValue(args, "--screenshot"))
   input.setNintendoLayout(argValue(args, "--layout") == "nintendo")
   input.setHandler(function(action)
     if action == "select" then
@@ -77,6 +90,16 @@ end
 function love.update(dt)
   input.update(dt)
   scenes.update(dt)
+  if screenshotIn then
+    screenshotIn = screenshotIn - dt
+    if screenshotIn <= 0 then
+      screenshotIn = nil
+      love.graphics.captureScreenshot(function(image)
+        image:encode("png", "screenshot.png")
+        love.event.quit()
+      end)
+    end
+  end
 end
 
 function love.draw()
