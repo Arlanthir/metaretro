@@ -1,6 +1,7 @@
 local backend = require("backends.backend")
 local catalog = require("core.catalog")
 local consoles = require("core.consoles")
+local covers = require("services.covers")
 local economy = require("core.economy")
 local input = require("core.input")
 local log = require("core.log")
@@ -8,6 +9,7 @@ local playtime = require("services.playtime")
 local progression = require("core.progression")
 local save = require("core.save")
 local scenes = require("core.scenes")
+local stores = require("core.stores")
 local ui = require("ui")
 local town = require("world.town")
 local Loading = require("scenes.loading")
@@ -28,7 +30,8 @@ end
 -- Rebuilds everything derived from the save after it changes, then saves it.
 function app:refresh()
   self.catalog = catalog.build(self.backend, self.state, isConsole)
-  town.assignLots(self.state, progression.timeline(self.catalog.systems), #self.town.lots)
+  self.stores = stores.list(self.state, self.catalog, progression.timeline(self.catalog.systems))
+  town.assignLots(self.state, self.stores, #self.town.lots)
   self:persist()
 end
 
@@ -38,6 +41,7 @@ local function argValue(args, flag)
       return args[i + 1]
     end
   end
+  return nil
 end
 
 local function loadLibrary(args)
@@ -55,7 +59,7 @@ local function loadLibrary(args)
     local starter = progression.timeline(app.catalog.systems)[1]
     if starter then
       app.state.ownedConsoles[starter.id] = true
-      economy.grantStarterPack(app.state, games, nil, { [starter.id] = true })
+      economy.grantStarterPack(app.state, games, love.math.random, { [starter.id] = true })
     end
     app.state.initialized = true
   end
@@ -88,6 +92,7 @@ function love.load(args)
 end
 
 function love.update(dt)
+  covers.update()
   input.update(dt)
   scenes.update(dt)
   if screenshotIn then

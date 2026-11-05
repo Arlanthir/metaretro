@@ -3,23 +3,11 @@ local town = require("world.town")
 
 local map = town.parse(require("world.townmap"))
 
-local function stateOwning(...)
-  local state = save.defaults()
-  for _, id in ipairs({ ... }) do
-    state.ownedConsoles[id] = true
-  end
-  return state
-end
-
-local function console(id, generation)
-  return { id = id, name = id, short = id, year = 1990, generation = generation or 4 }
-end
-
 describe("town map", function()
   it("has a start, home, dealer and store lots", function()
     assert.is_truthy(map.start)
     assert.equal(2, #map.fixed)
-    assert.equal(22, #map.lots)
+    assert.equal(34, #map.lots)
     assert.is_true(town.isWalkable(map, map.start.x, map.start.y))
   end)
 
@@ -60,40 +48,40 @@ describe("town map", function()
 end)
 
 describe("town.assignLots", function()
-  local timeline = { console("nes", 3), console("snes"), console("megadrive") }
+  local function store(id) return { id = id } end
+  local list = { store("nes"), store("snes"), store("genre:rpg") }
 
-  it("gives owned consoles the first free lots in timeline order", function()
-    local state = stateOwning("nes", "megadrive")
-    town.assignLots(state, timeline, 22)
-    assert.same({ nes = 1, megadrive = 2 }, state.lots)
+  it("gives stores the first free lots in list order", function()
+    local state = save.defaults()
+    town.assignLots(state, { list[1], list[3] }, 34)
+    assert.same({ nes = 1, ["genre:rpg"] = 2 }, state.lots)
   end)
 
   it("never moves existing stores", function()
-    local state = stateOwning("nes", "megadrive")
-    town.assignLots(state, timeline, 22)
-    state.ownedConsoles.snes = true
-    town.assignLots(state, timeline, 22)
-    assert.same({ nes = 1, megadrive = 2, snes = 3 }, state.lots)
+    local state = save.defaults()
+    town.assignLots(state, { list[1], list[3] }, 34)
+    town.assignLots(state, list, 34)
+    assert.same({ nes = 1, ["genre:rpg"] = 2, snes = 3 }, state.lots)
   end)
 
-  it("leaves consoles without a lot once the town is full", function()
-    local state = stateOwning("nes", "snes", "megadrive")
-    town.assignLots(state, timeline, 2)
+  it("leaves stores without a lot once the town is full", function()
+    local state = save.defaults()
+    town.assignLots(state, list, 2)
     assert.same({ nes = 1, snes = 2 }, state.lots)
   end)
 end)
 
 describe("town.layout", function()
-  it("places stores on assigned lots and leaves the rest empty", function()
-    local nes = console("nes", 3)
-    local state = stateOwning("nes")
+  it("places stores on their lots and leaves the rest empty", function()
+    local nes = { id = "nes", kind = "console" }
+    local state = save.defaults()
     state.lots.nes = 2
     local buildings = town.layout(map, state, { nes })
     assert.equal("home", buildings[1].kind)
     assert.equal("dealer", buildings[2].kind)
     assert.equal("lot", buildings[3].kind)
     assert.equal("store", buildings[4].kind)
-    assert.equal(nes, buildings[4].console)
+    assert.equal(nes, buildings[4].store)
     assert.equal(2 + #map.lots, #buildings)
   end)
 end)

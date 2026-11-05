@@ -1,6 +1,9 @@
+local consoles = require("core.consoles")
+local launchTitles = require("core.launchtitles")
+
 local economy = {}
 
-economy.STARTER_WALLET = 100
+economy.STARTER_WALLET = 1000
 economy.STARTER_GAMES = 3
 economy.COINS_PER_MINUTE = 2
 economy.SESSION_CAP_MINUTES = 120
@@ -69,27 +72,88 @@ function economy.buyConsole(state, console)
   return purchase(state, state.ownedConsoles, console.id, economy.consolePrice(console))
 end
 
--- Prefers games the player has already played; fills the rest randomly.
+local function releaseYear(game)
+  return tonumber(game.releasedate and game.releasedate:sub(1, 4))
+end
+
+-- Each system's launch year: the first year with games in the list, but never before the console came out.
+function economy.launchYears(games)
+  local years = {}
+  for _, game in ipairs(games) do
+    local console, year = consoles.get(game.system), releaseYear(game)
+    if console and year then
+      years[game.system] = math.min(years[game.system] or math.huge, math.max(year, console.year))
+    end
+  end
+  return years
+end
+
+-- Launch-window games came out in their system's launch year or the year after.
+function economy.isLaunchTitle(game, launchYears)
+  local launchYear, year = launchYears[game.system], releaseYear(game)
+  return launchYear ~= nil and year ~= nil and year <= launchYear + 1
+end
+
+local function normalizeName(name)
+  return (tostring(name or ""):lower():gsub("[^%w]", ""))
+end
+
+-- Matches the curated list by the strongest identifier both sides have:
+-- ScreenScraper ID, then RetroAchievements ID, then normalized name.
+function economy.isCuratedLaunchTitle(game)
+  local name = normalizeName(game.name)
+  for _, entry in ipairs(launchTitles[game.system] or {}) do
+    local match
+    if entry.screenscraper and game.screenscraperId then
+      match = entry.screenscraper == game.screenscraperId
+    elseif entry.retroachievements and game.cheevosId then
+      match = entry.retroachievements == game.cheevosId
+    else
+      match = normalizeName(entry.name) == name
+    end
+    if match then return true end
+  end
+  return false
+end
+
+local JAPANESE = { jp = true, ja = true }
+
+-- True when every listed language is Japanese; without languages, falls back to the region.
+function economy.isJapaneseOnly(game)
+  if not game.lang or game.lang == "" then
+    return game.region ~= nil and JAPANESE[game.region] == true
+  end
+  for lang in game.lang:gmatch("[^,%s]+") do
+    if not JAPANESE[lang] then return false end
+  end
+  return true
+end
+
+-- Picks STARTER_GAMES random games, skipping Japanese-only ones. Curated launch titles come first,
+-- then games from the launch window, then the rest.
 -- `systems` optionally restricts the pack to a set of system ids.
 function economy.grantStarterPack(state, games, random, systems)
   random = random or math.random
-  local played, unplayed = {}, {}
+  local eligible = {}
   for _, game in ipairs(games) do
-    if not systems or systems[game.system] then
-      table.insert((tonumber(game.playcount) or 0) > 0 and played or unplayed, game)
+    if (not systems or systems[game.system]) and not economy.isJapaneseOnly(game) then
+      table.insert(eligible, game)
     end
   end
+  local launchYears = economy.launchYears(eligible)
+  local curated, launch, rest = {}, {}, {}
+  for _, game in ipairs(eligible) do
+    local pool = economy.isCuratedLaunchTitle(game) and curated
+      or economy.isLaunchTitle(game, launchYears) and launch or rest
+    table.insert(pool, game)
+  end
   local granted = {}
-  local function grant(game)
-    state.owned[game.id] = true
-    table.insert(granted, game)
-  end
-  for _, game in ipairs(played) do
-    if #granted >= economy.STARTER_GAMES then break end
-    grant(game)
-  end
-  while #granted < economy.STARTER_GAMES and #unplayed > 0 do
-    grant(table.remove(unplayed, random(#unplayed)))
+  for _, pool in ipairs({ curated, launch, rest }) do
+    while #granted < economy.STARTER_GAMES and #pool > 0 do
+      local game = table.remove(pool, random(#pool))
+      state.owned[game.id] = true
+      table.insert(granted, game)
+    end
   end
   return granted
 end

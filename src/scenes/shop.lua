@@ -1,8 +1,11 @@
+local consoles = require("core.consoles")
 local economy = require("core.economy")
 local progression = require("core.progression")
 local scenes = require("core.scenes")
+local stores = require("core.stores")
 local ui = require("ui")
 local Confirm = require("scenes.confirm")
+local GameDetail = require("scenes.gamedetail")
 
 -- A shop sells one list of items; `stock(app)` returns { title, subtitle, items, consoles? }.
 local Shop = {}
@@ -24,13 +27,18 @@ function Shop.dealer(app)
   end)
 end
 
-function Shop.store(app, console)
+function Shop.store(app, store)
   return Shop.new(app, function()
-    local locked = app.catalog.bySystem[console.id].locked
+    local items, rerolled, inStock = stores.offer(store, app.state, app.catalog,
+      progression.timeline(app.catalog.systems), os.date("%Y-%m-%d"), love.math.random)
+    if rerolled then
+      app:persist()
+    end
     return {
-      title = console.short .. " Store",
-      subtitle = ("%d games for sale"):format(#locked),
-      items = locked,
+      title = store.title,
+      subtitle = ("Today's picks from %d games in stock. New picks tomorrow!"):format(inStock),
+      items = items,
+      showConsole = store.kind == "genre",
     }
   end)
 end
@@ -48,11 +56,17 @@ function Shop:price(item)
   return self.section.consoles and economy.consolePrice(item) or economy.price(item)
 end
 
-function Shop:buy(item)
+-- Genre stores mix consoles, so their rows say which console each game is for.
+function Shop:itemLabel(item)
+  local console = self.section.showConsole and consoles.get(item.system)
+  return console and ("[%s] %s"):format(console.short, item.name) or item.name
+end
+
+-- Returns a message when the purchase can't start; `onBought` runs after a confirmed purchase.
+function Shop:buy(item, onBought)
   local price = self:price(item)
   if self.app.state.wallet < price then
-    self.notice = ("You need %d more coins for %s."):format(price - self.app.state.wallet, item.name)
-    return
+    return ("You need %d more coins for %s."):format(price - self.app.state.wallet, item.name)
   end
   scenes.push(Confirm.new(("Buy %s for %d coins?"):format(item.name, price), function()
     local buy = self.section.consoles and economy.buyConsole or economy.buy
@@ -62,20 +76,31 @@ function Shop:buy(item)
       self:refresh()
       self.notice = self.section.consoles and ("Bought %s! Its store opens in town."):format(item.name)
         or ("Bought %s!"):format(item.name)
+      if onBought then onBought() end
     else
       self.notice = ("Can't buy %s: %s."):format(item.name, reason)
     end
   end))
 end
 
+function Shop:showDetails(item)
+  scenes.push(GameDetail.new(self.app, item, {
+    hint = ("buy for %d coins"):format(self:price(item)),
+    run = function() return self:buy(item, scenes.pop) end,
+  }))
+end
+
 function Shop:action(name)
   local items = self.section.items
+  local selected = items[self.cursor]
   if name == "up" and #items > 0 then
     self.cursor = (self.cursor - 2) % #items + 1
   elseif name == "down" and #items > 0 then
     self.cursor = self.cursor % #items + 1
-  elseif name == "a" and items[self.cursor] then
-    self:buy(items[self.cursor])
+  elseif name == "a" and selected and not self.section.consoles then
+    self:showDetails(selected)
+  elseif (name == "a" or name == "y") and selected then
+    self.notice = self:buy(selected)
   elseif name == "b" then
     scenes.pop()
   end
@@ -105,11 +130,11 @@ function Shop:draw()
   if #section.items == 0 then
     love.graphics.setFont(ui.fonts.body)
     ui.setColor("muted")
-    love.graphics.printf(section.consoles and "No consoles for sale right now." or "Sold out!",
+    love.graphics.printf(section.consoles and "No consoles for sale right now." or "Sold out for today!",
       ui.MARGIN, listTop + 20, listWidth, "center")
   else
     self.scroll = ui.list(section.items, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, listHeight,
-      function(item) return item.name, ("%d c"):format(self:price(item)) end)
+      function(item) return self:itemLabel(item), ("%d c"):format(self:price(item)) end)
   end
 
   local selected = section.items[self.cursor]
@@ -121,7 +146,7 @@ function Shop:draw()
     ui.drawCover(selected.image or selected.thumbnail, panelX, listTop, panelWidth, 220)
     love.graphics.setFont(ui.fonts.small)
     ui.setColor("muted")
-    love.graphics.printf(("%s  ·  %s"):format(ui.year(selected), selected.genre or "?"),
+    love.graphics.printf(("%s  ·  %s"):format(ui.year(selected), selected.genre or "Unknown genre"),
       panelX, listTop + 230, panelWidth, "center")
   end
 
@@ -130,7 +155,7 @@ function Shop:draw()
     ui.setColor("coin")
     love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - 48, ui.WIDTH - ui.MARGIN * 2, "center")
   end
-  ui.footer("A: buy   B: leave")
+  ui.footer(self.section.consoles and "A: buy   B: leave" or "A: details   Y: buy   B: leave")
 end
 
 return Shop

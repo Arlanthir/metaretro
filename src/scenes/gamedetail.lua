@@ -1,3 +1,4 @@
+local consoles = require("core.consoles")
 local scenes = require("core.scenes")
 local launcher = require("services.launcher")
 local ui = require("ui")
@@ -5,13 +6,18 @@ local ui = require("ui")
 local GameDetail = {}
 GameDetail.__index = GameDetail
 
-function GameDetail.new(app, game)
-  return setmetatable({ app = app, game = game }, GameDetail)
+-- `primary` is what A does: { hint, run(detail) }; owned games default to playing.
+function GameDetail.new(app, game, primary)
+  primary = primary or {
+    hint = "play",
+    run = function() launcher.launch(app.backend, game) end,
+  }
+  return setmetatable({ app = app, game = game, primary = primary }, GameDetail)
 end
 
 function GameDetail:action(name)
   if name == "a" then
-    launcher.launch(self.app.backend, self.game)
+    self.notice = self.primary.run(self)
   elseif name == "b" then
     scenes.pop()
   end
@@ -25,6 +31,7 @@ end
 function GameDetail:draw()
   local game = self.game
   local stats = self.app.backend.playStats(game)
+  local console = consoles.get(game.system)
   ui.header(game.name, self.app.state.wallet)
 
   local top = ui.HEADER_HEIGHT + ui.MARGIN
@@ -35,6 +42,7 @@ function GameDetail:draw()
   love.graphics.setFont(ui.fonts.body)
   ui.setColor("muted")
   love.graphics.printf(table.concat({
+    ("Console: %s"):format(console and console.name or game.system),
     ("Year: %s"):format(ui.year(game)),
     ("Genre: %s"):format(game.genre or "?"),
     ("Developer: %s"):format(game.developer or "?"),
@@ -43,9 +51,14 @@ function GameDetail:draw()
 
   ui.setColor("text")
   love.graphics.setFont(ui.fonts.small)
-  love.graphics.printf(game.desc or "", textX, top + 100, textWidth, "left")
+  love.graphics.printf(game.desc or "", textX, top + 120, textWidth, "left")
 
-  ui.footer("A: play   B: back")
+  if self.notice then
+    love.graphics.setFont(ui.fonts.body)
+    ui.setColor("coin")
+    love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - 48, ui.WIDTH - ui.MARGIN * 2, "center")
+  end
+  ui.footer(("A: %s   B: back"):format(self.primary.hint))
 end
 
 return GameDetail

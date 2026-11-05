@@ -75,8 +75,8 @@ end
 local function roofColor(building)
   if building.kind == "store" then
     local hash = 0
-    for i = 1, #building.console.id do
-      hash = hash + building.console.id:byte(i) * i
+    for i = 1, #building.store.id do
+      hash = hash + building.store.id:byte(i) * i
     end
     return STORE_ROOFS[hash % #STORE_ROOFS + 1]
   end
@@ -107,6 +107,15 @@ function art.building(building, label, x, y, columns, rows, doorColumn, font)
     end
   end
   rect(palette.door, x + doorColumn * t + 6, y + height - t + 2, t - 12, t - 2)
+  if building.kind == "store" and building.store.kind == "genre" then
+    -- Genre stores get a striped awning to set them apart from console stores.
+    local stripes = columns * 3
+    local stripeWidth = (width - 4) / stripes
+    for stripe = 0, stripes - 1 do
+      color(stripe % 2 == 0 and roofColor(building) or { 1, 1, 1 })
+      love.graphics.rectangle("fill", x + 2 + stripe * stripeWidth, y + height - t - 10, stripeWidth, 12)
+    end
+  end
   sign(label, x + width / 2, y + t + 4, font)
 end
 

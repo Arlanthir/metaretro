@@ -1,6 +1,5 @@
 local input = require("core.input")
 local log = require("core.log")
-local progression = require("core.progression")
 local scenes = require("core.scenes")
 local ui = require("ui")
 local art = require("world.art")
@@ -48,14 +47,14 @@ end
 function Town:label(building)
   if building.kind == "home" then return "Home", "Home" end
   if building.kind == "dealer" then return "Consoles", "Console Dealer" end
-  if building.kind == "store" then return building.console.short, building.console.short .. " Store" end
+  if building.kind == "store" then return building.store.short, building.store.title end
   return "For sale", "Empty lot"
 end
 
 -- Re-renders the static town (ground and buildings) into a canvas after anything that changes it.
 function Town:rebuild()
   local tile = art.TILE
-  self.buildings = town.layout(self.map, self.app.state, progression.timeline(self.app.catalog.systems))
+  self.buildings = town.layout(self.map, self.app.state, self.app.stores)
   self.doors = {}
   for _, building in ipairs(self.buildings) do
     self.doors[key(building.door.x, building.door.y)] = building
@@ -93,7 +92,7 @@ function Town:enterBuilding(building)
   elseif building.kind == "dealer" then
     scenes.push(Shop.dealer(self.app))
   else
-    scenes.push(Shop.store(self.app, building.console))
+    scenes.push(Shop.store(self.app, building.store))
   end
 end
 

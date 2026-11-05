@@ -11,6 +11,10 @@
 		<genre>Action</genre>
 		<playcount>3</playcount>
 		<gametime>5400</gametime>
+		<lang>en</lang>
+		<region>us</region>
+		<cheevosId>1446</cheevosId>
+		<scrap name="ScreenScraper" date="20240905T211802" />
 	</game>
 	<game>
 		<path>./Hidden.sfc</path>

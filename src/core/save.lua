@@ -14,6 +14,7 @@ function save.defaults()
     owned = {},
     ownedConsoles = {},
     lots = {},
+    offers = {},
     seenAchievements = {},
     creditedGametime = {},
     consumedSessions = 0,

@@ -12,7 +12,9 @@ local TITLES = {
   "Pixel Quest", "Turbo Racer", "Dungeon Delve", "Star Blaster", "Puzzle Tower",
   "Ninja Run", "Kart Mayhem", "Haunted Manor", "Sky Pirates", "Mecha Duel",
 }
-local GENRES = { "Platform", "Racing", "RPG", "Shooter", "Puzzle", "Action" }
+local GENRES = {
+  "Platform", "Racing, Driving", "Role Playing Game", "Shoot'em Up / Vertical", "Puzzle", "Action / Adventure",
+}
 
 local function makeGames(system, index)
   local games = {}
@@ -23,7 +25,7 @@ local function makeGames(system, index)
       system = system.id,
       path = path,
       name = ("%s %s"):format(title, ({ "", "II", "III", "DX", "Advance" })[index]):gsub("%s+$", ""),
-      desc = ("A mock %s game used while developing Metaretro on the desktop."):format(GENRES[(i + index) % #GENRES + 1]:lower()),
+      desc = "A mock game used while developing Metaretro on the desktop.",
       genre = GENRES[(i + index) % #GENRES + 1],
       releasedate = ("19%02d0101T000000"):format(85 + (i + index * 2) % 15),
       developer = "Mock Studios",

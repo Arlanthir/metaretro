@@ -1,21 +1,25 @@
+local genres = require("core.genres")
+
 local catalog = {}
 
 function catalog.gameId(system, path)
   return system .. ":" .. path
 end
 
-local function byName(a, b)
+function catalog.byName(a, b)
   return a.name:lower() < b.name:lower()
 end
+local byName = catalog.byName
 
 -- Returns { systems = {sorted system entries}, bySystem = { [id] = { owned = {...}, locked = {...} } } }.
--- `include(systemId)` optionally limits which systems appear.
+-- `include(systemId)` optionally limits which systems appear. Each game gets its genre `category`.
 function catalog.build(backend, state, include)
   local result = { systems = {}, bySystem = {} }
   for _, system in ipairs(backend.listSystems()) do
     local games = (not include or include(system.id)) and backend.listGames(system.id) or {}
     local owned, locked = {}, {}
     for _, game in ipairs(games) do
+      game.category = game.category or genres.categorize(game.genre)
       table.insert(state.owned[game.id] and owned or locked, game)
     end
     if #games > 0 then

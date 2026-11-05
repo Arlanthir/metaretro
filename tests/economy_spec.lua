@@ -99,24 +99,128 @@ describe("economy.buyConsole", function()
 
   it("refuses when the player can't afford it", function()
     local state = save.defaults()
+    state.wallet = 0
     assert.same({ false, "not enough coins" }, { economy.buyConsole(state, snes) })
     assert.is_nil(state.ownedConsoles.snes)
+  end)
+end)
+
+describe("economy.launchYears", function()
+  it("uses the first year with games, but never before the console came out", function()
+    local years = economy.launchYears({
+      game({ system = "nes", releasedate = "19870101T000000" }),
+      game({ system = "nes", releasedate = "19851018T000000" }),
+      game({ system = "snes", releasedate = "19700101T000000" }),
+      game({ system = "gba" }),
+    })
+    assert.same({ nes = 1985, snes = 1990 }, years)
+  end)
+end)
+
+describe("economy.isLaunchTitle", function()
+  local years = { snes = 1990 }
+
+  it("accepts games from the launch year and the year after", function()
+    assert.is_true(economy.isLaunchTitle(game({ releasedate = "19901121T000000" }), years))
+    assert.is_true(economy.isLaunchTitle(game({ releasedate = "19911231T000000" }), years))
+    assert.is_false(economy.isLaunchTitle(game({ releasedate = "19920101T000000" }), years))
+  end)
+
+  it("rejects undated games and systems without a launch year", function()
+    assert.is_false(economy.isLaunchTitle(game({}), years))
+    assert.is_false(economy.isLaunchTitle(game({ system = "dos", releasedate = "19900101T000000" }), years))
+  end)
+end)
+
+describe("economy.isCuratedLaunchTitle", function()
+  -- The curated list has snes F-Zero with ScreenScraper 2208 and RetroAchievements 252.
+  it("matches by ScreenScraper ID first", function()
+    assert.is_true(economy.isCuratedLaunchTitle(game({ name = "Whatever", screenscraperId = 2208 })))
+    assert.is_false(economy.isCuratedLaunchTitle(game({ name = "F-Zero", screenscraperId = 99999 })))
+  end)
+
+  it("falls back to the RetroAchievements ID", function()
+    assert.is_true(economy.isCuratedLaunchTitle(game({ name = "Whatever", cheevosId = 252 })))
+    assert.is_false(economy.isCuratedLaunchTitle(game({ name = "F-Zero", cheevosId = 99999 })))
+  end)
+
+  it("falls back to the name, ignoring case and punctuation", function()
+    assert.is_true(economy.isCuratedLaunchTitle(game({ name = "f zero" })))
+    assert.is_false(economy.isCuratedLaunchTitle(game({ name = "F-Zero", system = "gba" })))
+    assert.is_false(economy.isCuratedLaunchTitle(game({ name = "Super Mario Kart" })))
+  end)
+end)
+
+describe("economy.isJapaneseOnly", function()
+  it("checks every listed language", function()
+    assert.is_true(economy.isJapaneseOnly(game({ lang = "jp", region = "jp" })))
+    assert.is_false(economy.isJapaneseOnly(game({ lang = "en,jp", region = "jp" })))
+    assert.is_false(economy.isJapaneseOnly(game({ lang = "en", region = "jp" })))
+  end)
+
+  it("falls back to the region when languages are missing", function()
+    assert.is_true(economy.isJapaneseOnly(game({ region = "jp" })))
+    assert.is_false(economy.isJapaneseOnly(game({ region = "us" })))
+    assert.is_false(economy.isJapaneseOnly(game({})))
   end)
 end)
 
 describe("economy.grantStarterPack", function()
   local function first(n) return 1 end
 
-  it("prefers already played games", function()
+  it("favors launch-window games, then fills up with the rest", function()
+    local state = save.defaults()
+    local games = {
+      game({ path = "./late", releasedate = "19950101T000000" }),
+      game({ path = "./launch", releasedate = "19901121T000000" }),
+      game({ path = "./undated" }),
+      game({ path = "./next-year", releasedate = "19910823T000000" }),
+    }
+    local granted = economy.grantStarterPack(state, games, first)
+    assert.same({ games[2], games[4], games[1] }, granted)
+  end)
+
+  it("prefers curated launch titles over the launch window", function()
+    local state = save.defaults()
+    local games = {
+      game({ path = "./window", name = "Window Game", releasedate = "19901121T000000" }),
+      game({ path = "./curated", name = "SimCity", releasedate = "19911001T000000" }),
+      game({ path = "./late", name = "Late Game", releasedate = "19950101T000000" }),
+    }
+    local granted = economy.grantStarterPack(state, games, first)
+    assert.same({ games[2], games[1], games[3] }, granted)
+  end)
+
+  it("starts the launch window at the first non-Japanese release", function()
+    local state = save.defaults()
+    local games = {
+      game({ system = "nes", path = "./famicom", lang = "jp", releasedate = "19830715T000000" }),
+      game({ system = "nes", path = "./later", lang = "en", releasedate = "19900101T000000" }),
+      game({ system = "nes", path = "./us-launch", lang = "en", releasedate = "19851018T000000" }),
+    }
+    local granted = economy.grantStarterPack(state, games, first)
+    assert.same({ games[3], games[2] }, granted)
+  end)
+
+  it("skips Japanese-only games", function()
+    local state = save.defaults()
+    local games = {
+      game({ path = "./jp", lang = "jp", releasedate = "19901121T000000" }),
+      game({ path = "./en", lang = "en" }),
+    }
+    local granted = economy.grantStarterPack(state, games, first)
+    assert.same({ games[2] }, granted)
+  end)
+
+  it("picks randomly, ignoring play history", function()
     local state = save.defaults()
     local games = {}
     for i = 1, 6 do
       table.insert(games, game({ path = "./" .. i, playcount = i == 5 and 2 or 0 }))
     end
     local granted = economy.grantStarterPack(state, games, first)
-    assert.equal(economy.STARTER_GAMES, #granted)
-    assert.equal(games[5], granted[1])
-    assert.is_true(state.owned[games[5].id])
+    assert.same({ games[1], games[2], games[3] }, granted)
+    assert.is_nil(state.owned[games[5].id])
   end)
 
   it("only picks from the given systems", function()

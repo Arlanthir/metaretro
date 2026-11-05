@@ -21,6 +21,16 @@ describe("gamelist.parse", function()
     assert.equal("0.95", game.rating)
     assert.equal(3, game.playcount)
     assert.equal(5400, game.gametime)
+    assert.equal("en", game.lang)
+    assert.equal("us", game.region)
+    assert.equal(1446, game.cheevosId)
+  end)
+
+  it("reads the game id only when ScreenScraper filled the entry", function()
+    assert.equal(1, games[1].screenscraperId)
+    local other = gamelist.parse('<gameList><game id="7"><path>./a.sfc</path><scrap name="TheGamesDB" /></game></gameList>',
+      "snes", "/userdata/roms/snes")
+    assert.is_nil(other[1].screenscraperId)
   end)
 
   it("decodes named and numeric entities", function()

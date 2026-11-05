@@ -43,17 +43,17 @@ function town.footprint(door)
   return door.x - 1, door.y - town.BUILDING_HEIGHT + 1
 end
 
--- Gives each owned console without a store the first free lot; existing stores never move.
-function town.assignLots(state, timeline, lotCount)
+-- Gives each store without a lot the first free one, in list order; existing stores never move.
+function town.assignLots(state, storeList, lotCount)
   local taken = {}
   for _, index in pairs(state.lots) do
     taken[index] = true
   end
-  for _, console in ipairs(timeline) do
-    if state.ownedConsoles[console.id] and not state.lots[console.id] then
+  for _, store in ipairs(storeList) do
+    if not state.lots[store.id] then
       for index = 1, lotCount do
         if not taken[index] then
-          state.lots[console.id] = index
+          state.lots[store.id] = index
           taken[index] = true
           break
         end
@@ -62,13 +62,13 @@ function town.assignLots(state, timeline, lotCount)
   end
 end
 
--- Every building on the map: home, dealer, stores for owned consoles, and empty lots.
-function town.layout(map, state, timeline)
+-- Every building on the map: home, dealer, stores on their lots, and empty lots.
+function town.layout(map, state, storeList)
   local byLot = {}
-  for _, console in ipairs(timeline) do
-    local index = state.lots[console.id]
-    if index and state.ownedConsoles[console.id] then
-      byLot[index] = console
+  for _, store in ipairs(storeList) do
+    local index = state.lots[store.id]
+    if index then
+      byLot[index] = store
     end
   end
   local buildings = {}
@@ -76,8 +76,8 @@ function town.layout(map, state, timeline)
     table.insert(buildings, { kind = building.kind, door = building.door })
   end
   for index, lot in ipairs(map.lots) do
-    local console = byLot[index]
-    table.insert(buildings, { kind = console and "store" or "lot", door = lot.door, console = console })
+    local store = byLot[index]
+    table.insert(buildings, { kind = store and "store" or "lot", door = lot.door, store = store })
   end
   return buildings
 end

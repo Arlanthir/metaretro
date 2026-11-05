@@ -6,7 +6,7 @@ local FIELDS = {}
 for _, field in ipairs({
   "path", "name", "desc", "image", "thumbnail", "marquee", "video",
   "releasedate", "developer", "publisher", "genre", "players",
-  "rating", "playcount", "lastplayed", "gametime", "hidden",
+  "rating", "playcount", "lastplayed", "gametime", "hidden", "lang", "region", "cheevosId",
 }) do
   FIELDS[field] = true
 end
@@ -47,7 +47,7 @@ end
 
 function gamelist.parse(xml, systemId, systemDir)
   local games = {}
-  for body in xml:gmatch("<game%f[%s>][^>]*>(.-)</game>") do
+  for attributes, body in xml:gmatch("<game%f[%s>]([^>]*)>(.-)</game>") do
     local game = { system = systemId }
     -- Single pass over the entry's child elements; %1 matches the closing tag.
     for field, value in body:gmatch("<([%w_]+)>(.-)</%1>") do
@@ -65,6 +65,11 @@ function gamelist.parse(xml, systemId, systemDir)
       game.rom = resolve(systemDir, game.path)
       game.playcount = tonumber(game.playcount) or 0
       game.gametime = tonumber(game.gametime) or 0
+      game.cheevosId = tonumber(game.cheevosId)
+      -- The id attribute belongs to whichever scraper filled the entry; only trust ScreenScraper's.
+      if body:find('<scrap name="ScreenScraper"', 1, true) then
+        game.screenscraperId = tonumber(attributes:match('id="(%d+)"'))
+      end
       table.insert(games, game)
     end
   end
