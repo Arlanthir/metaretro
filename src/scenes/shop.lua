@@ -36,7 +36,7 @@ function Shop.store(app, store)
     end
     return {
       title = store.title,
-      subtitle = ("Today's picks from %d games in stock. New picks tomorrow!"):format(inStock),
+      subtitle = ("Today's picks of %d in stock · new ones tomorrow"):format(inStock),
       items = items,
       showConsole = store.kind == "genre",
     }
@@ -141,9 +141,9 @@ function Shop:draw()
   ui.header(section.title, self.app.state.wallet)
   love.graphics.setFont(ui.fonts.small)
   ui.setColor("muted")
-  love.graphics.printf(section.subtitle, 0, ui.HEADER_HEIGHT + 12, ui.WIDTH, "center")
+  love.graphics.printf(section.subtitle, 0, ui.HEADER_HEIGHT + 8, ui.WIDTH, "center")
 
-  local listTop = ui.HEADER_HEIGHT + 40
+  local listTop = ui.HEADER_HEIGHT + 44
   local listWidth = 360
   local listHeight = ui.HEIGHT - listTop - 84
   if #section.items == 0 then
@@ -162,11 +162,7 @@ function Shop:draw()
   if selected and section.consoles then
     self:drawConsoleInfo(selected, panelX, listTop + 20, panelWidth)
   elseif selected then
-    ui.drawCover(selected.image or selected.thumbnail, panelX, listTop, panelWidth, 220)
-    love.graphics.setFont(ui.fonts.small)
-    ui.setColor("muted")
-    love.graphics.printf(("%s  ·  %s"):format(ui.year(selected), selected.genre or "Unknown genre"),
-      panelX, listTop + 230, panelWidth, "center")
+    ui.coverWithCaption(selected, panelX, listTop, panelWidth, 220)
   end
 
   if self.notice then

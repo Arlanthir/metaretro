@@ -109,8 +109,9 @@ function art.buildingWidth(building)
   return house(building)[3]
 end
 
+-- A plaque sized to the letters themselves rather than the font's full line height.
 local function sign(text, centerX, y, font)
-  local width, height = font:getWidth(text) + 12, font:getHeight() + 4
+  local width, height = font:getWidth(text) + 10, 22
   local x = math.floor(centerX - width / 2)
   love.graphics.setColor(0.27, 0.16, 0.10)
   love.graphics.rectangle("fill", x - 2, y - 2, width + 4, height + 4, 3)
@@ -118,7 +119,7 @@ local function sign(text, centerX, y, font)
   love.graphics.rectangle("fill", x, y, width, height, 2)
   love.graphics.setColor(0.27, 0.16, 0.10)
   love.graphics.setFont(font)
-  love.graphics.print(text, x + 6, y + 2)
+  love.graphics.print(text, x + 5, math.floor(y + height / 2 - font:getAscent() * 0.65))
   love.graphics.setColor(1, 1, 1)
 end
 

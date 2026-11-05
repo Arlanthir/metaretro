@@ -1,12 +1,13 @@
 local covers = require("services.covers")
 
--- Menu look: Ninja Adventure UI pieces (CC0) and the Jersey 10 font (OFL), see src/assets.
+-- Menu look: Ninja Adventure UI pieces (CC0) and the Ark Pixel font (OFL), see src/assets.
 local ui = {}
 
 ui.WIDTH, ui.HEIGHT = 640, 480
 ui.MARGIN = 24 -- content inset from the screen edge, inside the content panel's frame
 ui.HEADER_HEIGHT = 52 -- where content starts below the header bar
 ui.FOOTER_HEIGHT = 44
+ui.LINE = 24 -- spacing between lines of text
 
 ui.colors = {
   background = { 0.12, 0.14, 0.10 },
@@ -31,8 +32,10 @@ local function image(name)
   return images[name]
 end
 
+-- Ark Pixel's 10px design, drawn at 2x like the rest of the pixel art.
 local function font(size)
-  local f = love.graphics.newFont("assets/fonts/Jersey10.ttf", size, "mono")
+  local f = love.graphics.newFont("assets/fonts/ArkPixel10.ttf", size, "mono")
+  f:setLineHeight(ui.LINE / f:getHeight())
   -- Characters the pixel font lacks (e.g. kana) come from LÖVE's default font instead of boxes.
   f:setFallbacks(love.graphics.newFont(size))
   return f
@@ -41,7 +44,8 @@ end
 local background
 
 function ui.load()
-  ui.fonts = { small = font(20), body = font(20), title = font(30) }
+  local text = font(20)
+  ui.fonts = { small = text, body = text, title = text, sign = text }
   -- Darkened grass from the town, so menus feel like they're laid over it.
   local grass = love.graphics.newImage("assets/ninja-adventure/TilesetFloor.png")
   local tile = love.graphics.newQuad(0, 192, 16, 16, grass:getDimensions())
@@ -133,10 +137,10 @@ function ui.header(title, wallet)
   ui.backdrop()
   ui.panel(4, ui.HEADER_HEIGHT - 4, ui.WIDTH - 8, ui.HEIGHT - ui.HEADER_HEIGHT - ui.FOOTER_HEIGHT + 4)
   ui.panel(4, 4, ui.WIDTH - 8, 44)
-  local coinsLeft = ui.coins(wallet, ui.WIDTH - 22, 15)
+  local coinsLeft = ui.coins(wallet, ui.WIDTH - 22, 10)
   love.graphics.setFont(ui.fonts.title)
-  ui.setColor("text")
-  love.graphics.print(ui.truncate(ui.fonts.title, title, coinsLeft - 40), 20, 9)
+  ui.setColor("highlight")
+  love.graphics.print(ui.truncate(ui.fonts.title, title, coinsLeft - 40), 20, 10)
 end
 
 -- Button names in hints map to their icons; "L/R" shows both shoulder buttons.
@@ -165,7 +169,7 @@ local function hintWidth(entries)
     for _, icon in ipairs(entry.icons) do
       width = width + image(icon):getWidth() + 3
     end
-    width = width + f:getWidth(entry.label) + (i < #entries and 18 or 0)
+    width = width + f:getWidth(entry.label) + 3 + (i < #entries and 18 or 0)
   end
   return width
 end
@@ -181,8 +185,8 @@ local function drawHint(entries, x, centerY)
       x = x + img:getWidth() + 3
     end
     ui.setColor("text")
-    love.graphics.print(entry.label, x, math.floor(centerY - f:getHeight() / 2))
-    x = x + f:getWidth(entry.label) + 18
+    love.graphics.print(entry.label, x + 3, math.floor(centerY - f:getAscent() * 0.65))
+    x = x + f:getWidth(entry.label) + 21
   end
 end
 
@@ -198,18 +202,18 @@ end
 function ui.hintPanel(hint, centerX, y)
   local entries = parseHint(hint)
   local width = hintWidth(entries) + 40
-  ui.panel(math.floor(centerX - width / 2), y, width, 36)
-  drawHint(entries, math.floor(centerX - width / 2) + 20, y + 18)
+  ui.panel(math.floor(centerX - width / 2), y, width, 40)
+  drawHint(entries, math.floor(centerX - width / 2) + 20, y + 20)
 end
 
 -- Text in a panel just big enough for it, centred on `centerX`.
 function ui.messagePanel(text, centerX, y, colorName)
   local f = ui.fonts.body
   local width = f:getWidth(text) + 40
-  ui.panel(math.floor(centerX - width / 2), y, width, 38)
+  ui.panel(math.floor(centerX - width / 2), y, width, 40)
   love.graphics.setFont(f)
   ui.setColor(colorName or "text")
-  love.graphics.print(text, math.floor(centerX - f:getWidth(text) / 2), y + 10)
+  love.graphics.print(text, math.floor(centerX - f:getWidth(text) / 2), y + 4)
 end
 
 local truncated = setmetatable({}, { __mode = "k" })
@@ -285,7 +289,7 @@ end
 -- and whether to mark the row with a trophy.
 -- Returns the scroll offset that keeps the cursor visible.
 function ui.list(items, cursor, scroll, x, y, width, height, label)
-  local rowHeight = 24
+  local rowHeight = ui.LINE + 2
   local visible = math.floor(height / rowHeight)
   scroll = math.max(math.min(scroll, cursor - 1), cursor - visible, 0)
   local f = ui.fonts.body
@@ -307,7 +311,7 @@ function ui.list(items, cursor, scroll, x, y, width, height, label)
     ui.setColor("text")
     love.graphics.print(ui.truncate(f, text, width - 28 - valueWidth - trophyWidth), x + 20, textY)
     if trophy then
-      ui.trophy(x + width - 8 - valueWidth - 14, rowY + 6)
+      ui.trophy(x + width - 8 - valueWidth - 14, textY + ui.iconOffset(11))
     end
     if value then
       ui.setColor("coin")
@@ -331,6 +335,21 @@ function ui.drawCover(path, x, y, width, height)
     love.graphics.setFont(ui.fonts.small)
     love.graphics.printf(image == nil and path and "loading..." or "no cover", x, y + height / 2 - 6, width, "center")
   end
+end
+
+-- A game's cover with its year and genre below, each kept to one line.
+function ui.coverWithCaption(game, x, y, width, height)
+  ui.drawCover(game.image or game.thumbnail, x, y, width, height)
+  local f = ui.fonts.small
+  love.graphics.setFont(f)
+  ui.setColor("muted")
+  love.graphics.printf(ui.year(game), x, y + height + 6, width, "center")
+  love.graphics.printf(ui.truncate(f, game.genre or "Unknown genre", width), x, y + height + 6 + ui.LINE, width, "center")
+end
+
+-- Vertical offset that centres an icon of `size` pixels on a line of text drawn at y.
+function ui.iconOffset(size)
+  return math.floor(ui.fonts.body:getAscent() * 0.65 - size / 2)
 end
 
 function ui.year(game)

@@ -58,16 +58,16 @@ function Collection:draw()
 
   love.graphics.setFont(ui.fonts.body)
   ui.setColor("highlight")
-  love.graphics.printf(("<  %s  >"):format(system.name), 0, ui.HEADER_HEIGHT + 10, ui.WIDTH, "center")
+  love.graphics.printf(("<  %s  >"):format(system.name), 0, ui.HEADER_HEIGHT + 6, ui.WIDTH, "center")
   ui.setColor("muted")
   love.graphics.setFont(ui.fonts.small)
   local games = self:games()
   local systemGames = self.app.catalog.bySystem[system.id]
   local owned, total = catalog.progress(self.app.catalog)
-  love.graphics.printf(("Console %d of %d  ·  %d / %d games here  ·  %d / %d games in all"):format(
-    self.tab, #self.systems, #games, #games + #systemGames.locked, owned, total), 0, ui.HEADER_HEIGHT + 30, ui.WIDTH, "center")
+  love.graphics.printf(("Console %d/%d  ·  %d/%d owned  ·  %d/%d in all"):format(
+    self.tab, #self.systems, #games, #games + #systemGames.locked, owned, total), 0, ui.HEADER_HEIGHT + 32, ui.WIDTH, "center")
 
-  local listTop = ui.HEADER_HEIGHT + 56
+  local listTop = ui.HEADER_HEIGHT + 68
   local listWidth = 360
   self.scroll = ui.list(games, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, ui.HEIGHT - listTop - 60,
     function(game) return game.name, nil, game.cheevosId ~= nil end)
@@ -75,11 +75,7 @@ function Collection:draw()
   local selected = games[self.cursor]
   if selected then
     local coverX = ui.MARGIN * 2 + listWidth
-    ui.drawCover(selected.image or selected.thumbnail, coverX, listTop, ui.WIDTH - coverX - ui.MARGIN, 220)
-    love.graphics.setFont(ui.fonts.small)
-    ui.setColor("muted")
-    love.graphics.printf(("%s  ·  %s"):format(ui.year(selected), selected.genre or "?"),
-      coverX, listTop + 230, ui.WIDTH - coverX - ui.MARGIN, "center")
+    ui.coverWithCaption(selected, coverX, listTop, ui.WIDTH - coverX - ui.MARGIN, 220)
   end
 
   ui.footer("L/R: console   A: details   B: leave")

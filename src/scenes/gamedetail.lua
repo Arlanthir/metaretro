@@ -61,7 +61,7 @@ function GameDetail:draw()
     { ("Played: %d times, %s"):format(tonumber(stats.playcount) or 0, formatPlaytime(stats.gametime)) },
     { self:achievementsLine(), icon = game.cheevosId and ui.trophy },
   }
-  local lineHeight = ui.fonts.body:getHeight()
+  local lineHeight = ui.LINE
   love.graphics.setFont(ui.fonts.body)
   for i, row in ipairs(rows) do
     local y = top + (i - 1) * lineHeight
@@ -69,7 +69,7 @@ function GameDetail:draw()
     ui.setColor("muted")
     love.graphics.print(text, textX, y)
     if row.icon then
-      row.icon(textX + ui.fonts.body:getWidth(text) + 8, y + 4)
+      row.icon(textX + ui.fonts.body:getWidth(text) + 8, y + ui.iconOffset(12))
     end
   end
 

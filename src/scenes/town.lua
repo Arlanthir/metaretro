@@ -104,7 +104,7 @@ function Town:rebuild()
       art.tree(object.x, object.row, (object.x - 1) * tile, (object.row - 1) * tile)
     else
       art.building(object.building, (self:label(object.building)), (object.x - 1) * tile, (object.top - 1) * tile,
-        town.BUILDING_WIDTH * tile, ui.fonts.small)
+        town.BUILDING_WIDTH * tile, ui.fonts.sign)
     end
   end
   love.graphics.setCanvas()
@@ -254,8 +254,8 @@ end
 function Town:drawHud()
   local wallet = self.app.state.wallet
   local width = ui.fonts.body:getWidth(tostring(wallet)) + 64
-  ui.panel(ui.WIDTH - width - 6, 6, width, 38)
-  ui.coins(wallet, ui.WIDTH - 26, 16)
+  ui.panel(ui.WIDTH - width - 6, 6, width, 40)
+  ui.coins(wallet, ui.WIDTH - 26, 10)
 
   if self.toast then
     ui.messagePanel(self.toast, ui.WIDTH / 2, 48, "coin")
