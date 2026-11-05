@@ -33,10 +33,12 @@ function ui.header(title, wallet)
   ui.setColor("panel")
   love.graphics.rectangle("fill", 0, 0, ui.WIDTH, ui.HEADER_HEIGHT)
   love.graphics.setFont(ui.fonts.title)
+  local coins = ("%d coins"):format(wallet)
+  local titleWidth = ui.WIDTH - ui.MARGIN * 3 - ui.fonts.title:getWidth(coins)
   ui.setColor("text")
-  love.graphics.print(title, ui.MARGIN, 9)
+  love.graphics.print(ui.truncate(ui.fonts.title, title, titleWidth), ui.MARGIN, 9)
   ui.setColor("coin")
-  love.graphics.printf(("%d coins"):format(wallet), 0, 9, ui.WIDTH - ui.MARGIN, "right")
+  love.graphics.printf(coins, 0, 9, ui.WIDTH - ui.MARGIN, "right")
 end
 
 function ui.footer(hint)
@@ -79,6 +81,39 @@ function ui.trophy(x, y)
   love.graphics.rectangle("fill", x + 10, y + 1, 2, 3)
   love.graphics.rectangle("fill", x + 5, y + 6, 2, 3)
   love.graphics.rectangle("fill", x + 3, y + 9, 6, 2)
+end
+
+local STAR_SIZE, STAR_SPACING = 12, 14
+local starTriangles
+
+-- Five stars filled to `rating` (0..1, ES style) in half-star steps.
+function ui.stars(x, y, rating)
+  if not starTriangles then
+    local points, r = {}, STAR_SIZE / 2
+    for i = 0, 9 do
+      local angle = -math.pi / 2 + i * math.pi / 5
+      local radius = i % 2 == 0 and r or r * 0.45
+      table.insert(points, r + math.cos(angle) * radius)
+      table.insert(points, r + math.sin(angle) * radius)
+    end
+    starTriangles = love.math.triangulate(points)
+  end
+  local filled = math.floor(math.max(0, math.min(1, rating)) * 10 + 0.5) / 2
+  for i = 0, 4 do
+    local starX = x + i * STAR_SPACING
+    for layer = 1, 2 do
+      local fill = layer == 1 and 1 or math.max(0, math.min(1, filled - i))
+      if fill > 0 then
+        if layer == 1 then ui.setColor("muted", 0.35) else ui.setColor("highlight") end
+        love.graphics.setScissor(starX, y, STAR_SIZE * fill, STAR_SIZE)
+        for _, triangle in ipairs(starTriangles) do
+          love.graphics.polygon("fill", starX + triangle[1], y + triangle[2], starX + triangle[3], y + triangle[4],
+            starX + triangle[5], y + triangle[6])
+        end
+      end
+    end
+  end
+  love.graphics.setScissor()
 end
 
 -- Draws a scrolling list; `label(item)` returns the text, an optional right-aligned value

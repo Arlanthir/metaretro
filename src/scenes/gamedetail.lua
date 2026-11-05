@@ -50,23 +50,32 @@ function GameDetail:draw()
 
   local textX = ui.MARGIN * 2 + 220
   local textWidth = ui.WIDTH - textX - ui.MARGIN
+  local rating = tonumber(game.rating)
+  -- One line each; `icon(x, y)` draws right after the line's text.
+  local rows = {
+    { ("Console: %s"):format(console and console.name or game.system) },
+    { ("Year: %s"):format(ui.year(game)) },
+    { ("Genre: %s"):format(game.genre or "?") },
+    { ("Developer: %s"):format(game.developer or "?") },
+    { rating and "Rating:" or "Rating: none", icon = rating and function(x, y) ui.stars(x, y, rating) end },
+    { ("Played: %d times, %s"):format(tonumber(stats.playcount) or 0, formatPlaytime(stats.gametime)) },
+    { self:achievementsLine(), icon = game.cheevosId and ui.trophy },
+  }
+  local lineHeight = ui.fonts.body:getHeight()
   love.graphics.setFont(ui.fonts.body)
-  ui.setColor("muted")
-  love.graphics.printf(table.concat({
-    ("Console: %s"):format(console and console.name or game.system),
-    ("Year: %s"):format(ui.year(game)),
-    ("Genre: %s"):format(game.genre or "?"),
-    ("Developer: %s"):format(game.developer or "?"),
-    ("Played: %d times, %s"):format(tonumber(stats.playcount) or 0, formatPlaytime(stats.gametime)),
-    self:achievementsLine(),
-  }, "\n"), textX, top, textWidth, "left")
-  if game.cheevosId then
-    ui.trophy(textX + ui.fonts.body:getWidth(self:achievementsLine()) + 8, top + 5 * ui.fonts.body:getHeight() + 4)
+  for i, row in ipairs(rows) do
+    local y = top + (i - 1) * lineHeight
+    local text = ui.truncate(ui.fonts.body, row[1], textWidth - (row.icon and 80 or 0))
+    ui.setColor("muted")
+    love.graphics.print(text, textX, y)
+    if row.icon then
+      row.icon(textX + ui.fonts.body:getWidth(text) + 8, y + 4)
+    end
   end
 
   ui.setColor("text")
   love.graphics.setFont(ui.fonts.small)
-  love.graphics.printf(game.desc or "", textX, top + 140, textWidth, "left")
+  love.graphics.printf(game.desc or "", textX, top + #rows * lineHeight + 16, textWidth, "left")
 
   if self.notice then
     love.graphics.setFont(ui.fonts.body)
