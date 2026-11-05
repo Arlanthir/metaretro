@@ -26,21 +26,16 @@ function Confirm:draw()
   love.graphics.setColor(0, 0, 0, 0.6)
   love.graphics.rectangle("fill", 0, 0, ui.WIDTH, ui.HEIGHT)
 
-  local width = 360
-  local _, lines = ui.fonts.body:getWrap(self.message, width - 32)
-  local height = math.max(110, #lines * ui.fonts.body:getHeight() + 70)
-  local x, y = (ui.WIDTH - width) / 2, (ui.HEIGHT - height) / 2
-  ui.setColor("panel")
-  love.graphics.rectangle("fill", x, y, width, height, 8)
-  ui.setColor("highlight")
-  love.graphics.rectangle("line", x, y, width, height, 8)
+  local width = 380
+  local _, lines = ui.fonts.body:getWrap(self.message, width - 48)
+  local height = math.max(120, #lines * ui.fonts.body:getHeight() + 84)
+  local x, y = math.floor((ui.WIDTH - width) / 2), math.floor((ui.HEIGHT - height) / 2)
+  ui.panel(x, y, width, height)
 
   love.graphics.setFont(ui.fonts.body)
   ui.setColor("text")
-  love.graphics.printf(self.message, x + 16, y + 24, width - 32, "center")
-  love.graphics.setFont(ui.fonts.small)
-  ui.setColor("muted")
-  love.graphics.printf(self.onConfirm and "A: yes   B: no" or "A: OK", x, y + height - 30, width, "center")
+  love.graphics.printf(self.message, x + 24, y + 24, width - 48, "center")
+  ui.hintPanel(self.onConfirm and "A: yes   B: no" or "A: OK", ui.WIDTH / 2, y + height - 18)
 end
 
 return Confirm

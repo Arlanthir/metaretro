@@ -32,11 +32,14 @@ end
 function scenes.update(dt) call(top(), "update", dt) end
 function scenes.action(name) call(top(), "action", name) end
 
+-- Draws the top scene, and the ones below it while the scene above has `drawBelow` (overlays).
 function scenes.draw()
-  for _, scene in ipairs(scenes.stack) do
-    if scene == top() or scene.drawBelow then
-      call(scene, "draw")
-    end
+  local first = #scenes.stack
+  while first > 1 and scenes.stack[first].drawBelow do
+    first = first - 1
+  end
+  for i = math.max(first, 1), #scenes.stack do
+    call(scenes.stack[i], "draw")
   end
 end
 

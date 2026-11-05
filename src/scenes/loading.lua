@@ -17,9 +17,8 @@ function Loading:update()
 end
 
 function Loading:draw()
-  love.graphics.setFont(ui.fonts.body)
-  ui.setColor("muted")
-  love.graphics.printf(self.message, 0, ui.HEIGHT / 2 - 8, ui.WIDTH, "center")
+  ui.backdrop()
+  ui.messagePanel(self.message, ui.WIDTH / 2, ui.HEIGHT / 2 - 19)
   self.drawn = true
 end
 

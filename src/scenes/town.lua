@@ -251,31 +251,19 @@ function Town:drawTreesInFront(camX, camY, screenX, screenY)
   love.graphics.setScissor()
 end
 
-local function panel(x, y, w, h)
-  love.graphics.setColor(0, 0, 0, 0.65)
-  love.graphics.rectangle("fill", x, y, w, h, 6)
-end
-
 function Town:drawHud()
-  love.graphics.setFont(ui.fonts.body)
-  local wallet = ("%d coins"):format(self.app.state.wallet)
-  local width = ui.fonts.body:getWidth(wallet) + 20
-  panel(ui.WIDTH - width - 8, 8, width, 28)
-  ui.setColor("coin")
-  love.graphics.print(wallet, ui.WIDTH - width + 2, 13)
+  local wallet = self.app.state.wallet
+  local width = ui.fonts.body:getWidth(tostring(wallet)) + 64
+  ui.panel(ui.WIDTH - width - 6, 6, width, 38)
+  ui.coins(wallet, ui.WIDTH - 26, 16)
 
   if self.toast then
-    panel(ui.WIDTH / 2 - 130, 44, 260, 28)
-    ui.setColor("coin")
-    love.graphics.printf(self.toast, ui.WIDTH / 2 - 130, 49, 260, "center")
+    ui.messagePanel(self.toast, ui.WIDTH / 2, 48, "coin")
   end
 
   local building = self:facingBuilding()
   local hint = building and ("Up: enter %s"):format(select(2, self:label(building))) or "Start: quit"
-  local hintWidth = ui.fonts.body:getWidth(hint) + 24
-  panel(ui.WIDTH / 2 - hintWidth / 2, ui.HEIGHT - 38, hintWidth, 28)
-  ui.setColor("text")
-  love.graphics.printf(hint, 0, ui.HEIGHT - 33, ui.WIDTH, "center")
+  ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)
 end
 
 return Town

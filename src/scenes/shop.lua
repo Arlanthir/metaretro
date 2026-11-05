@@ -145,7 +145,7 @@ function Shop:draw()
 
   local listTop = ui.HEADER_HEIGHT + 40
   local listWidth = 360
-  local listHeight = ui.HEIGHT - listTop - 56
+  local listHeight = ui.HEIGHT - listTop - 84
   if #section.items == 0 then
     love.graphics.setFont(ui.fonts.body)
     ui.setColor("muted")
@@ -172,7 +172,7 @@ function Shop:draw()
   if self.notice then
     love.graphics.setFont(ui.fonts.body)
     ui.setColor("coin")
-    love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - 48, ui.WIDTH - ui.MARGIN * 2, "center")
+    love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - ui.FOOTER_HEIGHT - 32, ui.WIDTH - ui.MARGIN * 2, "center")
   end
   ui.footer(self.section.consoles and "A: buy   B: leave" or "A: details   Y: buy   B: leave")
 end

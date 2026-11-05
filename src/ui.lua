@@ -1,27 +1,60 @@
 local covers = require("services.covers")
 
+-- Menu look: Ninja Adventure UI pieces (CC0) and the Jersey 10 font (OFL), see src/assets.
 local ui = {}
 
 ui.WIDTH, ui.HEIGHT = 640, 480
-ui.MARGIN = 16
-ui.HEADER_HEIGHT = 40
+ui.MARGIN = 24 -- content inset from the screen edge, inside the content panel's frame
+ui.HEADER_HEIGHT = 52 -- where content starts below the header bar
+ui.FOOTER_HEIGHT = 44
 
 ui.colors = {
-  background = { 0.08, 0.07, 0.12 },
-  panel = { 0.15, 0.13, 0.22 },
-  highlight = { 0.95, 0.75, 0.25 },
-  text = { 0.95, 0.94, 0.9 },
-  muted = { 0.6, 0.58, 0.68 },
-  coin = { 1.0, 0.85, 0.3 },
-  trophy = { 0.52, 0.58, 0.72 },
+  background = { 0.12, 0.14, 0.10 },
+  panelFill = { 0.22, 0.19, 0.15 }, -- inside of framed panels
+  panel = { 0.31, 0.27, 0.21 }, -- placeholders inside panels
+  highlight = { 0.98, 0.58, 0.28 },
+  selection = { 1.0, 0.68, 0.33 },
+  text = { 0.96, 0.91, 0.79 },
+  muted = { 0.72, 0.64, 0.52 },
+  coin = { 1.0, 0.78, 0.32 },
+  stars = { 1.0, 0.76, 0.22 },
+  trophy = { 0.64, 0.70, 0.84 },
 }
 
+local SCALE = 2
+local FRAME_SCALE = 1
+local UI_DIR = "assets/ninja-adventure/ui/"
+local images = {}
+
+local function image(name)
+  images[name] = images[name] or love.graphics.newImage(UI_DIR .. name .. ".png")
+  return images[name]
+end
+
+local function font(size)
+  local f = love.graphics.newFont("assets/fonts/Jersey10.ttf", size, "mono")
+  -- Characters the pixel font lacks (e.g. kana) come from LÖVE's default font instead of boxes.
+  f:setFallbacks(love.graphics.newFont(size))
+  return f
+end
+
+local background
+
 function ui.load()
-  ui.fonts = {
-    small = love.graphics.newFont(12),
-    body = love.graphics.newFont(15),
-    title = love.graphics.newFont(20),
-  }
+  ui.fonts = { small = font(20), body = font(20), title = font(30) }
+  -- Darkened grass from the town, so menus feel like they're laid over it.
+  local grass = love.graphics.newImage("assets/ninja-adventure/TilesetFloor.png")
+  local tile = love.graphics.newQuad(0, 192, 16, 16, grass:getDimensions())
+  background = love.graphics.newCanvas(ui.WIDTH, ui.HEIGHT)
+  love.graphics.setCanvas(background)
+  love.graphics.setColor(0.38, 0.42, 0.34)
+  for y = 0, ui.HEIGHT, 32 do
+    for x = 0, ui.WIDTH, 32 do
+      love.graphics.draw(grass, tile, x, y, 0, SCALE, SCALE)
+    end
+  end
+  love.graphics.setCanvas()
+  love.graphics.setColor(1, 1, 1)
 end
 
 function ui.setColor(name, alpha)
@@ -29,22 +62,154 @@ function ui.setColor(name, alpha)
   love.graphics.setColor(c[1], c[2], c[3], alpha or 1)
 end
 
-function ui.header(title, wallet)
-  ui.setColor("panel")
-  love.graphics.rectangle("fill", 0, 0, ui.WIDTH, ui.HEADER_HEIGHT)
-  love.graphics.setFont(ui.fonts.title)
-  local coins = ("%d coins"):format(wallet)
-  local titleWidth = ui.WIDTH - ui.MARGIN * 3 - ui.fonts.title:getWidth(coins)
-  ui.setColor("text")
-  love.graphics.print(ui.truncate(ui.fonts.title, title, titleWidth), ui.MARGIN, 9)
-  ui.setColor("coin")
-  love.graphics.printf(coins, 0, 9, ui.WIDTH - ui.MARGIN, "right")
+-- Nine-slice of the panel image: a wooden frame (6px left/top, 5px right/bottom at 1x) around white.
+local PANEL_INSETS = { 6, 6, 5, 5 }
+local panelQuads
+
+local panelImage
+
+-- The pack's panel with its white inside recoloured to `panelFill`.
+local function loadPanel()
+  local data = love.image.newImageData(UI_DIR .. "Panel.png")
+  local fill = ui.colors.panelFill
+  data:mapPixel(function(_, _, r, g, b, a)
+    if r == 1 and g == 1 and b == 1 then return fill[1], fill[2], fill[3], a end
+    return r, g, b, a
+  end)
+  return love.graphics.newImage(data)
 end
 
+function ui.panel(x, y, width, height)
+  panelImage = panelImage or loadPanel()
+  local img = panelImage
+  local w, h = img:getDimensions()
+  local l, t, r, b = unpack(PANEL_INSETS)
+  if not panelQuads then
+    panelQuads = {}
+    local xs, ws = { 0, l, w - r }, { l, w - l - r, r }
+    local ys, hs = { 0, t, h - b }, { t, h - t - b, b }
+    for row = 1, 3 do
+      for column = 1, 3 do
+        panelQuads[(row - 1) * 3 + column] = love.graphics.newQuad(xs[column], ys[row], ws[column], hs[row], w, h)
+      end
+    end
+  end
+  local scale = FRAME_SCALE
+  local innerW, innerH = width - (l + r) * scale, height - (t + b) * scale
+  local columnX, columnW = { x, x + l * scale, x + width - r * scale }, { l, innerW / scale, r }
+  local rowY, rowH = { y, y + t * scale, y + height - b * scale }, { t, innerH / scale, b }
+  local sourceW, sourceH = { l, w - l - r, r }, { t, h - t - b, b }
+  love.graphics.setColor(1, 1, 1)
+  for row = 1, 3 do
+    for column = 1, 3 do
+      love.graphics.draw(img, panelQuads[(row - 1) * 3 + column], columnX[column], rowY[row], 0,
+        scale * columnW[column] / sourceW[column], scale * rowH[row] / sourceH[row])
+    end
+  end
+end
+
+-- A spinning-coin icon (first frame) followed by the amount, right-aligned to `right`.
+function ui.coins(amount, right, y)
+  local text = tostring(amount)
+  local f = ui.fonts.body
+  local x = right - f:getWidth(text)
+  love.graphics.setFont(f)
+  ui.setColor("text")
+  love.graphics.print(text, x, y)
+  local coin = image("Coin")
+  local quad = love.graphics.newQuad(0, 0, 10, 10, coin:getDimensions())
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.draw(coin, quad, x - 24, y + (f:getHeight() - 20) / 2, 0, SCALE, SCALE)
+  return x - 24
+end
+
+function ui.backdrop()
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.draw(background, 0, 0)
+end
+
+-- Screen backdrop, header bar with the title and wallet, and the content panel below it.
+function ui.header(title, wallet)
+  ui.backdrop()
+  ui.panel(4, ui.HEADER_HEIGHT - 4, ui.WIDTH - 8, ui.HEIGHT - ui.HEADER_HEIGHT - ui.FOOTER_HEIGHT + 4)
+  ui.panel(4, 4, ui.WIDTH - 8, 44)
+  local coinsLeft = ui.coins(wallet, ui.WIDTH - 22, 15)
+  love.graphics.setFont(ui.fonts.title)
+  ui.setColor("text")
+  love.graphics.print(ui.truncate(ui.fonts.title, title, coinsLeft - 40), 20, 9)
+end
+
+-- Button names in hints map to their icons; "L/R" shows both shoulder buttons.
+local BUTTON_ICONS = {
+  A = { "ButtonA" }, B = { "ButtonB" }, X = { "ButtonX" }, Y = { "ButtonY" },
+  ["L/R"] = { "ButtonLB", "ButtonRB" }, Up = { "DPadUp" }, Start = { "Start" }, Select = { "Select" },
+}
+
+-- Hints look like "A: buy   B: leave": entries separated by 2+ spaces, each "<button>: <label>".
+local function parseHint(hint)
+  local entries = {}
+  for entry in (hint .. "  "):gmatch("(.-)%s%s+") do
+    local button, label = entry:match("^(%S+):%s*(.*)$")
+    if button and BUTTON_ICONS[button] then
+      table.insert(entries, { icons = BUTTON_ICONS[button], label = label })
+    elseif entry ~= "" then
+      table.insert(entries, { icons = {}, label = entry })
+    end
+  end
+  return entries
+end
+
+local function hintWidth(entries)
+  local f, width = ui.fonts.small, 0
+  for i, entry in ipairs(entries) do
+    for _, icon in ipairs(entry.icons) do
+      width = width + image(icon):getWidth() + 3
+    end
+    width = width + f:getWidth(entry.label) + (i < #entries and 18 or 0)
+  end
+  return width
+end
+
+local function drawHint(entries, x, centerY)
+  local f = ui.fonts.small
+  love.graphics.setFont(f)
+  for _, entry in ipairs(entries) do
+    for _, icon in ipairs(entry.icons) do
+      local img = image(icon)
+      love.graphics.setColor(1, 1, 1)
+      love.graphics.draw(img, x, math.floor(centerY - img:getHeight() / 2))
+      x = x + img:getWidth() + 3
+    end
+    ui.setColor("text")
+    love.graphics.print(entry.label, x, math.floor(centerY - f:getHeight() / 2))
+    x = x + f:getWidth(entry.label) + 18
+  end
+end
+
+-- Full-width hint bar at the bottom of menu screens.
 function ui.footer(hint)
-  love.graphics.setFont(ui.fonts.small)
-  ui.setColor("muted")
-  love.graphics.printf(hint, ui.MARGIN, ui.HEIGHT - 22, ui.WIDTH - ui.MARGIN * 2, "center")
+  local entries = parseHint(hint)
+  local top = ui.HEIGHT - ui.FOOTER_HEIGHT + 4
+  ui.panel(4, top, ui.WIDTH - 8, ui.FOOTER_HEIGHT - 8)
+  drawHint(entries, math.floor(ui.WIDTH / 2 - hintWidth(entries) / 2), top + (ui.FOOTER_HEIGHT - 8) / 2)
+end
+
+-- A hint in a panel just big enough for it, centred on `centerX` (used over the town).
+function ui.hintPanel(hint, centerX, y)
+  local entries = parseHint(hint)
+  local width = hintWidth(entries) + 40
+  ui.panel(math.floor(centerX - width / 2), y, width, 36)
+  drawHint(entries, math.floor(centerX - width / 2) + 20, y + 18)
+end
+
+-- Text in a panel just big enough for it, centred on `centerX`.
+function ui.messagePanel(text, centerX, y, colorName)
+  local f = ui.fonts.body
+  local width = f:getWidth(text) + 40
+  ui.panel(math.floor(centerX - width / 2), y, width, 38)
+  love.graphics.setFont(f)
+  ui.setColor(colorName or "text")
+  love.graphics.print(text, math.floor(centerX - f:getWidth(text) / 2), y + 10)
 end
 
 local truncated = setmetatable({}, { __mode = "k" })
@@ -104,7 +269,7 @@ function ui.stars(x, y, rating)
     for layer = 1, 2 do
       local fill = layer == 1 and 1 or math.max(0, math.min(1, filled - i))
       if fill > 0 then
-        if layer == 1 then ui.setColor("muted", 0.35) else ui.setColor("highlight") end
+        if layer == 1 then ui.setColor("muted", 0.3) else ui.setColor("stars") end
         love.graphics.setScissor(starX, y, STAR_SIZE * fill, STAR_SIZE)
         for _, triangle in ipairs(starTriangles) do
           love.graphics.polygon("fill", starX + triangle[1], y + triangle[2], starX + triangle[3], y + triangle[4],
@@ -123,28 +288,30 @@ function ui.list(items, cursor, scroll, x, y, width, height, label)
   local rowHeight = 24
   local visible = math.floor(height / rowHeight)
   scroll = math.max(math.min(scroll, cursor - 1), cursor - visible, 0)
-  love.graphics.setFont(ui.fonts.body)
+  local f = ui.fonts.body
+  love.graphics.setFont(f)
   for row = 1, math.min(visible, #items - scroll) do
     local index = scroll + row
     local rowY = y + (row - 1) * rowHeight
+    local textY = rowY + math.floor((rowHeight - f:getHeight()) / 2)
     if index == cursor then
-      ui.setColor("highlight", 0.25)
-      love.graphics.rectangle("fill", x, rowY, width, rowHeight, 4)
-      ui.setColor("highlight")
-    else
+      ui.setColor("selection", 0.45)
+      love.graphics.rectangle("fill", x, rowY, width, rowHeight, 3)
       ui.setColor("text")
+      local centerY = rowY + rowHeight / 2
+      love.graphics.polygon("fill", x + 6, centerY - 6, x + 6, centerY + 6, x + 13, centerY)
     end
     local text, value, trophy = label(items[index])
-    local valueWidth = value and ui.fonts.body:getWidth(value) + 12 or 0
+    local valueWidth = value and f:getWidth(value) + 12 or 0
     local trophyWidth = trophy and 18 or 0
-    love.graphics.print(ui.truncate(ui.fonts.body, text, width - 16 - valueWidth - trophyWidth), x + 8, rowY + 4)
+    ui.setColor("text")
+    love.graphics.print(ui.truncate(f, text, width - 28 - valueWidth - trophyWidth), x + 20, textY)
     if trophy then
-      local r, g, b, a = love.graphics.getColor()
       ui.trophy(x + width - 8 - valueWidth - 14, rowY + 6)
-      love.graphics.setColor(r, g, b, a)
     end
     if value then
-      love.graphics.printf(value, x + 8, rowY + 4, width - 16, "right")
+      ui.setColor("coin")
+      love.graphics.printf(value, x + 8, textY, width - 16, "right")
     end
   end
   return scroll

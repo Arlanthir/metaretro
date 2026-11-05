@@ -69,7 +69,7 @@ function Collection:draw()
 
   local listTop = ui.HEADER_HEIGHT + 56
   local listWidth = 360
-  self.scroll = ui.list(games, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, ui.HEIGHT - listTop - 32,
+  self.scroll = ui.list(games, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, ui.HEIGHT - listTop - 60,
     function(game) return game.name, nil, game.cheevosId ~= nil end)
 
   local selected = games[self.cursor]

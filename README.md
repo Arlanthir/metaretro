@@ -22,7 +22,7 @@ Built with [LÖVE](https://love2d.org) 11.x and distributed as a PortMaster port
 
 ### Art
 
-Town art comes from the [Ninja Adventure asset pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-boy and AAA (CC0). Only the images in use are in `src/assets/ninja-adventure/`; the full pack can be unzipped into `example-data/ninja-adventure/` (ignored by git) to pick more.
+Town and menu art comes from the [Ninja Adventure asset pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-boy and AAA (CC0). The font is [Jersey 10](https://fonts.google.com/specimen/Jersey+10) (SIL Open Font License, see `src/assets/fonts/`). Only the images in use are in `src/assets/ninja-adventure/`; the full pack can be unzipped into `example-data/ninja-adventure/` (ignored by git) to pick more.
 
 ### RetroAchievements
 

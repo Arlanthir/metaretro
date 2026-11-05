@@ -45,7 +45,7 @@ function GameDetail:draw()
   local console = consoles.get(game.system)
   ui.header(game.name, self.app.state.wallet)
 
-  local top = ui.HEADER_HEIGHT + ui.MARGIN
+  local top = ui.HEADER_HEIGHT + 14
   ui.drawCover(game.image or game.thumbnail, ui.MARGIN, top, 220, 300)
 
   local textX = ui.MARGIN * 2 + 220
@@ -80,7 +80,7 @@ function GameDetail:draw()
   if self.notice then
     love.graphics.setFont(ui.fonts.body)
     ui.setColor("coin")
-    love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - 48, ui.WIDTH - ui.MARGIN * 2, "center")
+    love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - ui.FOOTER_HEIGHT - 32, ui.WIDTH - ui.MARGIN * 2, "center")
   end
   ui.footer(("A: %s   B: back"):format(self.primary.hint))
 end
