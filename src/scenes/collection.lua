@@ -61,9 +61,12 @@ function Collection:draw()
   love.graphics.printf(("<  %s  >"):format(system.name), 0, ui.HEADER_HEIGHT + 10, ui.WIDTH, "center")
   ui.setColor("muted")
   love.graphics.setFont(ui.fonts.small)
-  love.graphics.printf(("%d / %d"):format(self.tab, #self.systems), 0, ui.HEADER_HEIGHT + 30, ui.WIDTH, "center")
-
   local games = self:games()
+  local systemGames = self.app.catalog.bySystem[system.id]
+  local owned, total = catalog.progress(self.app.catalog)
+  love.graphics.printf(("Console %d of %d  ·  %d / %d games here  ·  %d / %d games in all"):format(
+    self.tab, #self.systems, #games, #games + #systemGames.locked, owned, total), 0, ui.HEADER_HEIGHT + 30, ui.WIDTH, "center")
+
   local listTop = ui.HEADER_HEIGHT + 56
   local listWidth = 360
   self.scroll = ui.list(games, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, ui.HEIGHT - listTop - 32,

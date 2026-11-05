@@ -54,6 +54,13 @@ describe("catalog", function()
     assert.equal("gba", owned[1].id)
   end)
 
+  it("counts owned games out of all games", function()
+    local state = save.defaults()
+    state.owned[catalog.gameId("snes", "zelda")] = true
+    state.owned[catalog.gameId("gba", "metroid")] = true
+    assert.same({ 2, 4 }, { catalog.progress(catalog.build(backend, state)) })
+  end)
+
   it("leaves out systems the include filter rejects", function()
     local built = catalog.build(backend, save.defaults(), function(id) return id ~= "gba" end)
     assert.same({ "Super Nintendo" }, { built.systems[1].name, built.systems[2] and built.systems[2].name })

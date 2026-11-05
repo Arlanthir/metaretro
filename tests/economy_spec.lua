@@ -8,12 +8,14 @@ local function game(fields)
 end
 
 describe("economy.price", function()
-  it("uses the system tier as base price", function()
+  it("bases the price on the console generation", function()
+    assert.equal(20, economy.price(game({ system = "atari2600" })))
     assert.equal(40, economy.price(game({ system = "nes" })))
-    assert.equal(100, economy.price(game({ system = "psp" })))
+    assert.equal(100, economy.price(game({ system = "gba" })))
+    assert.equal(120, economy.price(game({ system = "psp" })))
   end)
 
-  it("falls back to the default tier for unknown systems", function()
+  it("treats unknown systems as 4th generation", function()
     assert.equal(60, economy.price(game({ system = "unknown" })))
   end)
 
@@ -95,6 +97,19 @@ describe("economy.buyConsole", function()
     assert.equal(1000 - economy.consolePrice(snes), state.wallet)
     assert.is_true(state.ownedConsoles.snes)
     assert.same({ false, "already owned" }, { economy.buyConsole(state, snes) })
+  end)
+
+  it("comes with a starter pack of that console's games", function()
+    local state = save.defaults()
+    local games = {
+      game({ path = "./a" }), game({ path = "./b" }), game({ path = "./c" }), game({ path = "./d" }),
+      game({ system = "nes", path = "./other" }),
+    }
+    state.owned[games[1].id] = true
+    local ok, granted = economy.buyConsole(state, snes, games, function() return 1 end)
+    assert.is_true(ok)
+    assert.same({ games[2], games[3], games[4] }, granted)
+    assert.is_nil(state.owned[games[5].id])
   end)
 
   it("refuses when the player can't afford it", function()

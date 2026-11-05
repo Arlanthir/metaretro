@@ -69,18 +69,37 @@ function Shop:buy(item, onBought)
     return ("You need %d more coins for %s."):format(price - self.app.state.wallet, item.name)
   end
   scenes.push(Confirm.new(("Buy %s for %d coins?"):format(item.name, price), function()
-    local buy = self.section.consoles and economy.buyConsole or economy.buy
-    local ok, reason = buy(self.app.state, item)
-    if ok then
-      self.app:refresh()
-      self:refresh()
-      self.notice = self.section.consoles and ("Bought %s! Its store opens in town."):format(item.name)
-        or ("Bought %s!"):format(item.name)
-      if onBought then onBought() end
+    local ok, result
+    if self.section.consoles then
+      ok, result = economy.buyConsole(self.app.state, item, self.app.catalog.bySystem[item.id].locked, love.math.random)
     else
-      self.notice = ("Can't buy %s: %s."):format(item.name, reason)
+      ok, result = economy.buy(self.app.state, item)
     end
+    if not ok then
+      self.notice = ("Can't buy %s: %s."):format(item.name, result)
+      return
+    end
+    self.app:refresh()
+    self:refresh()
+    if self.section.consoles then
+      self.notice = ("Bought %s! Its store opens in town."):format(item.name)
+      scenes.push(Confirm.notice(self:starterPackMessage(item, result)))
+    else
+      self.notice = ("Bought %s!"):format(item.name)
+    end
+    if onBought then onBought() end
   end))
+end
+
+function Shop:starterPackMessage(console, games)
+  if #games == 0 then
+    return ("%s is yours!"):format(console.name)
+  end
+  local lines = { ("%s comes with:"):format(console.name), "" }
+  for _, game in ipairs(games) do
+    table.insert(lines, ui.truncate(ui.fonts.body, game.name, 320))
+  end
+  return table.concat(lines, "\n")
 end
 
 function Shop:showDetails(item)

@@ -10,14 +10,9 @@ economy.SESSION_CAP_MINUTES = 120
 economy.COINS_PER_RA_POINT = 1
 economy.HARDCORE_MULTIPLIER = 2
 
-local SYSTEM_TIER = {
-  atari2600 = 1, nes = 1, gb = 1, gbc = 1, gamegear = 1, mastersystem = 1,
-  snes = 2, megadrive = 2, gba = 2, pcengine = 2, neogeo = 2,
-  n64 = 3, psx = 3, saturn = 3, nds = 3,
-  dreamcast = 4, psp = 4,
-}
-local TIER_BASE = { 40, 60, 80, 100 }
-local DEFAULT_TIER = 2
+-- Base game price per console generation: 2nd gen costs 20, each later one 20 more.
+economy.PRICE_PER_GENERATION = 20
+local DEFAULT_GENERATION = 4
 
 local function roundTo(value, step)
   return math.floor(value / step + 0.5) * step
@@ -25,7 +20,9 @@ end
 
 -- ES ratings are 0..1; a well-rated game costs up to 25% more, a poorly rated one up to 25% less.
 function economy.price(game)
-  local base = TIER_BASE[SYSTEM_TIER[game.system] or DEFAULT_TIER]
+  local console = consoles.get(game.system)
+  local generation = console and console.generation or DEFAULT_GENERATION
+  local base = (generation - 1) * economy.PRICE_PER_GENERATION
   local rating = tonumber(game.rating)
   if rating then
     base = base * (0.75 + math.max(0, math.min(1, rating)) * 0.5)
@@ -68,8 +65,13 @@ function economy.buy(state, game)
   return purchase(state, state.owned, game.id, economy.price(game))
 end
 
-function economy.buyConsole(state, console)
-  return purchase(state, state.ownedConsoles, console.id, economy.consolePrice(console))
+-- A new console comes with a starter pack picked from `games`; returns true and the granted games.
+function economy.buyConsole(state, console, games, random)
+  local ok, reason = purchase(state, state.ownedConsoles, console.id, economy.consolePrice(console))
+  if not ok then
+    return false, reason
+  end
+  return true, economy.grantStarterPack(state, games or {}, random, { [console.id] = true })
 end
 
 local function releaseYear(game)
@@ -136,7 +138,7 @@ function economy.grantStarterPack(state, games, random, systems)
   random = random or math.random
   local eligible = {}
   for _, game in ipairs(games) do
-    if (not systems or systems[game.system]) and not economy.isJapaneseOnly(game) then
+    if (not systems or systems[game.system]) and not state.owned[game.id] and not economy.isJapaneseOnly(game) then
       table.insert(eligible, game)
     end
   end

@@ -43,6 +43,16 @@ function catalog.allGames(backend)
   return games
 end
 
+-- Returns how many games are owned and how many there are in total, across all systems.
+function catalog.progress(built)
+  local owned, total = 0, 0
+  for _, games in pairs(built.bySystem) do
+    owned = owned + #games.owned
+    total = total + #games.owned + #games.locked
+  end
+  return owned, total
+end
+
 function catalog.ownedSystems(built)
   local systems = {}
   for _, system in ipairs(built.systems) do
