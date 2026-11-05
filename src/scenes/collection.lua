@@ -1,6 +1,8 @@
 local catalog = require("core.catalog")
+local log = require("core.log")
 local scenes = require("core.scenes")
 local ui = require("ui")
+local Confirm = require("scenes.confirm")
 local GameDetail = require("scenes.gamedetail")
 
 local Collection = {}
@@ -38,7 +40,10 @@ function Collection:action(name)
   elseif name == "a" and games[self.cursor] then
     scenes.push(GameDetail.new(self.app, games[self.cursor]))
   elseif name == "start" then
-    love.event.quit()
+    scenes.push(Confirm.new("Quit Metaretro?", function()
+      log("quit confirmed by player")
+      love.event.quit()
+    end))
   end
 end
 

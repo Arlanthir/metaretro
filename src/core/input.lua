@@ -23,9 +23,17 @@ local REPEAT_INTERVAL = 0.08
 
 local held = {}
 local handler = function() end
+local clock = love and love.timer and love.timer.getTime or os.clock
+local ignoreUntil = 0
 
 function input.setHandler(fn)
   handler = fn
+end
+
+-- Drops presses for a while, e.g. ones queued while the app was blocked loading.
+function input.ignoreFor(seconds)
+  held = {}
+  ignoreUntil = clock() + seconds
 end
 
 function input.setNintendoLayout(enabled)
@@ -35,7 +43,7 @@ function input.setNintendoLayout(enabled)
 end
 
 local function press(action)
-  if not action then return end
+  if not action or clock() < ignoreUntil then return end
   if REPEATABLE[action] then
     held[action] = REPEAT_DELAY
   end

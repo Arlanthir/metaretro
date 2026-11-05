@@ -51,7 +51,12 @@ local function loadLibrary(args)
   app.earned = playtime.credit(app.state, app.backend, games, sessions)
   app:persist()
   app.catalog = catalog.build(app.backend, app.state)
+  input.ignoreFor(0.5)
   scenes.switch(Collection.new(app))
+end
+
+function love.quit()
+  log("quit")
 end
 
 function love.load(args)

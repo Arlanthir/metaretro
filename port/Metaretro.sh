@@ -25,12 +25,16 @@ cd "$GAMEDIR" || exit 1
 
 # PortMaster's bundled LÖVE runtime; sets $LOVE_RUN, $LOVE_BINARY and $LOVE_GPTK.
 source "$controlfolder/runtimes/love_11.5/love.txt"
-$GPTOKEYB "$LOVE_GPTK" &
 
 while true; do
+  # gptokeyb only while Metaretro runs, so its quit combo can't fire during a game.
+  $GPTOKEYB "$LOVE_GPTK" &
+  gptokeyb_pid=$!
   pm_platform_helper "$LOVE_BINARY"
   # TEMP: starter pack limited to GBA while testing launches; remove once launching is verified.
   $LOVE_RUN "$GAMEDIR/metaretro.love" --layout nintendo --starter-systems gba
+  echo "[metaretro.sh] metaretro exited with status $?"
+  kill "$gptokeyb_pid" 2>/dev/null
   [ -f "$SAVEDIR/launch.txt" ] || break
 
   game_id=$(sed -n 1p "$SAVEDIR/launch.txt")
@@ -39,6 +43,7 @@ while true; do
 
   start=$(date +%s)
   sh -c "$game_cmd"
+  echo "[metaretro.sh] game exited with status $?"
   printf '%s\t%s\t%s\n' "$game_id" "$start" "$(date +%s)" >> "$SAVEDIR/sessions.log"
 done
 
