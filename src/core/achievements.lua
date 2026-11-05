@@ -32,6 +32,10 @@ function achievements.credit(state, progress, since)
   end
   coins = math.floor(coins + 0.5)
   state.wallet = state.wallet + coins
+  if progress.ID then
+    local gameId = tostring(progress.ID)
+    state.achievementCoins[gameId] = (state.achievementCoins[gameId] or 0) + coins
+  end
   return coins
 end
 

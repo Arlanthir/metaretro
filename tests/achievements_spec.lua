@@ -24,6 +24,16 @@ describe("achievements.credit", function()
     assert.equal(coins, state.wallet)
   end)
 
+  it("keeps a running total per game", function()
+    local state = save.defaults()
+    local data = progress({ { ID = 1, Points = 10, DateEarned = "2026-11-02 10:00:00" } })
+    data.ID = 508
+    achievements.credit(state, data, SINCE)
+    data.Achievements["2"] = { ID = 2, Points = 5, DateEarned = "2026-11-03 10:00:00" }
+    achievements.credit(state, data, SINCE)
+    assert.equal(15 * PER_POINT, state.achievementCoins["508"])
+  end)
+
   it("pays each unlock only once", function()
     local state = save.defaults()
     local data = progress({ { ID = 1, Points = 10, DateEarned = "2026-11-02 10:00:00" } })

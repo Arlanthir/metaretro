@@ -13,6 +13,7 @@ ui.colors = {
   text = { 0.95, 0.94, 0.9 },
   muted = { 0.6, 0.58, 0.68 },
   coin = { 1.0, 0.85, 0.3 },
+  trophy = { 0.52, 0.58, 0.72 },
 }
 
 function ui.load()
@@ -69,7 +70,19 @@ function ui.truncate(font, text, maxWidth)
   return result
 end
 
--- Draws a scrolling list; `label(item)` returns the text and an optional right-aligned value.
+-- A small cup silhouette marking games with RetroAchievements.
+function ui.trophy(x, y)
+  ui.setColor("trophy")
+  love.graphics.rectangle("fill", x + 2, y, 8, 5, 2)
+  love.graphics.rectangle("fill", x + 3, y + 4, 6, 2)
+  love.graphics.rectangle("fill", x, y + 1, 2, 3)
+  love.graphics.rectangle("fill", x + 10, y + 1, 2, 3)
+  love.graphics.rectangle("fill", x + 5, y + 6, 2, 3)
+  love.graphics.rectangle("fill", x + 3, y + 9, 6, 2)
+end
+
+-- Draws a scrolling list; `label(item)` returns the text, an optional right-aligned value
+-- and whether to mark the row with a trophy.
 -- Returns the scroll offset that keeps the cursor visible.
 function ui.list(items, cursor, scroll, x, y, width, height, label)
   local rowHeight = 24
@@ -86,9 +99,15 @@ function ui.list(items, cursor, scroll, x, y, width, height, label)
     else
       ui.setColor("text")
     end
-    local text, value = label(items[index])
+    local text, value, trophy = label(items[index])
     local valueWidth = value and ui.fonts.body:getWidth(value) + 12 or 0
-    love.graphics.print(ui.truncate(ui.fonts.body, text, width - 16 - valueWidth), x + 8, rowY + 4)
+    local trophyWidth = trophy and 18 or 0
+    love.graphics.print(ui.truncate(ui.fonts.body, text, width - 16 - valueWidth - trophyWidth), x + 8, rowY + 4)
+    if trophy then
+      local r, g, b, a = love.graphics.getColor()
+      ui.trophy(x + width - 8 - valueWidth - 14, rowY + 6)
+      love.graphics.setColor(r, g, b, a)
+    end
     if value then
       love.graphics.printf(value, x + 8, rowY + 4, width - 16, "right")
     end

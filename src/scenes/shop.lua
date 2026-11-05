@@ -153,7 +153,7 @@ function Shop:draw()
       ui.MARGIN, listTop + 20, listWidth, "center")
   else
     self.scroll = ui.list(section.items, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, listHeight,
-      function(item) return self:itemLabel(item), ("%d c"):format(self:price(item)) end)
+      function(item) return self:itemLabel(item), ("%d c"):format(self:price(item)), item.cheevosId ~= nil end)
   end
 
   local selected = section.items[self.cursor]

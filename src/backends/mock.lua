@@ -32,6 +32,7 @@ local function makeGames(system, index)
       rating = ((i * 7 + index) % 10) / 10,
       playcount = (i == index) and 1 or 0,
       gametime = 0,
+      cheevosId = i % 3 == 0 and index * 100 + i or nil,
     })
   end
   return games

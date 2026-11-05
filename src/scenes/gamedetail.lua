@@ -28,6 +28,17 @@ local function formatPlaytime(seconds)
   return ("%dh %02dm"):format(math.floor(seconds / 3600), math.floor(seconds % 3600 / 60))
 end
 
+function GameDetail:achievementsLine()
+  local game = self.game
+  if not game.cheevosId then
+    return "Achievements: none known"
+  elseif not self.app.state.owned[game.id] then
+    return "Achievements: yes"
+  end
+  local coins = self.app.state.achievementCoins[tostring(game.cheevosId)]
+  return coins and ("Achievements: %d coins earned"):format(coins) or "Achievements: none paid yet"
+end
+
 function GameDetail:draw()
   local game = self.game
   local stats = self.app.backend.playStats(game)
@@ -47,11 +58,15 @@ function GameDetail:draw()
     ("Genre: %s"):format(game.genre or "?"),
     ("Developer: %s"):format(game.developer or "?"),
     ("Played: %d times, %s"):format(tonumber(stats.playcount) or 0, formatPlaytime(stats.gametime)),
+    self:achievementsLine(),
   }, "\n"), textX, top, textWidth, "left")
+  if game.cheevosId then
+    ui.trophy(textX + ui.fonts.body:getWidth(self:achievementsLine()) + 8, top + 5 * ui.fonts.body:getHeight() + 4)
+  end
 
   ui.setColor("text")
   love.graphics.setFont(ui.fonts.small)
-  love.graphics.printf(game.desc or "", textX, top + 120, textWidth, "left")
+  love.graphics.printf(game.desc or "", textX, top + 140, textWidth, "left")
 
   if self.notice then
     love.graphics.setFont(ui.fonts.body)

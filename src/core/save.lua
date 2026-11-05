@@ -16,6 +16,7 @@ function save.defaults()
     lots = {},
     offers = {},
     seenAchievements = {}, -- achievement id -> "softcore" or "hardcore" once paid
+    achievementCoins = {}, -- RetroAchievements game id -> coins paid for its achievements
     achievementsSince = "", -- UTC time tracking started; earlier unlocks pay less
     pendingAchievementGames = {}, -- RetroAchievements game ids to check at the next sync
     creditedGametime = {},
