@@ -12,7 +12,7 @@ function GameDetail.new(app, game, primary)
     hint = "play",
     run = function() launcher.launch(app.backend, game) end,
   }
-  return setmetatable({ app = app, game = game, primary = primary }, GameDetail)
+  return setmetatable({ app = app, game = game, primary = primary, descScroll = 0, descMaxScroll = 0 }, GameDetail)
 end
 
 function GameDetail:action(name)
@@ -20,6 +20,9 @@ function GameDetail:action(name)
     self.notice = self.primary.run(self)
   elseif name == "b" then
     scenes.pop()
+  elseif name == "up" or name == "down" then
+    local step = name == "up" and -1 or 1
+    self.descScroll = math.max(0, math.min(self.descMaxScroll, self.descScroll + step))
   end
 end
 
@@ -73,16 +76,43 @@ function GameDetail:draw()
     end
   end
 
-  ui.setColor("text")
-  love.graphics.setFont(ui.fonts.small)
-  love.graphics.printf(game.desc or "", textX, top + #rows * lineHeight + 16, textWidth, "left")
+  local descTop = top + #rows * lineHeight + 16
+  local descBottom = ui.HEIGHT - ui.FOOTER_HEIGHT - 12 - (self.notice and 32 or 0)
+  self:drawDescription(textX, descTop, textWidth, descBottom - descTop)
 
   if self.notice then
     love.graphics.setFont(ui.fonts.body)
     ui.setColor("coin")
     love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - ui.FOOTER_HEIGHT - 32, ui.WIDTH - ui.MARGIN * 2, "center")
   end
-  ui.footer(("A: %s   B: back"):format(self.primary.hint))
+  ui.footer(("A: %s   %sB: back"):format(self.primary.hint, self.descMaxScroll > 0 and "Up/Down: scroll   " or ""))
+end
+
+-- The description, wrapped to `width` and scrolled with up/down when it's taller than `height`.
+function GameDetail:drawDescription(x, y, width, height)
+  local f = ui.fonts.small
+  if not self.descLines then
+    local _, lines = f:getWrap(self.game.desc or "", width - 14)
+    self.descLines = lines
+  end
+  local visible = math.max(1, math.floor(height / ui.LINE))
+  self.descMaxScroll = math.max(0, #self.descLines - visible)
+  self.descScroll = math.min(self.descScroll, self.descMaxScroll)
+  love.graphics.setFont(f)
+  ui.setColor("text")
+  for i = 1, math.min(visible, #self.descLines - self.descScroll) do
+    love.graphics.print(self.descLines[self.descScroll + i], x, y + (i - 1) * ui.LINE)
+  end
+  -- Small arrows at the right edge show there's more text above or below.
+  ui.setColor("highlight")
+  local arrowX = x + width - 4
+  if self.descScroll > 0 then
+    love.graphics.polygon("fill", arrowX - 5, y + 8, arrowX + 5, y + 8, arrowX, y + 2)
+  end
+  if self.descScroll < self.descMaxScroll then
+    local bottom = y + visible * ui.LINE
+    love.graphics.polygon("fill", arrowX - 5, bottom - 8, arrowX + 5, bottom - 8, arrowX, bottom - 2)
+  end
 end
 
 return GameDetail

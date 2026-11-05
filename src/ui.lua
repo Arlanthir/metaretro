@@ -146,7 +146,7 @@ end
 -- Button names in hints map to their icons; "L/R" shows both shoulder buttons.
 local BUTTON_ICONS = {
   A = { "ButtonA" }, B = { "ButtonB" }, X = { "ButtonX" }, Y = { "ButtonY" },
-  ["L/R"] = { "ButtonLB", "ButtonRB" }, Up = { "DPadUp" }, Start = { "Start" }, Select = { "Select" },
+  ["L/R"] = { "ButtonLB", "ButtonRB" }, Up = { "DPadUp" }, ["Up/Down"] = { "DPadUp" }, Start = { "Start" }, Select = { "Select" },
 }
 
 -- Hints look like "A: buy   B: leave": entries separated by 2+ spaces, each "<button>: <label>".
