@@ -1,0 +1,12 @@
+I: Bus=0019 Vendor=0001 Product=0001 Version=0100
+N: Name="axp20x-pek"
+P: Phys=m1kbd/input2
+H: Handlers=kbd event0
+B: PROP=0
+
+I: Bus=0019 Vendor=0001 Product=0001 Version=0100
+N: Name="H700 Gamepad"
+P: Phys=
+S: Sysfs=/devices/virtual/input/input3
+H: Handlers=event3 js0
+B: PROP=0

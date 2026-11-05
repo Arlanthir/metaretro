@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<gameList>
+	<game id="1">
+		<path>./Super Metroid (USA).sfc</path>
+		<name>Super Metroid</name>
+		<desc>Samus &amp; the baby Metroid &#233;&#x2764;</desc>
+		<image>./images/Super Metroid (USA)-image.png</image>
+		<thumbnail>/userdata/roms/snes/media/thumb.png</thumbnail>
+		<rating>0.95</rating>
+		<releasedate>19940318T000000</releasedate>
+		<genre>Action</genre>
+		<playcount>3</playcount>
+		<gametime>5400</gametime>
+	</game>
+	<game>
+		<path>./Hidden.sfc</path>
+		<name>Hidden</name>
+		<hidden>true</hidden>
+	</game>
+	<game>
+		<path>./roms/No Metadata.sfc</path>
+	</game>
+	<folder>
+		<path>./roms</path>
+		<name>Roms folder</name>
+	</folder>
+</gameList>

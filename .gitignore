@@ -1,0 +1,6 @@
+log*.txt
+*.log
+# Build output from scripts/build-port.sh
+dist/
+
+.DS_Store
