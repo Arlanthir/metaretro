@@ -197,10 +197,7 @@ function Town:update(dt)
 end
 
 function Town:action(name)
-  if name == "a" then
-    local building = self:facingBuilding()
-    if building and not self.move then self:walkInto(building) end
-  elseif name == "start" then
+  if name == "start" then
     scenes.push(Confirm.new("Quit Metaretro?", function()
       log("quit confirmed by player")
       love.event.quit()
@@ -274,7 +271,7 @@ function Town:drawHud()
   end
 
   local building = self:facingBuilding()
-  local hint = building and ("A: enter %s"):format(select(2, self:label(building))) or "Start: quit"
+  local hint = building and ("Up: enter %s"):format(select(2, self:label(building))) or "Start: quit"
   local hintWidth = ui.fonts.body:getWidth(hint) + 24
   panel(ui.WIDTH / 2 - hintWidth / 2, ui.HEIGHT - 38, hintWidth, 28)
   ui.setColor("text")
