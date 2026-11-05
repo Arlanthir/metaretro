@@ -116,6 +116,10 @@ function Town:heldDirection()
 end
 
 function Town:update(dt)
+  if self.app.announcement then
+    self.toast, self.toastTime = self.app.announcement, TOAST_SECONDS
+    self.app.announcement = nil
+  end
   if self.toast then
     self.toastTime = self.toastTime - dt
     if self.toastTime <= 0 then self.toast = nil end

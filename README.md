@@ -20,6 +20,21 @@ Built with [LÖVE](https://love2d.org) 11.x and distributed as a PortMaster port
 - Tests: `luarocks install busted`, then `busted` from the repo root.
 - Screenshot: `love src --screenshot 2` saves `screenshot.png` to the LÖVE save folder after 2 seconds and quits.
 
+### RetroAchievements
+
+To earn coins from achievements, create `retroachievements.txt` next to `metaretro.love` with your web API key from <https://retroachievements.org/settings>:
+
+```
+apikey=YOUR_WEB_API_KEY
+username=YourName
+```
+
+- On the device: `/userdata/roms/ports/metaretro/retroachievements.txt` (`roms/ports/metaretro/` on the SD card). `scripts/build-port.sh` doesn't copy it, so copy it yourself; updating the port's files leaves it in place.
+- On desktop: `retroachievements.txt` at the repo root, since `love src` looks in the folder above `src/`. It's in `.gitignore`.
+- `username` is optional on Knulli, where it's read from the RetroAchievements login in `batocera.conf`. On desktop (mock backend) it's required.
+
+After you play an owned game, the next launch checks its achievements online (games that can't be checked stay queued). New unlocks pay 5 coins per point (twice in hardcore); unlocks from before tracking started pay half, once.
+
 # Metaretro
 
 This is a (meta)game intended to run in retro handhelds like the Anbernic RG 40XXV, to help the user progressively unlock their collection of games and help them choose what to play from their collection. At least Emulationstation must be supported, with additional backends to follow.

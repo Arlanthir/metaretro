@@ -5,7 +5,7 @@ local save = require("core.save")
 describe("playtime.parseLog", function()
   it("parses tab separated sessions and skips junk", function()
     local sessions = playtime.parseLog("snes:./a.sfc\t100\t700\ngarbage\ngba:./b\t0\t60\n")
-    assert.same({ { id = "snes:./a.sfc", seconds = 600 }, { id = "gba:./b", seconds = 60 } }, sessions)
+    assert.same({ { id = "snes:./a.sfc", start = 100, seconds = 600 }, { id = "gba:./b", start = 0, seconds = 60 } }, sessions)
   end)
 
   it("handles a missing log", function()
@@ -15,27 +15,45 @@ end)
 
 describe("playtime.credit", function()
   local sessions = { { id = "a", seconds = 600 }, { id = "b", seconds = 120 } }
+  local a, b = { id = "a", gametime = 0 }, { id = "b", gametime = 0 }
 
-  it("pays for new sessions only on backends without gametime", function()
+  it("pays for new sessions only", function()
     local state = save.defaults()
     local backend = { tracksGametime = false }
-    local earned = playtime.credit(state, backend, {}, sessions)
+    local earned, played = playtime.credit(state, backend, { a, b }, sessions)
     assert.equal(economy.playEarnings(600) + economy.playEarnings(120), earned)
+    assert.same({ a, b }, played)
     assert.equal(economy.STARTER_WALLET + earned, state.wallet)
-    assert.equal(0, playtime.credit(state, backend, {}, sessions))
+    assert.equal(0, playtime.credit(state, backend, { a, b }, sessions))
   end)
 
   it("pays gametime growth and baselines games seen for the first time", function()
     local state = save.defaults()
     local backend = { tracksGametime = true }
-    local game = { id = "a", gametime = 3600 }
+    local game = { id = "c", gametime = 3600 }
 
-    assert.equal(0, playtime.credit(state, backend, { game }, sessions))
-    assert.equal(2, state.consumedSessions)
-
+    assert.equal(0, playtime.credit(state, backend, { game }, {}))
     game.gametime = 3600 + 900
-    assert.equal(economy.playEarnings(900), playtime.credit(state, backend, { game }, sessions))
-    assert.equal(0, playtime.credit(state, backend, { game }, sessions))
+    local earned, played = playtime.credit(state, backend, { game }, {})
+    assert.equal(economy.playEarnings(900), earned)
+    assert.same({ game }, played)
+    assert.equal(0, playtime.credit(state, backend, { game }, {}))
+  end)
+
+  it("pays sessions on gametime backends whose gametime didn't move", function()
+    local state = save.defaults()
+    local backend = { tracksGametime = true }
+    playtime.credit(state, backend, { a }, {})
+    assert.equal(economy.playEarnings(600), playtime.credit(state, backend, { a }, { sessions[1] }))
+  end)
+
+  it("pays the larger of session time and gametime growth, not both", function()
+    local state = save.defaults()
+    local backend = { tracksGametime = true }
+    local game = { id = "a", gametime = 0 }
+    playtime.credit(state, backend, { game }, {})
+    game.gametime = 900
+    assert.equal(economy.playEarnings(900), playtime.credit(state, backend, { game }, { sessions[1] }))
   end)
 
   it("never pays for gametime going backwards", function()

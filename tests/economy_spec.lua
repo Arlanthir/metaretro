@@ -43,8 +43,9 @@ end)
 
 describe("economy.achievementEarnings", function()
   it("multiplies hardcore unlocks", function()
-    assert.equal(10, economy.achievementEarnings(10, false))
-    assert.equal(10 * economy.HARDCORE_MULTIPLIER, economy.achievementEarnings(10, true))
+    local perPoint = economy.COINS_PER_RA_POINT
+    assert.equal(10 * perPoint, economy.achievementEarnings(10, false))
+    assert.equal(10 * perPoint * economy.HARDCORE_MULTIPLIER, economy.achievementEarnings(10, true))
   end)
 end)
 

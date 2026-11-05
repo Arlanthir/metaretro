@@ -3,10 +3,12 @@ local catalog = require("core.catalog")
 local consoles = require("core.consoles")
 local covers = require("services.covers")
 local economy = require("core.economy")
+local http = require("services.http")
 local input = require("core.input")
 local log = require("core.log")
 local playtime = require("services.playtime")
 local progression = require("core.progression")
+local retroachievements = require("services.retroachievements")
 local save = require("core.save")
 local scenes = require("core.scenes")
 local stores = require("core.stores")
@@ -21,6 +23,11 @@ local screenshotIn -- dev aid: `--screenshot <seconds>` saves screenshot.png to 
 
 function app:persist()
   save.write(love.filesystem, self.state)
+end
+
+-- Shows a short message in town (now, or when the player returns there).
+function app:announce(message)
+  self.announcement = message
 end
 
 local function isConsole(systemId)
@@ -65,8 +72,11 @@ local function loadLibrary(args)
   end
   progression.syncOwnedConsoles(app.state, games)
   local sessions = playtime.parseLog(love.filesystem.read(playtime.LOG))
-  app.earned = playtime.credit(app.state, app.backend, games, sessions)
+  local played
+  app.earned, played = playtime.credit(app.state, app.backend, games, sessions)
+  retroachievements.queue(app.state, played)
   app:refresh()
+  retroachievements.sync(app, sessions[1] and sessions[1].start)
   input.ignoreFor(0.5)
   scenes.switch(Town.new(app))
 end
@@ -93,6 +103,7 @@ end
 
 function love.update(dt)
   covers.update()
+  http.update()
   input.update(dt)
   scenes.update(dt)
   if screenshotIn then

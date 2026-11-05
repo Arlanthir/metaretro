@@ -15,7 +15,9 @@ function save.defaults()
     ownedConsoles = {},
     lots = {},
     offers = {},
-    seenAchievements = {},
+    seenAchievements = {}, -- achievement id -> "softcore" or "hardcore" once paid
+    achievementsSince = "", -- UTC time tracking started; earlier unlocks pay less
+    pendingAchievementGames = {}, -- RetroAchievements game ids to check at the next sync
     creditedGametime = {},
     consumedSessions = 0,
     settings = {},
