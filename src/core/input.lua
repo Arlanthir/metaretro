@@ -38,6 +38,11 @@ function input.ignoreFor(seconds)
   ignoreUntil = clock() + seconds
 end
 
+-- Stops held directions from repeating until they're pressed again; they still count as held.
+function input.stopRepeats()
+  held = {}
+end
+
 function input.setNintendoLayout(enabled)
   for button, action in pairs(NINTENDO_BUTTONS) do
     BUTTONS[button] = enabled and action or button

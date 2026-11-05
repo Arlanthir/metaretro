@@ -98,6 +98,8 @@ function love.load(args)
       scenes.action(action)
     end
   end)
+  -- A direction held while walking through a door shouldn't keep scrolling the screen it opens.
+  scenes.onChange = input.stopRepeats
   scenes.switch(Loading.new("Loading your library...", function() loadLibrary(args) end))
 end
 

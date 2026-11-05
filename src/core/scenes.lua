@@ -1,4 +1,5 @@
-local scenes = { stack = {} }
+-- `onChange` runs whenever the top scene changes.
+local scenes = { stack = {}, onChange = function() end }
 
 local function top()
   return scenes.stack[#scenes.stack]
@@ -12,11 +13,13 @@ end
 
 function scenes.push(scene)
   table.insert(scenes.stack, scene)
+  scenes.onChange()
   call(scene, "enter")
 end
 
 function scenes.pop()
   local scene = table.remove(scenes.stack)
+  scenes.onChange()
   call(scene, "leave")
   call(top(), "resume")
 end
