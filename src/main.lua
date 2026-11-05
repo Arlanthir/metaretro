@@ -125,8 +125,10 @@ function love.draw()
   scenes.draw()
   if showFps then
     love.graphics.setFont(ui.fonts.small)
-    love.graphics.setColor(0, 1, 0)
-    love.graphics.print(("%d fps"):format(love.timer.getFPS()), 4, ui.HEIGHT - 16)
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.rectangle("fill", 4, 4, 56, 18, 4)
+    love.graphics.setColor(0.4, 1, 0.4)
+    love.graphics.print(("%d fps"):format(love.timer.getFPS()), 10, 7)
   end
 end
 

@@ -1,142 +1,151 @@
--- Placeholder pixel-style art drawn with primitives. Swap for a real tileset later;
--- callers only rely on these functions and the tile size.
+-- Town art from the Ninja Adventure asset pack (CC0, see assets/ninja-adventure/README.md).
+-- Sprites are 16x16 pixel art drawn at 2x, so one map tile is art.TILE screen pixels.
 local art = {}
 
 art.TILE = 32
+local SCALE = 2
+local SOURCE = 16
+local DIR = "assets/ninja-adventure/"
 
-local palette = {
-  grass = { 0.36, 0.62, 0.31 },
-  path = { 0.83, 0.72, 0.52 }, pathEdge = { 0.74, 0.62, 0.43 },
-  trunk = { 0.45, 0.30, 0.18 }, leaves = { 0.17, 0.42, 0.20 }, leavesLight = { 0.24, 0.52, 0.25 },
-  water = { 0.26, 0.50, 0.80 }, waterLight = { 0.45, 0.68, 0.92 },
-  wall = { 0.93, 0.88, 0.78 }, wallShade = { 0.80, 0.74, 0.64 },
-  door = { 0.40, 0.25, 0.15 }, window = { 0.55, 0.78, 0.95 },
-  dirt = { 0.60, 0.46, 0.30 }, fence = { 0.85, 0.80, 0.70 },
-  sign = { 0.20, 0.16, 0.12 }, signText = { 1, 0.95, 0.80 },
-  skin = { 0.98, 0.80, 0.65 }, shirt = { 0.85, 0.25, 0.25 }, pants = { 0.20, 0.25, 0.55 }, hair = { 0.30, 0.18, 0.10 },
-}
+local images, quads = {}, {}
 
-local ROOFS = {
-  home = { 0.80, 0.30, 0.25 },
-  dealer = { 0.45, 0.30, 0.70 },
-}
-local STORE_ROOFS = {
-  { 0.20, 0.55, 0.75 }, { 0.85, 0.55, 0.15 }, { 0.25, 0.60, 0.40 },
-  { 0.70, 0.25, 0.45 }, { 0.35, 0.40, 0.75 }, { 0.75, 0.70, 0.20 },
-}
-
-local function color(c, alpha)
-  love.graphics.setColor(c[1], c[2], c[3], alpha or 1)
+local function image(name)
+  images[name] = images[name] or love.graphics.newImage(DIR .. name .. ".png")
+  return images[name]
 end
 
-local function rect(c, x, y, w, h)
-  color(c)
-  love.graphics.rectangle("fill", x, y, w, h)
+-- Draws the `columns` x `rows` tile region at (`column`, `row`) of a sheet, with its top-left at (x, y).
+local function sprite(name, column, row, x, y, columns, rows)
+  columns, rows = columns or 1, rows or 1
+  local key = table.concat({ name, column, row, columns, rows }, ",")
+  local img = image(name)
+  quads[key] = quads[key] or love.graphics.newQuad(column * SOURCE, row * SOURCE, columns * SOURCE, rows * SOURCE,
+    img:getDimensions())
+  love.graphics.draw(img, quads[key], x, y, 0, SCALE, SCALE)
 end
 
-local function grass(x, y, tx, ty)
-  local t = art.TILE
-  rect(palette.grass, x, y, t, t)
-  if (tx * 7 + ty * 3) % 5 == 0 then
-    rect(palette.leavesLight, x + 8, y + 12, 2, 4)
-    rect(palette.leavesLight, x + 20, y + 22, 2, 4)
+-- Autotile layout shared by the path and water sheets: a 3x3 blob, a horizontal strip below it,
+-- a vertical strip to its right and a single tile. Keyed by which neighbours match: N=1, E=2, S=4, W=8.
+local AUTOTILE = {
+  [6] = { 0, 0 }, [14] = { 1, 0 }, [12] = { 2, 0 },
+  [7] = { 0, 1 }, [15] = { 1, 1 }, [13] = { 2, 1 },
+  [3] = { 0, 2 }, [11] = { 1, 2 }, [9] = { 2, 2 },
+  [2] = { 0, 3 }, [10] = { 1, 3 }, [8] = { 2, 3 },
+  [4] = { 3, 0 }, [5] = { 3, 1 }, [1] = { 3, 2 }, [0] = { 3, 3 },
+}
+local PATH = { sheet = "TilesetFloor", column = 0, row = 7 }
+local WATER = { sheet = "TilesetWater", column = 0, row = 6 }
+local GRASS = { "TilesetFloor", 0, 12 }
+-- Mostly grass tufts, with the occasional flower.
+local DECORATIONS = {
+  { "TilesetFloor", 1, 12 }, { "TilesetFloor", 2, 12 }, { "TilesetFloor", 3, 12 }, { "TilesetFloor", 4, 12 },
+  { "TilesetFloor", 2, 11 }, { "TilesetFloor", 3, 11 }, { "TilesetFloor", 1, 12 }, { "TilesetFloor", 3, 12 },
+  { "TilesetNature", 0, 11 }, { "TilesetNature", 1, 11 }, { "TilesetNature", 3, 11 },
+}
+local DECORATION_CHANCE = 0.12
+local TREES = { { 0, 0 }, { 0, 0 }, { 2, 0 } }
+
+-- Buildings are 4x3 tiles with the door one tile in from the left; these sprites all match that.
+local HOUSES = {
+  home = { 0, 0, 4 },
+  dealer = { 16, 0, 3 },
+  console = { { 4, 0, 4 }, { 8, 0, 4 }, { 12, 0, 4 } },
+  genre = { { 23, 0, 3 }, { 26, 0, 3 } },
+}
+
+local PLAYER_COLUMNS = { down = 0, up = 1, left = 2, right = 3 }
+
+-- A stable pseudo-random number in [0, 1) per tile, so decorations don't line up in patterns.
+local function noise(x, y, salt)
+  local value = math.sin(x * 12.9898 + y * 78.233 + (salt or 0) * 37.719) * 43758.5453
+  return value - math.floor(value)
+end
+
+local function pick(list, x, y, salt)
+  return list[math.floor(noise(x, y, salt) * #list) + 1]
+end
+
+local function autotile(set, matches, x, y, px, py)
+  local mask = (matches(x, y - 1) and 1 or 0) + (matches(x + 1, y) and 2 or 0)
+    + (matches(x, y + 1) and 4 or 0) + (matches(x - 1, y) and 8 or 0)
+  local offset = AUTOTILE[mask]
+  sprite(set.sheet, set.column + offset[1], set.row + offset[2], px, py)
+end
+
+-- Ground for one tile: `kind` is "path", "water" or "grass"; `matches(x, y)` tells whether a
+-- neighbouring tile is the same kind, so paths and ponds get proper edges.
+function art.ground(kind, matches, x, y, px, py)
+  sprite(GRASS[1], GRASS[2], GRASS[3], px, py)
+  if kind == "path" then
+    autotile(PATH, matches, x, y, px, py)
+  elseif kind == "water" then
+    autotile(WATER, matches, x, y, px, py)
+  elseif noise(x, y) < DECORATION_CHANCE then
+    local decoration = pick(DECORATIONS, x, y, 1)
+    sprite(decoration[1], decoration[2], decoration[3], px, py)
   end
 end
 
-function art.ground(tile, x, y, tx, ty)
-  local t = art.TILE
-  if tile == "=" or tile == "@" then
-    rect(palette.path, x, y, t, t)
-    rect(palette.pathEdge, x + 6, y + 10, 3, 3)
-    rect(palette.pathEdge, x + 22, y + 24, 3, 3)
-  elseif tile == "~" then
-    rect(palette.water, x, y, t, t)
-    rect(palette.waterLight, x + 6 + (tx % 2) * 10, y + 10, 10, 2)
-  else
-    grass(x, y, tx, ty)
-    if tile == "T" then
-      rect(palette.trunk, x + 13, y + 20, 6, 10)
-      color(palette.leaves)
-      love.graphics.circle("fill", x + 16, y + 14, 12)
-      color(palette.leavesLight)
-      love.graphics.circle("fill", x + 12, y + 10, 5)
-    end
+-- A 2x2 tree whose trunk stands on the tile at (px, py); its crown covers the tile above.
+function art.tree(x, y, px, py)
+  local tree = pick(TREES, x, y, 2)
+  sprite("TilesetNature", tree[1], tree[2], px - art.TILE / 2, py - art.TILE, 2, 2)
+end
+
+local function house(building)
+  if building.kind ~= "store" then
+    return HOUSES[building.kind]
   end
+  local pool = HOUSES[building.store.kind] or HOUSES.console
+  local sum = 0
+  for i = 1, #building.store.id do
+    sum = sum + building.store.id:byte(i) * i
+  end
+  return pool[sum % #pool + 1]
+end
+
+-- How many tiles wide the building's sprite is (3 or 4).
+function art.buildingWidth(building)
+  return house(building)[3]
 end
 
 local function sign(text, centerX, y, font)
-  local width = font:getWidth(text) + 10
-  rect(palette.sign, centerX - width / 2, y, width, font:getHeight() + 4)
-  color(palette.signText)
+  local width, height = font:getWidth(text) + 12, font:getHeight() + 4
+  local x = math.floor(centerX - width / 2)
+  love.graphics.setColor(0.27, 0.16, 0.10)
+  love.graphics.rectangle("fill", x - 2, y - 2, width + 4, height + 4, 3)
+  love.graphics.setColor(0.98, 0.91, 0.74)
+  love.graphics.rectangle("fill", x, y, width, height, 2)
+  love.graphics.setColor(0.27, 0.16, 0.10)
   love.graphics.setFont(font)
-  love.graphics.print(text, math.floor(centerX - font:getWidth(text) / 2), y + 2)
+  love.graphics.print(text, x + 6, y + 2)
+  love.graphics.setColor(1, 1, 1)
 end
 
-local function roofColor(building)
-  if building.kind == "store" then
-    local hash = 0
-    for i = 1, #building.store.id do
-      hash = hash + building.store.id:byte(i) * i
-    end
-    return STORE_ROOFS[hash % #STORE_ROOFS + 1]
-  end
-  return ROOFS[building.kind]
-end
-
--- `x, y` is the building's top-left pixel; `doorColumn` is the door's offset in tiles.
-function art.building(building, label, x, y, columns, rows, doorColumn, font)
-  local t = art.TILE
-  local width, height = columns * t, rows * t
+-- `x, y` is the building's top-left pixel and `width` its width in pixels.
+function art.building(building, label, x, y, width, font)
+  local tile = art.TILE
   if building.kind == "lot" then
-    rect(palette.dirt, x + 4, y + t, width - 8, height - t - 4)
-    color(palette.fence)
-    love.graphics.setLineWidth(3)
-    love.graphics.rectangle("line", x + 4, y + t, width - 8, height - t - 4)
-    love.graphics.setLineWidth(1)
-    sign(label, x + width / 2, y + t + 18, font)
+    for column = 0, 3 do
+      for row = 1, 2 do
+        local inLot = function(cx, cy) return cx >= 0 and cx <= 3 and cy >= 1 and cy <= 2 end
+        autotile(PATH, inLot, column, row, x + column * tile, y + row * tile)
+      end
+    end
+    sign(label, x + width / 2, y + tile + 10, font)
     return
   end
-
-  rect(palette.wall, x + 2, y + t, width - 4, height - t)
-  rect(palette.wallShade, x + 2, y + height - 6, width - 4, 6)
-  color(roofColor(building))
-  love.graphics.polygon("fill", x - 2, y + t + 4, x + 10, y + 2, x + width - 10, y + 2, x + width + 2, y + t + 4)
-  for column = 0, columns - 1 do
-    if column ~= doorColumn then
-      rect(palette.window, x + column * t + 8, y + height - t + 4, 16, 12)
-    end
-  end
-  rect(palette.door, x + doorColumn * t + 6, y + height - t + 2, t - 12, t - 2)
-  if building.kind == "store" and building.store.kind == "genre" then
-    -- Genre stores get a striped awning to set them apart from console stores.
-    local stripes = columns * 3
-    local stripeWidth = (width - 4) / stripes
-    for stripe = 0, stripes - 1 do
-      color(stripe % 2 == 0 and roofColor(building) or { 1, 1, 1 })
-      love.graphics.rectangle("fill", x + 2 + stripe * stripeWidth, y + height - t - 10, stripeWidth, 12)
-    end
-  end
-  sign(label, x + width / 2, y + t + 4, font)
+  local look = house(building)
+  sprite("TilesetHouse", look[1], look[2], x, y, look[3], 3)
+  sign(label, x + look[3] * tile / 2, y + 6, font)
 end
 
--- `step` alternates 0/1 while walking.
-function art.player(x, y, facing, step)
-  local bob = step == 1 and -2 or 0
-  color({ 0, 0, 0 }, 0.25)
-  love.graphics.ellipse("fill", x + 16, y + 29, 10, 4)
-  rect(palette.pants, x + 10, y + 20 + bob, 5, 8 - bob)
-  rect(palette.pants, x + 17, y + 20 + bob, 5, 8 - bob)
-  rect(palette.shirt, x + 9, y + 12 + bob, 14, 10)
-  rect(palette.skin, x + 10, y + 3 + bob, 12, 10)
-  rect(palette.hair, x + 10, y + 2 + bob, 12, facing == "up" and 10 or 4)
-  if facing == "down" then
-    rect({ 0, 0, 0 }, x + 13, y + 8 + bob, 2, 2)
-    rect({ 0, 0, 0 }, x + 18, y + 8 + bob, 2, 2)
-  elseif facing == "left" then
-    rect({ 0, 0, 0 }, x + 11, y + 8 + bob, 2, 2)
-  elseif facing == "right" then
-    rect({ 0, 0, 0 }, x + 19, y + 8 + bob, 2, 2)
-  end
+-- `frame` counts walk frames (0 when standing still).
+function art.player(x, y, facing, frame)
+  love.graphics.setColor(1, 1, 1, 0.6)
+  love.graphics.draw(image("Shadow"), x + 4, y + art.TILE - 10, 0, SCALE, SCALE)
+  love.graphics.setColor(1, 1, 1)
+  sprite("Boy", PLAYER_COLUMNS[facing], frame % 4, x, y - 4)
 end
 
 return art

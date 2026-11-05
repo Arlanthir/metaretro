@@ -12,13 +12,15 @@ local Town = {}
 Town.__index = Town
 
 local STEPS_PER_SECOND = 6
+-- Walking into a door is slower, while the screen fades out; coming back fades in.
+local DOOR_STEP_SPEED = 0.5
+local FADE_IN_SECONDS = 0.25
 local TOAST_SECONDS = 4
 local DIRECTIONS = {
   up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 },
 }
 local DIRECTION_ORDER = { "up", "down", "left", "right" }
--- Doors and building bodies sit on grass; everything else draws as itself.
-local GROUND = { ["="] = "=", ["@"] = "@", T = "T", ["~"] = "~" }
+local GROUND = { ["="] = "path", ["@"] = "path", ["~"] = "water" }
 
 local function key(x, y)
   return x .. "," .. y
@@ -41,6 +43,7 @@ end
 function Town:resume()
   self:rebuild()
   self.waitForRelease = true
+  self.fadeIn = 1
 end
 
 -- Short text for the building's sign, and the full name used in hints.
@@ -51,27 +54,58 @@ function Town:label(building)
   return "For sale", "Empty lot"
 end
 
--- Re-renders the static town (ground and buildings) into a canvas after anything that changes it.
+local function groundKind(map, x, y)
+  return GROUND[town.tile(map, x, y)] or "grass"
+end
+
+-- Re-renders the static town (ground, trees and buildings) into a canvas after anything that changes it.
 function Town:rebuild()
   local tile = art.TILE
-  self.buildings = town.layout(self.map, self.app.state, self.app.stores)
+  local map = self.map
+  self.buildings = town.layout(map, self.app.state, self.app.stores)
+  self.blocked = town.blockedTiles(self.buildings, art.buildingWidth)
   self.doors = {}
   for _, building in ipairs(self.buildings) do
     self.doors[key(building.door.x, building.door.y)] = building
   end
 
-  self.canvas = self.canvas or love.graphics.newCanvas(self.map.width * tile, self.map.height * tile)
-  love.graphics.setCanvas(self.canvas)
-  love.graphics.clear()
-  for y = 1, self.map.height do
-    for x = 1, self.map.width do
-      art.ground(GROUND[town.tile(self.map, x, y)] or ".", (x - 1) * tile, (y - 1) * tile, x, y)
+  -- Trees and buildings draw in row order so nearer ones overlap farther ones.
+  local objects = {}
+  self.trees = {}
+  for y = 1, map.height do
+    for x = 1, map.width do
+      if town.tile(map, x, y) == "T" then
+        self.trees[key(x, y)] = true
+        table.insert(objects, { row = y, x = x, tree = true })
+      end
     end
   end
   for _, building in ipairs(self.buildings) do
     local left, top = town.footprint(building.door)
-    art.building(building, (self:label(building)), (left - 1) * tile, (top - 1) * tile,
-      town.BUILDING_WIDTH, town.BUILDING_HEIGHT, building.door.x - left, ui.fonts.small)
+    table.insert(objects, { row = top + town.BUILDING_HEIGHT - 1, x = left, building = building, top = top })
+  end
+  table.sort(objects, function(a, b)
+    if a.row ~= b.row then return a.row < b.row end
+    return a.x < b.x
+  end)
+
+  self.canvas = self.canvas or love.graphics.newCanvas(map.width * tile, map.height * tile)
+  love.graphics.setCanvas(self.canvas)
+  love.graphics.clear()
+  love.graphics.setColor(1, 1, 1)
+  for y = 1, map.height do
+    for x = 1, map.width do
+      local kind = groundKind(map, x, y)
+      art.ground(kind, function(nx, ny) return groundKind(map, nx, ny) == kind end, x, y, (x - 1) * tile, (y - 1) * tile)
+    end
+  end
+  for _, object in ipairs(objects) do
+    if object.tree then
+      art.tree(object.x, object.row, (object.x - 1) * tile, (object.row - 1) * tile)
+    else
+      art.building(object.building, (self:label(object.building)), (object.x - 1) * tile, (object.top - 1) * tile,
+        town.BUILDING_WIDTH * tile, ui.fonts.small)
+    end
   end
   love.graphics.setCanvas()
 end
@@ -101,10 +135,16 @@ function Town:step(direction)
   local targetX, targetY = self:facingTile()
   local building = self:facingBuilding()
   if building and direction == "up" then
-    self:enterBuilding(building)
-  elseif town.isWalkable(self.map, targetX, targetY) then
+    self:walkInto(building)
+  elseif town.isWalkable(self.map, targetX, targetY, self.blocked) then
     self.move = { dx = targetX - self.x, dy = targetY - self.y, t = 0 }
   end
+end
+
+-- Steps onto the doorway; the building opens once the step ends (see Town:update).
+function Town:walkInto(building)
+  self.facing = "up"
+  self.move = { dx = building.door.x - self.x, dy = building.door.y - self.y, t = 0, enter = building }
 end
 
 function Town:heldDirection()
@@ -125,12 +165,24 @@ function Town:update(dt)
     if self.toastTime <= 0 then self.toast = nil end
   end
 
-  if self.move then
-    self.move.t = self.move.t + dt * STEPS_PER_SECOND
-    if self.move.t < 1 then return end
-    self.x, self.y = self.x + self.move.dx, self.y + self.move.dy
+  if self.fadeIn then
+    self.fadeIn = self.fadeIn - dt / FADE_IN_SECONDS
+    if self.fadeIn <= 0 then self.fadeIn = nil end
+  end
+
+  local move = self.move
+  if move then
+    move.t = move.t + dt * STEPS_PER_SECOND * (move.enter and DOOR_STEP_SPEED or 1)
+    if move.t < 1 then return end
     self.move = nil
     self.steps = self.steps + 1
+    if move.enter then
+      -- The player stays outside the door, so they step out of it facing the street.
+      self.facing = "down"
+      self:enterBuilding(move.enter)
+      return
+    end
+    self.x, self.y = self.x + move.dx, self.y + move.dy
   end
 
   local direction = self:heldDirection()
@@ -147,7 +199,7 @@ end
 function Town:action(name)
   if name == "a" then
     local building = self:facingBuilding()
-    if building then self:enterBuilding(building) end
+    if building and not self.move then self:walkInto(building) end
   elseif name == "start" then
     scenes.push(Confirm.new("Quit Metaretro?", function()
       log("quit confirmed by player")
@@ -173,10 +225,33 @@ function Town:draw()
 
   love.graphics.setColor(1, 1, 1)
   love.graphics.draw(self.canvas, -camX, -camY)
-  local walking = self.move and (self.steps + (self.move.t > 0.5 and 1 or 0)) % 2 or 0
-  art.player(math.floor(px - camX), math.floor(py - camY), self.facing, walking)
+  local frame = self.move and self.steps * 2 + math.floor(self.move.t * 2) or 0
+  local screenX, screenY = math.floor(px - camX), math.floor(py - camY)
+  art.player(screenX, screenY, self.facing, frame)
+  self:drawTreesInFront(camX, camY, screenX, screenY)
+
+  local fade = self.move and self.move.enter and self.move.t or self.fadeIn
+  if fade then
+    love.graphics.setColor(0, 0, 0, math.min(1, fade))
+    love.graphics.rectangle("fill", 0, 0, ui.WIDTH, ui.HEIGHT)
+  end
 
   self:drawHud()
+end
+
+-- Trees standing just below the player cover them with their crowns. They're redrawn only
+-- over the player's sprite (at `screenX, screenY`), so they can't cover the trees in front of them.
+function Town:drawTreesInFront(camX, camY, screenX, screenY)
+  local move = self.move or { dx = 0, dy = 0 }
+  love.graphics.setScissor(screenX, screenY - 4, art.TILE, art.TILE + 8)
+  for y = math.min(self.y, self.y + move.dy), math.max(self.y, self.y + move.dy) do
+    for x = math.min(self.x, self.x + move.dx) - 1, math.max(self.x, self.x + move.dx) + 1 do
+      if self.trees[key(x, y + 1)] then
+        art.tree(x, y + 1, (x - 1) * art.TILE - camX, y * art.TILE - camY)
+      end
+    end
+  end
+  love.graphics.setScissor()
 end
 
 local function panel(x, y, w, h)

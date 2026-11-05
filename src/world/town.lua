@@ -34,8 +34,33 @@ function town.tile(map, x, y)
   return row and x >= 1 and x <= #row and row:sub(x, x) or "T"
 end
 
-function town.isWalkable(map, x, y)
-  return WALKABLE[town.tile(map, x, y)] == true
+local function isBuildingTile(tile)
+  return tile == "B" or FIXED[tile] ~= nil or LOT_LABELS:find(tile, 1, true) ~= nil
+end
+
+-- `blocked` (from town.blockedTiles) frees the parts of building plots nothing stands on;
+-- without it every plot tile blocks.
+function town.isWalkable(map, x, y, blocked)
+  local tile = town.tile(map, x, y)
+  if WALKABLE[tile] then return true end
+  return blocked ~= nil and isBuildingTile(tile) and not blocked[x .. "," .. y]
+end
+
+-- Tiles covered by actual buildings; `widthOf(building)` gives each one's width in tiles
+-- (empty lots cover nothing).
+function town.blockedTiles(buildings, widthOf)
+  local blocked = {}
+  for _, building in ipairs(buildings) do
+    if building.kind ~= "lot" then
+      local left, top = town.footprint(building.door)
+      for x = left, left + widthOf(building) - 1 do
+        for y = top, top + town.BUILDING_HEIGHT - 1 do
+          blocked[x .. "," .. y] = true
+        end
+      end
+    end
+  end
+  return blocked
 end
 
 -- Top-left tile of the building whose door is at `door`.

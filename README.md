@@ -20,6 +20,10 @@ Built with [LÖVE](https://love2d.org) 11.x and distributed as a PortMaster port
 - Tests: `luarocks install busted`, then `busted` from the repo root.
 - Screenshot: `love src --screenshot 2` saves `screenshot.png` to the LÖVE save folder after 2 seconds and quits.
 
+### Art
+
+Town art comes from the [Ninja Adventure asset pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-boy and AAA (CC0). Only the images in use are in `src/assets/ninja-adventure/`; the full pack can be unzipped into `example-data/ninja-adventure/` (ignored by git) to pick more.
+
 ### RetroAchievements
 
 To earn coins from achievements, create `retroachievements.txt` next to `metaretro.love` with your web API key from <https://retroachievements.org/settings>:

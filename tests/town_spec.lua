@@ -45,6 +45,17 @@ describe("town map", function()
     assert.is_false(town.isWalkable(map, 1, 1))
     assert.is_false(town.isWalkable(map, map.fixed[1].door.x, map.fixed[1].door.y))
   end)
+
+  it("frees plot tiles that no building covers", function()
+    local home = { kind = "home", door = map.fixed[1].door }
+    local lot = { kind = "lot", door = map.lots[1].door }
+    local blocked = town.blockedTiles({ home, lot }, function() return 3 end)
+    local left, top = town.footprint(home.door)
+    assert.is_false(town.isWalkable(map, left + 2, top, blocked))
+    assert.is_true(town.isWalkable(map, left + 3, top, blocked))
+    assert.is_true(town.isWalkable(map, lot.door.x, lot.door.y, blocked))
+    assert.is_false(town.isWalkable(map, 1, 1, blocked))
+  end)
 end)
 
 describe("town.assignLots", function()
