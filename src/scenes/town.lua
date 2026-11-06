@@ -342,10 +342,9 @@ function Town:draw()
   love.graphics.draw(self.canvas, -camX, -camY)
   local frame = self.move and self.steps * 2 + math.floor(self.move.t * 2) or 0
   local screenX, screenY = math.floor(px - camX), math.floor(py - camY)
-  self:drawBillboards(camX, camY)
-
-  -- Characters lower on screen stand in front of the ones above them.
+  -- Characters and billboards lower on screen stand in front of the ones above them.
   local characters = { { y = py, draw = function() art.player(screenX, screenY, self.facing, frame) end } }
+  self:addBillboards(characters, camX, camY)
   for _, villager in ipairs(self.villagers) do
     local vx, vy = self:villagerPixels(villager)
     local walkFrame = villager.move and math.floor(villager.move.t * 4) or 0
@@ -366,17 +365,26 @@ function Town:draw()
   self:drawHud()
 end
 
-function Town:drawBillboards(camX, camY)
+-- Adds the billboards on screen to `drawables`, sorted by the bottom row of their base so
+-- characters walking behind a tall board are hidden by it.
+function Town:addBillboards(drawables, camX, camY)
   for i, billboard in ipairs(self.map.billboards) do
     local px, py = (billboard.x - 1) * art.TILE - camX, (billboard.y - 1) * art.TILE - camY
-    local onScreen = px > -4 * art.TILE and px < ui.WIDTH and py > -3 * art.TILE and py < ui.HEIGHT
+    local onScreen = px > -4 * art.TILE and px < ui.WIDTH and py > -3 * art.TILE and py < ui.HEIGHT + 2 * art.TILE
     local ad = self.ads[i]
-    if onScreen and ad then
-      local path = ad.game.image or ad.game.thumbnail
+    if onScreen then
+      local path = ad and ui.boxArt(ad.game)
       local image = path and covers.get(path)
-      art.billboard(px, py, image, ad.game.name, ad.store.title, ui.fonts.sign)
-    elseif onScreen then
-      art.billboard(px, py, nil, "Your ad here!", "Metaretro", ui.fonts.sign)
+      table.insert(drawables, {
+        y = (billboard.y + town.BILLBOARD_HEIGHT - 2) * art.TILE,
+        draw = function()
+          if ad then
+            art.billboard(px, py, image, ad.game.name, ui.fonts.sign)
+          else
+            art.billboard(px, py, nil, "Your ad here!", ui.fonts.sign)
+          end
+        end,
+      })
     end
   end
 end

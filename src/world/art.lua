@@ -164,35 +164,38 @@ function art.building(building, label, x, y, width, font)
   sign(label, x + look[3] * tile / 2, y + 6, font)
 end
 
--- A 4x3-tile billboard on two posts advertising `title`, with `image` (an Image, or nil/false
--- while loading or when there's none) filling the board and `caption` on a plaque at the bottom.
-function art.billboard(px, py, image, title, caption, font)
+-- A billboard on two posts standing on a 4x3-tile base at (px, py), advertising `title`.
+-- The board takes the shape of `image` (the game's box art; nil/false while loading or when there's
+-- none, which shows the title instead) and may rise above the base.
+local BILLBOARD_MAX_W, BILLBOARD_MAX_H = 112, 108
+local BILLBOARD_BOARD_BOTTOM = 66 -- from the top of the base
+
+function art.billboard(px, py, image, title, font)
   local tile = art.TILE
-  local width = 4 * tile
-  local board = { x = px + 6, y = py + 4, w = width - 12, h = 2 * tile + 4 }
-  -- Posts, then the frame.
+  local centerX = px + 2 * tile
+  local w, h = BILLBOARD_MAX_W, 64
+  if image then
+    local scale = math.min(BILLBOARD_MAX_W / image:getWidth(), BILLBOARD_MAX_H / image:getHeight())
+    w, h = math.floor(image:getWidth() * scale), math.floor(image:getHeight() * scale)
+  end
+  local board = { x = math.floor(centerX - w / 2), y = py + BILLBOARD_BOARD_BOTTOM - h, w = w, h = h }
+
   love.graphics.setColor(0.36, 0.22, 0.13)
-  love.graphics.rectangle("fill", px + 26, board.y + board.h - 4, 8, 3 * tile - board.h - 4)
-  love.graphics.rectangle("fill", px + width - 34, board.y + board.h - 4, 8, 3 * tile - board.h - 4)
+  for _, postX in ipairs({ centerX - 30, centerX + 22 }) do
+    love.graphics.rectangle("fill", postX, board.y + board.h, 8, 3 * tile - BILLBOARD_BOARD_BOTTOM - 4)
+  end
   love.graphics.setColor(0.27, 0.16, 0.10)
   love.graphics.rectangle("fill", board.x - 4, board.y - 4, board.w + 8, board.h + 8, 4)
-  love.graphics.setColor(0.13, 0.10, 0.08)
-  love.graphics.rectangle("fill", board.x, board.y, board.w, board.h)
   if image then
-    -- Scaled to fill the board and cropped, like a poster.
-    local scale = math.max(board.w / image:getWidth(), board.h / image:getHeight())
-    local sx, sy, sw, sh = love.graphics.getScissor()
-    love.graphics.intersectScissor(board.x, board.y, board.w, board.h)
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(image, board.x + board.w / 2, board.y + board.h / 2, 0, scale, scale,
-      image:getWidth() / 2, image:getHeight() / 2)
-    love.graphics.setScissor(sx, sy, sw, sh)
+    love.graphics.draw(image, board.x, board.y, 0, board.w / image:getWidth(), board.h / image:getHeight())
   else
+    love.graphics.setColor(0.13, 0.10, 0.08)
+    love.graphics.rectangle("fill", board.x, board.y, board.w, board.h)
     love.graphics.setColor(0.98, 0.91, 0.74)
     love.graphics.setFont(font)
     love.graphics.printf(title, board.x + 6, board.y + 6, board.w - 12, "center")
   end
-  sign(caption, px + width / 2, board.y + board.h - 2, font) -- hangs off the bottom edge
 end
 
 -- A character from a 4-direction sheet (one column per direction, walk frames down the rows)

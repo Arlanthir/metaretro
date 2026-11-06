@@ -49,7 +49,7 @@ function GameDetail:draw()
   ui.header(game.name, self.app.state.wallet)
 
   local top = ui.HEADER_HEIGHT + 14
-  ui.drawCover(game.image or game.thumbnail, ui.MARGIN, top, 220, 300)
+  ui.drawCover(ui.fullImage(game), ui.MARGIN, top, 220, 300)
 
   local textX = ui.MARGIN * 2 + 220
   local textWidth = ui.WIDTH - textX - ui.MARGIN

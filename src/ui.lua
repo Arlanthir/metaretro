@@ -348,9 +348,18 @@ function ui.drawCover(path, x, y, width, height)
   end
 end
 
--- A game's cover with its year and genre below, each kept to one line.
+-- Scraped media: `thumbnail` is the box front, `image` a composite (screenshot, box and logo).
+function ui.boxArt(game)
+  return game.thumbnail or game.image
+end
+
+function ui.fullImage(game)
+  return game.image or game.thumbnail
+end
+
+-- A game's box art with its year and genre below, each kept to one line.
 function ui.coverWithCaption(game, x, y, width, height)
-  ui.drawCover(game.image or game.thumbnail, x, y, width, height)
+  ui.drawCover(ui.boxArt(game), x, y, width, height)
   local f = ui.fonts.small
   love.graphics.setFont(f)
   ui.setColor("muted")
