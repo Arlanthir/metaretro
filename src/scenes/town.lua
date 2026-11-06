@@ -28,6 +28,8 @@ local DIRECTIONS = {
 local DIRECTION_ORDER = { "up", "down", "left", "right" }
 local GROUND = { ["="] = "path", ["@"] = "path", ["~"] = "water" }
 local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
+local WELCOME = "Welcome to Metaretro! Play your games to earn coins, then spend them in the shops. "
+  .. "The townsfolk always have a tip or two."
 
 local function key(x, y)
   return x .. "," .. y
@@ -103,6 +105,11 @@ function Town:rebuild()
     local left, top = town.footprint(building.door)
     table.insert(objects, { row = top + town.BUILDING_HEIGHT - 1, x = left, building = building, top = top })
   end
+  self.props = {}
+  for _, prop in ipairs(map.props) do
+    self.props[key(prop.x, prop.y)] = prop
+    table.insert(objects, { row = prop.y, x = prop.x, prop = prop })
+  end
   table.sort(objects, function(a, b)
     if a.row ~= b.row then return a.row < b.row end
     return a.x < b.x
@@ -121,6 +128,8 @@ function Town:rebuild()
   for _, object in ipairs(objects) do
     if object.tree then
       art.tree(object.x, object.row, (object.x - 1) * tile, (object.row - 1) * tile)
+    elseif object.prop then
+      art.prop(object.prop.kind, (object.x - 1) * tile, (object.row - 1) * tile)
     else
       art.building(object.building, (self:label(object.building)), (object.x - 1) * tile, (object.top - 1) * tile,
         town.BUILDING_WIDTH * tile, ui.fonts.sign)
@@ -287,9 +296,11 @@ function Town:update(dt)
 end
 
 function Town:action(name)
-  local villager = self:facingVillager()
+  local villager, prop = self:facingVillager(), self.props[key(self:facingTile())]
   if name == "a" and villager and not self.move then
     self:talkTo(villager)
+  elseif name == "a" and prop and prop.kind == "sign" and not self.move then
+    scenes.push(Dialog.new("Signpost", nil, WELCOME))
   elseif name == "start" then
     scenes.push(Confirm.new("Quit Metaretro?", function()
       log("quit confirmed by player")
@@ -362,8 +373,10 @@ function Town:drawHud()
   end
 
   local building, villager = self:facingBuilding(), self:facingVillager()
+  local prop = self.props[key(self:facingTile())]
   local hint = building and ("Up: enter %s"):format(select(2, self:label(building)))
-    or villager and ("A: talk to %s"):format(villager.name) or "Start: quit"
+    or villager and ("A: talk to %s"):format(villager.name)
+    or prop and prop.kind == "sign" and "A: read sign" or "Start: quit"
   ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)
 end
 

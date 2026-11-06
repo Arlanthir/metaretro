@@ -1,7 +1,8 @@
 local scenes = require("core.scenes")
 local ui = require("ui")
 
--- A villager talking: portrait, name and text that types itself out at the bottom of the screen.
+-- A villager talking (or a sign being read): optional portrait, name and text that types itself
+-- out at the bottom of the screen.
 -- `accept` ({ hint, run }) is optional; without it A just closes the dialog.
 local Dialog = { drawBelow = true }
 Dialog.__index = Dialog
@@ -44,11 +45,12 @@ end
 function Dialog:draw()
   local x, y, width = 8, ui.HEIGHT - HEIGHT - 8, ui.WIDTH - 16
   ui.panel(x, y, width, HEIGHT)
-  local portraitSize = self.portrait:getWidth() * 2
-  love.graphics.setColor(1, 1, 1)
-  love.graphics.draw(self.portrait, x + 14, y + 14, 0, 2, 2)
-
-  local textX = x + 14 + portraitSize + 14
+  local textX = x + 16
+  if self.portrait then
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(self.portrait, x + 14, y + 14, 0, 2, 2)
+    textX = x + 14 + self.portrait:getWidth() * 2 + 14
+  end
   local textWidth = x + width - 16 - textX
   love.graphics.setFont(ui.fonts.body)
   ui.setColor("highlight")
