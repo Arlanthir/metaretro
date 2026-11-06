@@ -53,7 +53,7 @@ local HOUSES = {
   genre = { { 23, 0, 3 }, { 26, 0, 3 } },
 }
 
-local PLAYER_COLUMNS = { down = 0, up = 1, left = 2, right = 3 }
+local CHARACTER_COLUMNS = { down = 0, up = 1, left = 2, right = 3 }
 
 -- A stable pseudo-random number in [0, 1) per tile, so decorations don't line up in patterns.
 local function noise(x, y, salt)
@@ -141,12 +141,28 @@ function art.building(building, label, x, y, width, font)
   sign(label, x + look[3] * tile / 2, y + 6, font)
 end
 
--- `frame` counts walk frames (0 when standing still).
-function art.player(x, y, facing, frame)
+-- A character from a 4-direction sheet (one column per direction, walk frames down the rows)
+-- with its shadow; `frame` counts walk frames (0 when standing still).
+function art.character(sheet, x, y, facing, frame)
   love.graphics.setColor(1, 1, 1, 0.6)
   love.graphics.draw(image("Shadow"), x + 4, y + art.TILE - 10, 0, SCALE, SCALE)
   love.graphics.setColor(1, 1, 1)
-  sprite("Boy", PLAYER_COLUMNS[facing], frame % 4, x, y - 4)
+  -- Most sheets have 4 walk frames, some only 2.
+  local frames = math.min(4, image(sheet):getHeight() / SOURCE)
+  sprite(sheet, CHARACTER_COLUMNS[facing], frame % frames, x, y - 4)
+end
+
+function art.player(x, y, facing, frame)
+  art.character("Boy", x, y, facing, frame)
+end
+
+function art.villager(villager, x, y, facing, frame)
+  art.character("villagers/" .. villager.sprite, x, y, facing, frame or 0)
+end
+
+-- The villager's portrait for dialogs, as an Image.
+function art.portrait(villager)
+  return image("villagers/" .. villager.sprite .. "Face")
 end
 
 return art

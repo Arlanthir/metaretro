@@ -4,8 +4,12 @@ local scenes = require("core.scenes")
 local ui = require("ui")
 local art = require("world.art")
 local town = require("world.town")
+local progression = require("core.progression")
+local townsfolk = require("core.townsfolk")
 local Collection = require("scenes.collection")
 local Confirm = require("scenes.confirm")
+local Dialog = require("scenes.dialog")
+local GameDetail = require("scenes.gamedetail")
 local Shop = require("scenes.shop")
 
 local Town = {}
@@ -16,11 +20,14 @@ local STEPS_PER_SECOND = 6
 local DOOR_STEP_SPEED = 0.5
 local FADE_IN_SECONDS = 0.25
 local TOAST_SECONDS = 4
+local VILLAGER_STEPS_PER_SECOND = 3
+local VILLAGER_PAUSE = { 1.5, 4 } -- seconds between villager steps
 local DIRECTIONS = {
   up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 },
 }
 local DIRECTION_ORDER = { "up", "down", "left", "right" }
 local GROUND = { ["="] = "path", ["@"] = "path", ["~"] = "water" }
+local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
 
 local function key(x, y)
   return x .. "," .. y
@@ -28,8 +35,16 @@ end
 
 function Town.new(app)
   local map = app.town
+  local villagers, villagerAt = {}, {}
+  for _, entry in ipairs(townsfolk.dailyRoster(os.date("%Y-%m-%d"))) do
+    -- Each villager stands on a tile, wanders around `home`, and waits `pause` seconds between steps.
+    local villager = setmetatable({ x = entry.x, y = entry.y, home = { x = entry.x, y = entry.y },
+      facing = "down", pause = love.math.random() * VILLAGER_PAUSE[2] }, { __index = entry.villager })
+    table.insert(villagers, villager)
+    villagerAt[key(villager.x, villager.y)] = villager
+  end
   return setmetatable({
-    app = app, map = map,
+    app = app, map = map, villagers = villagers, villagerAt = villagerAt,
     x = map.start.x, y = map.start.y, facing = "down", steps = 0,
     toast = app.earned > 0 and ("+%d coins from play"):format(app.earned) or nil,
     toastTime = TOAST_SECONDS,
@@ -40,10 +55,14 @@ function Town:enter()
   self:rebuild()
 end
 
+-- Back from a building (redrawn, faded in) or from a conversation (villagers go back to wandering).
 function Town:resume()
-  self:rebuild()
-  self.waitForRelease = true
-  self.fadeIn = 1
+  if self.inside then
+    self.inside = false
+    self:rebuild()
+    self.waitForRelease = true
+    self.fadeIn = 1
+  end
 end
 
 -- Short text for the building's sign, and the full name used in hints.
@@ -120,7 +139,76 @@ function Town:facingBuilding()
   return building and building.kind ~= "lot" and building or nil
 end
 
+function Town:facingVillager()
+  return self.villagerAt[key(self:facingTile())]
+end
+
+local function finishVillagerStep(town, villager)
+  local move = villager.move
+  town.villagerAt[key(villager.x, villager.y)] = nil
+  villager.x, villager.y, villager.move = villager.x + move.dx, villager.y + move.dy, nil
+end
+
+-- Villagers take a step in a random direction now and then, never onto the player or each other.
+function Town:updateVillagers(dt)
+  local map = self.map
+  local playerMove = self.move or { dx = 0, dy = 0 }
+  local playerTarget = key(self.x + playerMove.dx, self.y + playerMove.dy)
+  local function tileAt(x, y) return town.tile(map, x, y) end
+  for _, villager in ipairs(self.villagers) do
+    if villager.move then
+      villager.move.t = villager.move.t + dt * VILLAGER_STEPS_PER_SECOND
+      if villager.move.t >= 1 then finishVillagerStep(self, villager) end
+    else
+      villager.pause = villager.pause - dt
+      if villager.pause <= 0 then
+        villager.pause = VILLAGER_PAUSE[1] + love.math.random() * (VILLAGER_PAUSE[2] - VILLAGER_PAUSE[1])
+        local direction = DIRECTION_ORDER[love.math.random(#DIRECTION_ORDER)]
+        local d = DIRECTIONS[direction]
+        local x, y = villager.x + d[1], villager.y + d[2]
+        local spot = key(x, y)
+        villager.facing = direction
+        if townsfolk.canWanderTo(tileAt, villager.home, x, y) and not self.villagerAt[spot]
+          and spot ~= key(self.x, self.y) and spot ~= playerTarget then
+          villager.move = { dx = d[1], dy = d[2], t = 0 }
+          self.villagerAt[spot] = villager -- reserved while they walk there
+        end
+      end
+    end
+  end
+end
+
+function Town:villagerPixels(villager)
+  local move = villager.move or { dx = 0, dy = 0, t = 0 }
+  return (villager.x - 1 + move.dx * move.t) * art.TILE, (villager.y - 1 + move.dy * move.t) * art.TILE
+end
+
+function Town:talkTo(villager)
+  local move = villager.move
+  if move and key(villager.x, villager.y) == key(self:facingTile()) then
+    -- Leaving the tile in front of the player: stay put instead.
+    self.villagerAt[key(villager.x + move.dx, villager.y + move.dy)] = nil
+    villager.move = nil
+  elseif move then
+    finishVillagerStep(self, villager)
+  end
+  villager.pause = VILLAGER_PAUSE[2]
+  villager.facing = OPPOSITE[self.facing]
+  local app = self.app
+  local reply = townsfolk.talk(villager, {
+    state = app.state, catalog = app.catalog, timeline = progression.timeline(app.catalog.systems),
+    today = os.date("%Y-%m-%d"), random = love.math.random,
+  })
+  app:persist() -- store tips can roll the day's store picks
+  local accept = reply.game and {
+    hint = "show me",
+    run = function() scenes.push(GameDetail.new(app, reply.game)) end,
+  }
+  scenes.push(Dialog.new(villager.name, art.portrait(villager), reply.text, accept))
+end
+
 function Town:enterBuilding(building)
+  self.inside = true
   if building.kind == "home" then
     scenes.push(Collection.new(self.app))
   elseif building.kind == "dealer" then
@@ -136,7 +224,7 @@ function Town:step(direction)
   local building = self:facingBuilding()
   if building and direction == "up" then
     self:walkInto(building)
-  elseif town.isWalkable(self.map, targetX, targetY, self.blocked) then
+  elseif town.isWalkable(self.map, targetX, targetY, self.blocked) and not self.villagerAt[key(targetX, targetY)] then
     self.move = { dx = targetX - self.x, dy = targetY - self.y, t = 0 }
   end
 end
@@ -164,6 +252,8 @@ function Town:update(dt)
     self.toastTime = self.toastTime - dt
     if self.toastTime <= 0 then self.toast = nil end
   end
+
+  self:updateVillagers(dt)
 
   if self.fadeIn then
     self.fadeIn = self.fadeIn - dt / FADE_IN_SECONDS
@@ -197,7 +287,10 @@ function Town:update(dt)
 end
 
 function Town:action(name)
-  if name == "start" then
+  local villager = self:facingVillager()
+  if name == "a" and villager and not self.move then
+    self:talkTo(villager)
+  elseif name == "start" then
     scenes.push(Confirm.new("Quit Metaretro?", function()
       log("quit confirmed by player")
       love.event.quit()
@@ -224,7 +317,17 @@ function Town:draw()
   love.graphics.draw(self.canvas, -camX, -camY)
   local frame = self.move and self.steps * 2 + math.floor(self.move.t * 2) or 0
   local screenX, screenY = math.floor(px - camX), math.floor(py - camY)
-  art.player(screenX, screenY, self.facing, frame)
+  -- Characters lower on screen stand in front of the ones above them.
+  local characters = { { y = py, draw = function() art.player(screenX, screenY, self.facing, frame) end } }
+  for _, villager in ipairs(self.villagers) do
+    local vx, vy = self:villagerPixels(villager)
+    local walkFrame = villager.move and math.floor(villager.move.t * 4) or 0
+    table.insert(characters, { y = vy, draw = function()
+      art.villager(villager, math.floor(vx - camX), math.floor(vy - camY), villager.facing, walkFrame)
+    end })
+  end
+  table.sort(characters, function(a, b) return a.y < b.y end)
+  for _, character in ipairs(characters) do character.draw() end
   self:drawTreesInFront(camX, camY, screenX, screenY)
 
   local fade = self.move and self.move.enter and self.move.t or self.fadeIn
@@ -252,17 +355,15 @@ function Town:drawTreesInFront(camX, camY, screenX, screenY)
 end
 
 function Town:drawHud()
-  local wallet = self.app.state.wallet
-  local width = ui.fonts.body:getWidth(tostring(wallet)) + 64
-  ui.panel(ui.WIDTH - width - 6, 6, width, 40)
-  ui.coins(wallet, ui.WIDTH - 26, 10)
+  ui.walletPanel(self.app.state.wallet)
 
   if self.toast then
     ui.messagePanel(self.toast, ui.WIDTH / 2, 48, "coin")
   end
 
-  local building = self:facingBuilding()
-  local hint = building and ("Up: enter %s"):format(select(2, self:label(building))) or "Start: quit"
+  local building, villager = self:facingBuilding(), self:facingVillager()
+  local hint = building and ("Up: enter %s"):format(select(2, self:label(building)))
+    or villager and ("A: talk to %s"):format(villager.name) or "Start: quit"
   ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)
 end
 

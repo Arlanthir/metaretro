@@ -74,6 +74,9 @@ local function loadLibrary(args)
   local sessions = playtime.parseLog(love.filesystem.read(playtime.LOG))
   local played
   app.earned, played = playtime.credit(app.state, app.backend, games, sessions)
+  for _, game in ipairs(played) do
+    app.state.lastPlayed[game.id] = os.time()
+  end
   retroachievements.queue(app.state, played)
   app:refresh()
   retroachievements.sync(app, sessions[1] and sessions[1].start)

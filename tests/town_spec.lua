@@ -96,3 +96,16 @@ describe("town.layout", function()
     assert.equal(2 + #map.lots, #buildings)
   end)
 end)
+
+describe("townsfolk placement", function()
+  local townsfolk = require("core.townsfolk")
+  local map = town.parse(require("world.townmap"))
+
+  it("starts villagers on spots they may stand on", function()
+    local function tileAt(x, y) return town.tile(map, x, y) end
+    assert.is_true(#townsfolk.SPOTS >= #townsfolk.KINDS)
+    for _, spot in ipairs(townsfolk.SPOTS) do
+      assert.is_true(townsfolk.canWanderTo(tileAt, spot, spot.x, spot.y), spot.x .. "," .. spot.y)
+    end
+  end)
+end)

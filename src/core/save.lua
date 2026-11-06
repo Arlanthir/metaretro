@@ -20,6 +20,7 @@ function save.defaults()
     achievementsSince = "", -- UTC time tracking started; earlier unlocks pay less
     pendingAchievementGames = {}, -- RetroAchievements game ids to check at the next sync
     creditedGametime = {},
+    lastPlayed = {}, -- game id -> epoch of the last play Metaretro noticed
     consumedSessions = 0,
     settings = {},
   }

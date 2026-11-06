@@ -132,12 +132,23 @@ function ui.backdrop()
   love.graphics.draw(background, 0, 0)
 end
 
+-- The wallet sits at the same spot in menus and in town, so it doesn't jump between them.
+local WALLET_RIGHT, WALLET_Y = ui.WIDTH - 22, 10
+local BAR_Y, BAR_HEIGHT = 4, 44
+
+-- Just the wallet, in a panel matching the right end of the menu header bar (used over the town).
+function ui.walletPanel(wallet)
+  local width = ui.WIDTH - WALLET_RIGHT + ui.fonts.body:getWidth(tostring(wallet)) + 42
+  ui.panel(ui.WIDTH - 4 - width, BAR_Y, width, BAR_HEIGHT)
+  ui.coins(wallet, WALLET_RIGHT, WALLET_Y)
+end
+
 -- Screen backdrop, header bar with the title and wallet, and the content panel below it.
 function ui.header(title, wallet)
   ui.backdrop()
   ui.panel(4, ui.HEADER_HEIGHT - 4, ui.WIDTH - 8, ui.HEIGHT - ui.HEADER_HEIGHT - ui.FOOTER_HEIGHT + 4)
-  ui.panel(4, 4, ui.WIDTH - 8, 44)
-  local coinsLeft = ui.coins(wallet, ui.WIDTH - 22, 10)
+  ui.panel(4, BAR_Y, ui.WIDTH - 8, BAR_HEIGHT)
+  local coinsLeft = ui.coins(wallet, WALLET_RIGHT, WALLET_Y)
   love.graphics.setFont(ui.fonts.title)
   ui.setColor("highlight")
   love.graphics.print(ui.truncate(ui.fonts.title, title, coinsLeft - 40), 20, 10)
