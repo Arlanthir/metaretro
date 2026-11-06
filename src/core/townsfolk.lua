@@ -1,4 +1,5 @@
 -- Villagers in town and what they recommend when you talk to them.
+local daily = require("core.daily")
 local genres = require("core.genres")
 local stores = require("core.stores")
 
@@ -49,21 +50,9 @@ townsfolk.SPOTS = {
 }
 townsfolk.WANDER_RADIUS = 2
 
--- A small deterministic generator, so a given day always has the same villagers in the same spots.
-local function seededRandom(text)
-  local seed = 0
-  for i = 1, #text do
-    seed = (seed * 31 + text:byte(i)) % 2147483647
-  end
-  return function(n)
-    seed = (seed * 48271) % 2147483647
-    return seed % n + 1
-  end
-end
-
 -- Today's villagers: one of each kind, each on its own spot, as { villager, x, y }.
 function townsfolk.dailyRoster(day)
-  local random = seededRandom(day)
+  local random = daily.random(day)
   local spots = {}
   for i, spot in ipairs(townsfolk.SPOTS) do spots[i] = spot end
   local roster = {}

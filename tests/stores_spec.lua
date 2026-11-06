@@ -128,3 +128,40 @@ describe("stores.offer", function()
     assert.same({ "nes:Mario" }, ids(games))
   end)
 end)
+
+describe("stores.featured", function()
+  local minimum = stores.MIN_GENRE_GAMES
+  before_each(function() stores.MIN_GENRE_GAMES = 1 end)
+  after_each(function() stores.MIN_GENRE_GAMES = minimum end)
+
+  local function first() return 1 end
+
+  it("picks games from different stores, the same all day", function()
+    local state = save.defaults()
+    state.ownedConsoles.nes = true
+    state.ownedConsoles.snes = true
+    local ads = stores.featured(state, built, timeline, "2026-11-06", 2, first)
+    assert.equal(2, #ads)
+    assert.are_not.equal(ads[1].store.id, ads[2].store.id)
+    assert.are_not.equal(ads[1].game.id, ads[2].game.id)
+    local again = stores.featured(state, built, timeline, "2026-11-06", 2, first)
+    assert.same({ ads[1].game.id, ads[2].game.id }, { again[1].game.id, again[2].game.id })
+  end)
+
+  it("returns fewer ads when there's little for sale", function()
+    local state = save.defaults()
+    assert.same({}, stores.featured(state, built, timeline, "2026-11-06", 2, first))
+    state.ownedConsoles.nes = true
+    stores.MIN_GENRE_GAMES = 100
+    assert.equal(1, #stores.featured(state, built, timeline, "2026-11-06", 2, first))
+  end)
+
+  it("fills the rest from the same stores when there are fewer stores than ads", function()
+    local state = save.defaults()
+    state.ownedConsoles.snes = true
+    stores.MIN_GENRE_GAMES = 100
+    local ads = stores.featured(state, built, timeline, "2026-11-06", 2, first)
+    assert.same({ "snes", "snes" }, { ads[1].store.id, ads[2].store.id })
+    assert.are_not.equal(ads[1].game.id, ads[2].game.id)
+  end)
+end)

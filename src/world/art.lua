@@ -164,6 +164,37 @@ function art.building(building, label, x, y, width, font)
   sign(label, x + look[3] * tile / 2, y + 6, font)
 end
 
+-- A 4x3-tile billboard on two posts advertising `title`, with `image` (an Image, or nil/false
+-- while loading or when there's none) filling the board and `caption` on a plaque at the bottom.
+function art.billboard(px, py, image, title, caption, font)
+  local tile = art.TILE
+  local width = 4 * tile
+  local board = { x = px + 6, y = py + 4, w = width - 12, h = 2 * tile + 4 }
+  -- Posts, then the frame.
+  love.graphics.setColor(0.36, 0.22, 0.13)
+  love.graphics.rectangle("fill", px + 26, board.y + board.h - 4, 8, 3 * tile - board.h - 4)
+  love.graphics.rectangle("fill", px + width - 34, board.y + board.h - 4, 8, 3 * tile - board.h - 4)
+  love.graphics.setColor(0.27, 0.16, 0.10)
+  love.graphics.rectangle("fill", board.x - 4, board.y - 4, board.w + 8, board.h + 8, 4)
+  love.graphics.setColor(0.13, 0.10, 0.08)
+  love.graphics.rectangle("fill", board.x, board.y, board.w, board.h)
+  if image then
+    -- Scaled to fill the board and cropped, like a poster.
+    local scale = math.max(board.w / image:getWidth(), board.h / image:getHeight())
+    local sx, sy, sw, sh = love.graphics.getScissor()
+    love.graphics.intersectScissor(board.x, board.y, board.w, board.h)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(image, board.x + board.w / 2, board.y + board.h / 2, 0, scale, scale,
+      image:getWidth() / 2, image:getHeight() / 2)
+    love.graphics.setScissor(sx, sy, sw, sh)
+  else
+    love.graphics.setColor(0.98, 0.91, 0.74)
+    love.graphics.setFont(font)
+    love.graphics.printf(title, board.x + 6, board.y + 6, board.w - 12, "center")
+  end
+  sign(caption, px + width / 2, board.y + board.h - 2, font) -- hangs off the bottom edge
+end
+
 -- A character from a 4-direction sheet (one column per direction, walk frames down the rows)
 -- with its shadow; `frame` counts walk frames (0 when standing still).
 function art.character(sheet, x, y, facing, frame)

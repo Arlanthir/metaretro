@@ -2,11 +2,12 @@
 --   .  grass        =  path        T  tree        ~  water        @  player start (path)
 --   B  building     H  home door   D  console dealer door
 --   1-9, a-z  doors of store lots, in the order they get filled
---   $  signpost (readable)   %  crate   &  barrel
+--   $  signpost (readable)   %  crate   &  barrel   #  billboard (4x3 block of #)
 -- Every door sits on the bottom row of a 4x3 building, one tile from its left edge.
 local town = {}
 
 town.BUILDING_WIDTH, town.BUILDING_HEIGHT = 4, 3
+town.BILLBOARD_WIDTH, town.BILLBOARD_HEIGHT = 4, 3
 
 local LOT_LABELS = "123456789abcdefghijklmnopqrstuvwxyz"
 local WALKABLE = { ["."] = true, ["="] = true, ["@"] = true }
@@ -14,7 +15,7 @@ local FIXED = { H = "home", D = "dealer" }
 local PROPS = { ["$"] = "sign", ["%"] = "crate", ["&"] = "barrel" }
 
 function town.parse(rows)
-  local map = { rows = rows, width = #rows[1], height = #rows, fixed = {}, lots = {}, props = {} }
+  local map = { rows = rows, width = #rows[1], height = #rows, fixed = {}, lots = {}, props = {}, billboards = {} }
   for y, row in ipairs(rows) do
     for x = 1, #row do
       local tile = row:sub(x, x)
@@ -23,6 +24,8 @@ function town.parse(rows)
         map.start = { x = x, y = y }
       elseif PROPS[tile] then
         table.insert(map.props, { kind = PROPS[tile], x = x, y = y })
+      elseif tile == "#" and row:sub(x - 1, x - 1) ~= "#" and (rows[y - 1] or ""):sub(x, x) ~= "#" then
+        table.insert(map.billboards, { x = x, y = y }) -- top-left corner
       elseif FIXED[tile] then
         table.insert(map.fixed, { kind = FIXED[tile], door = { x = x, y = y } })
       elseif lot then

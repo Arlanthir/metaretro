@@ -1,4 +1,5 @@
 local catalog = require("core.catalog")
+local daily = require("core.daily")
 local genres = require("core.genres")
 
 -- Stores in town: one per owned console, plus a genre store for every category with enough games on
@@ -83,6 +84,35 @@ function stores.offer(store, state, built, timeline, today, random)
   end
   table.sort(games, catalog.byName)
   return games, rerolled, #stock
+end
+
+-- Up to `count` games from today's store picks to advertise, as { game, store }: different stores
+-- first, then more games from the same stores if there are fewer stores than ads. The choice depends
+-- only on the day; `random` is only used to roll new picks.
+function stores.featured(state, built, timeline, today, count, random)
+  local pickDaily = daily.random("featured " .. today)
+  local order = {}
+  for _, store in ipairs(stores.list(state, built, timeline)) do
+    table.insert(order, pickDaily(#order + 1), store)
+  end
+  local featured, seen = {}, {}
+  local added = true
+  while #featured < count and added do
+    added = false
+    for _, store in ipairs(order) do
+      local candidates = {}
+      for _, game in ipairs((stores.offer(store, state, built, timeline, today, random))) do
+        if not seen[game.id] then table.insert(candidates, game) end
+      end
+      if #featured < count and #candidates > 0 then
+        local game = candidates[pickDaily(#candidates)]
+        seen[game.id] = true
+        table.insert(featured, { game = game, store = store })
+        added = true
+      end
+    end
+  end
+  return featured
 end
 
 return stores

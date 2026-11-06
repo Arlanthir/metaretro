@@ -5,6 +5,8 @@ local ui = require("ui")
 local art = require("world.art")
 local town = require("world.town")
 local progression = require("core.progression")
+local stores = require("core.stores")
+local covers = require("services.covers")
 local townsfolk = require("core.townsfolk")
 local Collection = require("scenes.collection")
 local Confirm = require("scenes.confirm")
@@ -104,6 +106,18 @@ function Town:rebuild()
   for _, building in ipairs(self.buildings) do
     local left, top = town.footprint(building.door)
     table.insert(objects, { row = top + town.BUILDING_HEIGHT - 1, x = left, building = building, top = top })
+  end
+  -- Billboards advertise games from today's store picks; drawn live since their images load later.
+  self.ads = stores.featured(self.app.state, self.app.catalog, progression.timeline(self.app.catalog.systems),
+    os.date("%Y-%m-%d"), #map.billboards, love.math.random)
+  self.app:persist() -- featuring a store can roll its picks for the day
+  self.billboardAt = {}
+  for i, billboard in ipairs(map.billboards) do
+    for x = billboard.x, billboard.x + town.BILLBOARD_WIDTH - 1 do
+      for y = billboard.y, billboard.y + town.BILLBOARD_HEIGHT - 1 do
+        self.billboardAt[key(x, y)] = i
+      end
+    end
   end
   self.props = {}
   for _, prop in ipairs(map.props) do
@@ -328,6 +342,8 @@ function Town:draw()
   love.graphics.draw(self.canvas, -camX, -camY)
   local frame = self.move and self.steps * 2 + math.floor(self.move.t * 2) or 0
   local screenX, screenY = math.floor(px - camX), math.floor(py - camY)
+  self:drawBillboards(camX, camY)
+
   -- Characters lower on screen stand in front of the ones above them.
   local characters = { { y = py, draw = function() art.player(screenX, screenY, self.facing, frame) end } }
   for _, villager in ipairs(self.villagers) do
@@ -348,6 +364,21 @@ function Town:draw()
   end
 
   self:drawHud()
+end
+
+function Town:drawBillboards(camX, camY)
+  for i, billboard in ipairs(self.map.billboards) do
+    local px, py = (billboard.x - 1) * art.TILE - camX, (billboard.y - 1) * art.TILE - camY
+    local onScreen = px > -4 * art.TILE and px < ui.WIDTH and py > -3 * art.TILE and py < ui.HEIGHT
+    local ad = self.ads[i]
+    if onScreen and ad then
+      local path = ad.game.image or ad.game.thumbnail
+      local image = path and covers.get(path)
+      art.billboard(px, py, image, ad.game.name, ad.store.title, ui.fonts.sign)
+    elseif onScreen then
+      art.billboard(px, py, nil, "Your ad here!", "Metaretro", ui.fonts.sign)
+    end
+  end
 end
 
 -- Trees standing just below the player cover them with their crowns. They're redrawn only
@@ -374,7 +405,9 @@ function Town:drawHud()
 
   local building, villager = self:facingBuilding(), self:facingVillager()
   local prop = self.props[key(self:facingTile())]
+  local ad = self.ads[self.billboardAt[key(self:facingTile())] or 0]
   local hint = building and ("Up: enter %s"):format(select(2, self:label(building)))
+    or ad and ("%s at the %s"):format(ad.game.name, ad.store.title)
     or villager and ("A: talk to %s"):format(villager.name)
     or prop and prop.kind == "sign" and "A: read sign" or "Start: quit"
   ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)
