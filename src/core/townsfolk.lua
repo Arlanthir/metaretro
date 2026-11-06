@@ -6,39 +6,110 @@ local stores = require("core.stores")
 local townsfolk = {}
 
 -- Everyone who might be in town. Each day one villager of each kind shows up (see dailyRoster).
--- `sprite` names art in assets/ninja-adventure/villagers. `suggest` takes the game's name (the genre
--- kind also gets the category first, the store kind the store first); `none` is for nothing to suggest.
+-- `sprite` names art in assets/ninja-adventure/villagers. Each talk picks one of the `suggest` lines,
+-- which take the game's name (the genre kind gets the category first, the store kind the store first),
+-- or one of the `none` lines when there's nothing to suggest.
 townsfolk.CAST = {
   { id = "tomo", name = "Grandpa Tomo", sprite = "OldMan", kind = "neverPlayed",
-    suggest = "Back in my day we finished what we bought! You've never even started %s. Give it a go!",
-    none = "You've played every game you own? Hmph. Kids these days... well done." },
+    suggest = {
+      "Back in my day we finished what we bought! You've never even started %s. Give it a go!",
+      "%s is gathering dust on your shelf. Games are for playing, youngster!",
+      "When I was your age, I'd have played %s till my thumbs hurt. You haven't even tried it!",
+    },
+    none = {
+      "You've played every game you own? Hmph. Kids these days... well done.",
+      "Not one unplayed game. My generation would be proud.",
+    } },
   { id = "bram", name = "Bram", sprite = "Villager", kind = "neverPlayed",
-    suggest = "You bought %s and never played it? That's like baking bread and not eating it!",
-    none = "Not a single unplayed game? I wish my bakery shelves were that tidy." },
+    suggest = {
+      "You bought %s and never played it? That's like baking bread and not eating it!",
+      "Fresh out of the box: %s! Well, it would be, if you ever opened it.",
+      "A game unplayed is a loaf unbaked. Give %s a try!",
+    },
+    none = {
+      "Not a single unplayed game? I wish my bakery shelves were that tidy.",
+      "Everything you own has been played. Now that's a well-stocked pantry!",
+    } },
   { id = "pip", name = "Pip", sprite = "Villager4", kind = "genre",
-    suggest = "I'm crazy about %s right now! Have you tried %s? It's one of yours!",
-    none = "Buy some games and I'll tell you which ones I love!" },
+    suggest = {
+      "I'm crazy about %s right now! Have you tried %s? It's one of yours!",
+      "%s games are the best! You should play %s, you already have it!",
+      "Ooh, I've been dreaming about %s. Play %s and tell me everything!",
+    },
+    none = {
+      "Buy some games and I'll tell you which ones I love!",
+      "No games yet? The shops are just down the road!",
+    } },
   { id = "juno", name = "Juno", sprite = "Villager3", kind = "genre",
-    suggest = "Everyone at school is into %s lately. You've got %s, why not try it?",
-    none = "Your shelf is empty! Go get some games already." },
+    suggest = {
+      "Everyone at school is into %s lately. You've got %s, why not try it?",
+      "My friends won't stop talking about %s. Have you played %s?",
+      "If you like %s, %s is right there in your collection!",
+    },
+    none = {
+      "Your shelf is empty! Go get some games already.",
+      "I'd recommend something, but you don't have anything yet!",
+    } },
   { id = "sensei", name = "Sensei", sprite = "Master", kind = "achievements",
-    suggest = "%s hides achievements you have not claimed. Seek them, and coins will follow.",
-    none = "Every challenge in your collection has paid its reward. Your training is complete... for now." },
+    suggest = {
+      "%s hides achievements you have not claimed. Seek them, and coins will follow.",
+      "A true master would return to %s. Its challenges still await you.",
+      "The path to wealth runs through %s. Its achievements remain unclaimed.",
+    },
+    none = {
+      "Every challenge in your collection has paid its reward. Your training is complete... for now.",
+      "You have claimed all there is to claim. Find new games, and new challenges.",
+    } },
   { id = "kai", name = "Brother Kai", sprite = "Monk", kind = "achievements",
-    suggest = "Patience brings rewards. %s still holds achievements waiting for you.",
-    none = "There are no rewards left to seek. Rest, and find new games." },
+    suggest = {
+      "Patience brings rewards. %s still holds achievements waiting for you.",
+      "I meditated on %s today. Its achievements are calling to you.",
+      "Some treasures take effort. %s has achievements you have yet to earn.",
+    },
+    none = {
+      "There are no rewards left to seek. Rest, and find new games.",
+      "Your collection holds no unclaimed rewards. Be at peace.",
+    } },
   { id = "rose", name = "Granny Rose", sprite = "OldWoman", kind = "forgotten",
-    suggest = "Oh dear, it's been ages since you played %s. Old friends like to be visited!",
-    none = "Play a few games, dear, and I'll remind you of the ones you miss." },
+    suggest = {
+      "Oh dear, it's been ages since you played %s. Old friends like to be visited!",
+      "Whatever happened to %s? You used to play it, didn't you?",
+      "I was just thinking about %s. You should give it another go, dear.",
+    },
+    none = {
+      "Play a few games, dear, and I'll remind you of the ones you miss.",
+      "You haven't played anything yet? Go on, have some fun!",
+    } },
   { id = "mia", name = "Mia", sprite = "Woman", kind = "forgotten",
-    suggest = "Remember %s? You haven't played it in forever!",
-    none = "Once you've played a few games, I'll tell you which ones you're neglecting." },
+    suggest = {
+      "Remember %s? You haven't played it in forever!",
+      "Feeling nostalgic? %s has been waiting for you.",
+      "It's been a while since %s. Want to pick it up again?",
+    },
+    none = {
+      "Once you've played a few games, I'll tell you which ones you're neglecting.",
+      "Nothing to be nostalgic about yet. Go make some memories!",
+    } },
   { id = "scout", name = "Scout", sprite = "Inspector", kind = "storeTip",
-    suggest = "Psst! The %s has %s in today's picks. Don't tell anyone I told you.",
-    none = "Nothing worth a tip today. Check back tomorrow!" },
+    suggest = {
+      "Psst! The %s has %s in today's picks. Don't tell anyone I told you.",
+      "My sources say the %s got %s in today. Act fast!",
+      "Word on the street: %s, %s. You didn't hear it from me.",
+    },
+    none = {
+      "Nothing worth a tip today. Check back tomorrow!",
+      "The shops are quiet today. My sources have nothing.",
+    } },
   { id = "timmy", name = "Timmy", sprite = "Child", kind = "storeTip",
-    suggest = "Guess what! The %s has %s today! I saw it through the window!",
-    none = "The stores are boring today. Nothing new!" },
+    suggest = {
+      "Guess what! The %s has %s today! I saw it through the window!",
+      "I wish I had coins! The %s is selling %s today!",
+      "Mom says no, but the %s has %s! You should get it!",
+    },
+    none = {
+      "The stores are boring today. Nothing new!",
+      "I checked every shop window. Nothing cool today.",
+    } },
 }
 
 townsfolk.KINDS = { "neverPlayed", "genre", "achievements", "forgotten", "storeTip" }
@@ -159,25 +230,25 @@ function townsfolk.talk(villager, context)
 
   if kind == "neverPlayed" then
     game = pick(townsfolk.neverPlayed(state, owned), random)
-    text = game and villager.suggest:format(game.name)
+    text = game and pick(villager.suggest, random):format(game.name)
   elseif kind == "genre" then
     local group = pick(townsfolk.byCategory(owned), random)
     game = group and pick(group.games, random)
-    text = game and villager.suggest:format(group.category.name, game.name)
+    text = game and pick(villager.suggest, random):format(group.category.name, game.name)
   elseif kind == "achievements" then
     game = pick(townsfolk.uncashedAchievements(state, owned), random)
-    text = game and villager.suggest:format(game.name)
+    text = game and pick(villager.suggest, random):format(game.name)
   elseif kind == "forgotten" then
     game = pick(townsfolk.forgotten(state, owned), random)
-    text = game and villager.suggest:format(game.name)
+    text = game and pick(villager.suggest, random):format(game.name)
   elseif kind == "storeTip" then
     local store = pick(stores.list(state, context.catalog, context.timeline), random)
     local offer = store and stores.offer(store, state, context.catalog, context.timeline, context.today, random)
     local tip = offer and pick(offer, random)
     -- A tip points at a store; there's nothing to open from the dialog.
-    return { text = tip and villager.suggest:format(store.title, tip.name) or villager.none }
+    return { text = tip and pick(villager.suggest, random):format(store.title, tip.name) or pick(villager.none, random) }
   end
-  return { game = game, text = text or villager.none }
+  return { game = game, text = text or pick(villager.none, random) }
 end
 
 return townsfolk

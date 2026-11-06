@@ -53,6 +53,21 @@ describe("townsfolk", function()
     assert.is_false(townsfolk.canWanderTo(tileAt, home, 4, 3)) -- too far from home
   end)
 
+  it("gives every villager several lines with the right placeholders for their kind", function()
+    local arguments = { genre = 2, storeTip = 2 }
+    for _, villager in ipairs(townsfolk.CAST) do
+      assert.is_true(#villager.suggest >= 2 and #villager.none >= 2, villager.name)
+      local expected = arguments[villager.kind] or 1
+      for _, line in ipairs(villager.suggest) do
+        local _, count = line:gsub("%%s", "")
+        assert.equal(expected, count, villager.name .. ": " .. line)
+      end
+      for _, line in ipairs(villager.none) do
+        assert.is_nil(line:find("%", 1, true), villager.name .. ": " .. line)
+      end
+    end
+  end)
+
   it("knows when a game was last played from the backend or Metaretro", function()
     assert.equal(0, townsfolk.lastPlayed(state, game("a")))
     assert.equal(20241003122910, townsfolk.lastPlayed(state, game("a", { lastplayed = "20241003T122910" })))
