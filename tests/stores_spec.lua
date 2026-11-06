@@ -23,6 +23,18 @@ local function ids(list)
 end
 
 describe("stores.list", function()
+  local minimum = stores.MIN_GENRE_GAMES
+  before_each(function() stores.MIN_GENRE_GAMES = 1 end)
+  after_each(function() stores.MIN_GENRE_GAMES = minimum end)
+
+  it("only opens genre stores with enough games across owned consoles", function()
+    stores.MIN_GENRE_GAMES = 2
+    local state = save.defaults()
+    state.ownedConsoles.nes = true
+    state.ownedConsoles.snes = true
+    assert.same({ "nes", "snes", "genre:platform" }, ids(stores.list(state, built, timeline)))
+  end)
+
   it("lists owned consoles, then genres with games on those consoles", function()
     local state = save.defaults()
     state.ownedConsoles.nes = true

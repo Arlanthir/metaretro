@@ -1,9 +1,13 @@
 local catalog = require("core.catalog")
 local genres = require("core.genres")
 
--- Stores in town: one per owned console, plus a genre store for every category those consoles have games in.
+-- Stores in town: one per owned console, plus a genre store for every category with enough games on
+-- those consoles (a tiny genre would offer the same few games every day).
 -- Store ids double as lot keys in the save: console stores use the system id, genre stores "genre:<id>".
 local stores = {}
+
+-- Games of a category, owned or not, the owned consoles need before its genre store opens.
+stores.MIN_GENRE_GAMES = 30
 
 function stores.list(state, built, timeline)
   local list, stocked = {}, {}
@@ -14,13 +18,13 @@ function stores.list(state, built, timeline)
       local games = built.bySystem[console.id]
       for _, group in ipairs({ games.owned, games.locked }) do
         for _, game in ipairs(group) do
-          stocked[game.category] = true
+          stocked[game.category] = (stocked[game.category] or 0) + 1
         end
       end
     end
   end
   for _, category in ipairs(genres.CATEGORIES) do
-    if stocked[category.id] then
+    if (stocked[category.id] or 0) >= stores.MIN_GENRE_GAMES then
       table.insert(list, { id = "genre:" .. category.id, kind = "genre", genre = category,
         short = category.short, title = category.name .. " Store" })
     end
