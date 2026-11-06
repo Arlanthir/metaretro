@@ -41,16 +41,17 @@ function town.tile(map, x, y)
   return row and x >= 1 and x <= #row and row:sub(x, x) or "T"
 end
 
-local function isBuildingTile(tile)
-  return tile == "B" or FIXED[tile] ~= nil or LOT_LABELS:find(tile, 1, true) ~= nil
+-- Plots: building lots and billboard spots, solid only where something actually stands.
+local function isPlotTile(tile)
+  return tile == "B" or tile == "#" or FIXED[tile] ~= nil or LOT_LABELS:find(tile, 1, true) ~= nil
 end
 
--- `blocked` (from town.blockedTiles) frees the parts of building plots nothing stands on;
--- without it every plot tile blocks.
+-- `blocked` (from town.blockedTiles, plus any billboards in use) frees the parts of plots nothing
+-- stands on; without it every plot tile blocks.
 function town.isWalkable(map, x, y, blocked)
   local tile = town.tile(map, x, y)
   if WALKABLE[tile] then return true end
-  return blocked ~= nil and isBuildingTile(tile) and not blocked[x .. "," .. y]
+  return blocked ~= nil and isPlotTile(tile) and not blocked[x .. "," .. y]
 end
 
 -- Tiles covered by actual buildings; `widthOf(building)` gives each one's width in tiles

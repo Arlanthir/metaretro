@@ -357,6 +357,22 @@ function ui.fullImage(game)
   return game.image or game.thumbnail
 end
 
+-- Starts loading the covers a list will likely need next: the selected game's full image (for its
+-- details page), the box art of the games below and above the cursor, and of `extra` games.
+function ui.prefetchAround(items, cursor, extra)
+  local paths = {}
+  local selected = items[cursor]
+  if selected then table.insert(paths, ui.fullImage(selected)) end
+  for _, offset in ipairs({ 1, 2, 3, 4, 5, -1, -2 }) do
+    local game = items[cursor + offset]
+    if game then table.insert(paths, ui.boxArt(game)) end
+  end
+  for _, game in ipairs(extra or {}) do
+    table.insert(paths, ui.boxArt(game))
+  end
+  covers.prefetch(paths)
+end
+
 -- A game's box art with its year and genre below, each kept to one line.
 function ui.coverWithCaption(game, x, y, width, height)
   ui.drawCover(ui.boxArt(game), x, y, width, height)

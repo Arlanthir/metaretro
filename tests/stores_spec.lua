@@ -164,4 +164,14 @@ describe("stores.featured", function()
     assert.same({ "snes", "snes" }, { ads[1].store.id, ads[2].store.id })
     assert.are_not.equal(ads[1].game.id, ads[2].game.id)
   end)
+
+  it("only features games that pass the filter", function()
+    local state = save.defaults()
+    state.ownedConsoles.nes = true
+    state.ownedConsoles.snes = true
+    local ads = stores.featured(state, built, timeline, "2026-11-06", 3, first,
+      function(game) return game.name == "F-Zero" end)
+    assert.equal(1, #ads)
+    assert.equal("F-Zero", ads[1].game.name)
+  end)
 end)

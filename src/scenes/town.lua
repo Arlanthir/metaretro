@@ -1,3 +1,4 @@
+local catalog = require("core.catalog")
 local input = require("core.input")
 local log = require("core.log")
 local scenes = require("core.scenes")
@@ -109,13 +110,28 @@ function Town:rebuild()
   end
   -- Billboards advertise games from today's store picks; drawn live since their images load later.
   self.ads = stores.featured(self.app.state, self.app.catalog, progression.timeline(self.app.catalog.systems),
-    os.date("%Y-%m-%d"), #map.billboards, love.math.random)
+    os.date("%Y-%m-%d"), #map.billboards, love.math.random, function(game) return ui.boxArt(game) ~= nil end)
+  -- Load in the background what's likely to be seen first: the billboards, and the game Home
+  -- opens on (its first console's first game), so entering Home shows its cover straight away.
+  local images = {}
+  for _, ad in ipairs(self.ads) do table.insert(images, ui.boxArt(ad.game)) end
+  local homeSystem = catalog.ownedSystems(self.app.catalog)[1]
+  local homeGame = homeSystem and self.app.catalog.bySystem[homeSystem.id].owned[1]
+  if homeGame then
+    table.insert(images, ui.boxArt(homeGame))
+    table.insert(images, ui.fullImage(homeGame))
+  end
+  covers.prefetch(images)
   self.app:persist() -- featuring a store can roll its picks for the day
+  -- Billboards without an ad aren't there at all: not drawn, and their tiles are walkable grass.
   self.billboardAt = {}
   for i, billboard in ipairs(map.billboards) do
-    for x = billboard.x, billboard.x + town.BILLBOARD_WIDTH - 1 do
-      for y = billboard.y, billboard.y + town.BILLBOARD_HEIGHT - 1 do
-        self.billboardAt[key(x, y)] = i
+    if self.ads[i] then
+      for x = billboard.x, billboard.x + town.BILLBOARD_WIDTH - 1 do
+        for y = billboard.y, billboard.y + town.BILLBOARD_HEIGHT - 1 do
+          self.billboardAt[key(x, y)] = i
+          self.blocked[key(x, y)] = true
+        end
       end
     end
   end
@@ -372,18 +388,12 @@ function Town:addBillboards(drawables, camX, camY)
     local px, py = (billboard.x - 1) * art.TILE - camX, (billboard.y - 1) * art.TILE - camY
     local onScreen = px > -4 * art.TILE and px < ui.WIDTH and py > -3 * art.TILE and py < ui.HEIGHT + 2 * art.TILE
     local ad = self.ads[i]
-    if onScreen then
+    if onScreen and ad then
       local path = ad and ui.boxArt(ad.game)
       local image = path and covers.get(path)
       table.insert(drawables, {
         y = (billboard.y + town.BILLBOARD_HEIGHT - 2) * art.TILE,
-        draw = function()
-          if ad then
-            art.billboard(px, py, image, ad.game.name, ui.fonts.sign)
-          else
-            art.billboard(px, py, nil, "Your ad here!", ui.fonts.sign)
-          end
-        end,
+        draw = function() art.billboard(px, py, image, ad.game.name, ui.fonts.sign) end,
       })
     end
   end

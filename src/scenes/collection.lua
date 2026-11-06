@@ -72,6 +72,16 @@ function Collection:draw()
   self.scroll = ui.list(games, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, ui.HEIGHT - listTop - 60,
     function(game) return game.name, nil, game.cheevosId ~= nil end)
 
+  -- The first games of the neighbouring consoles are what L/R shows next.
+  local neighbours = {}
+  for _, delta in ipairs({ -1, 1 }) do
+    local other = self.systems[(self.tab - 1 + delta) % #self.systems + 1]
+    if other ~= system then
+      for i = 1, 3 do table.insert(neighbours, self.app.catalog.bySystem[other.id].owned[i]) end
+    end
+  end
+  ui.prefetchAround(games, self.cursor, neighbours)
+
   local selected = games[self.cursor]
   if selected then
     local coverX = ui.MARGIN * 2 + listWidth

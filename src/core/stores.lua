@@ -88,8 +88,8 @@ end
 
 -- Up to `count` games from today's store picks to advertise, as { game, store }: different stores
 -- first, then more games from the same stores if there are fewer stores than ads. The choice depends
--- only on the day; `random` is only used to roll new picks.
-function stores.featured(state, built, timeline, today, count, random)
+-- only on the day; `random` is only used to roll new picks. `eligible(game)` optionally filters games.
+function stores.featured(state, built, timeline, today, count, random, eligible)
   local pickDaily = daily.random("featured " .. today)
   local order = {}
   for _, store in ipairs(stores.list(state, built, timeline)) do
@@ -102,7 +102,7 @@ function stores.featured(state, built, timeline, today, count, random)
     for _, store in ipairs(order) do
       local candidates = {}
       for _, game in ipairs((stores.offer(store, state, built, timeline, today, random))) do
-        if not seen[game.id] then table.insert(candidates, game) end
+        if not seen[game.id] and (not eligible or eligible(game)) then table.insert(candidates, game) end
       end
       if #featured < count and #candidates > 0 then
         local game = candidates[pickDaily(#candidates)]

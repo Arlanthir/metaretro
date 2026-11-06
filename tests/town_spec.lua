@@ -46,6 +46,13 @@ describe("town map", function()
     assert.is_false(town.isWalkable(map, map.fixed[1].door.x, map.fixed[1].door.y))
   end)
 
+  it("treats billboard spots as plots: solid only when blocked", function()
+    local billboard = map.billboards[1]
+    assert.is_false(town.isWalkable(map, billboard.x, billboard.y))
+    assert.is_true(town.isWalkable(map, billboard.x, billboard.y, {}))
+    assert.is_false(town.isWalkable(map, billboard.x, billboard.y, { [billboard.x .. "," .. billboard.y] = true }))
+  end)
+
   it("frees plot tiles that no building covers", function()
     local home = { kind = "home", door = map.fixed[1].door }
     local lot = { kind = "lot", door = map.lots[1].door }

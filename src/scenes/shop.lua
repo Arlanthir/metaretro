@@ -157,6 +157,9 @@ function Shop:draw()
   end
 
   local selected = section.items[self.cursor]
+  if not section.consoles then
+    ui.prefetchAround(section.items, self.cursor)
+  end
   local panelX = ui.MARGIN * 2 + listWidth
   local panelWidth = ui.WIDTH - panelX - ui.MARGIN
   if selected and section.consoles then
