@@ -175,3 +175,34 @@ describe("stores.featured", function()
     assert.equal("F-Zero", ads[1].game.name)
   end)
 end)
+
+describe("stores.onSale", function()
+  local minimum = stores.MIN_GENRE_GAMES
+  before_each(function() stores.MIN_GENRE_GAMES = 1 end)
+  after_each(function() stores.MIN_GENRE_GAMES = minimum end)
+
+  local function first() return 1 end
+
+  it("lists each game in today's picks once, under the first store selling it", function()
+    local state = save.defaults()
+    state.ownedConsoles.nes = true
+    state.ownedConsoles.snes = true
+    local sale = stores.onSale(state, built, timeline, "2026-11-06", first)
+    local names, storeOf = {}, {}
+    for _, item in ipairs(sale) do
+      table.insert(names, item.game.name)
+      storeOf[item.game.name] = item.store.id
+    end
+    table.sort(names)
+    assert.same({ "F-Zero", "Mario", "Mario World" }, names)
+    assert.equal("nes", storeOf.Mario) -- also in the Platform store, which comes later
+  end)
+
+  it("only lists games that pass the filter", function()
+    local state = save.defaults()
+    state.ownedConsoles.snes = true
+    local sale = stores.onSale(state, built, timeline, "2026-11-06", first, function(game) return game.name == "F-Zero" end)
+    assert.equal(1, #sale)
+    assert.equal("F-Zero", sale[1].game.name)
+  end)
+end)

@@ -29,6 +29,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `http` and `httpworker`: curl or wget on a thread.
   - `retroachievements`: the sync.
   - `playtime`: session log plus gametime.
+  - `video` and `videoworker`: silent video playback for the TV. ffmpeg decodes the video on a thread into 320x240 frames at 20fps.
   - `launcher`.
 - `world/`:
   - `townmap`: the ASCII map; its legend is in `world/town.lua`.
@@ -37,7 +38,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `art`: all town and Home drawing from the Ninja Adventure sheets, plus our own TV, console and sofa in `assets/metaretro/` (the pack has none).
 - `scenes/`:
   - `walker`: the base for scenes the player walks around (town and home): steps, door fades, camera, the quit prompt.
-  - town, home (inside), shop (store/dealer), collection (opened from the console at home), gamedetail, dialog, confirm, loading.
+  - town, home (inside), tv (the reel), shop (store/dealer), collection (opened from the console at home), gamedetail, dialog, confirm, loading.
 - `ui.lua`: fonts, panels (nine-slice), hint bars with button icons, lists, covers, and the `ui.boxArt` (thumbnail) / `ui.fullImage` (image) helpers.
 
 ## Rules and numbers (change here, not in the README)
@@ -69,7 +70,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - The wallet sits in the same spot in town and in menus (`ui.walletPanel`).
 - **Covers:** stores and Home show box art (`thumbnail`); details pages show the composite `image`. Billboards show box art, take the box's shape, and aren't drawn at all without an ad.
 - **Doors:** you enter by walking up into them; A doesn't enter. A talks to villagers and reads the signpost. You leave Home by walking down onto its front door.
-- **Home:** an open-plan kitchen and living room, plus a bedroom. The console under the TV opens the collection (A). Walls are `TilesetWallSimple` pieces. The wall between two rooms is one tile thick, made from the halves of the pieces on either side (see `WALLS` in `world/art.lua`).
+- **Home:** an open-plan kitchen and living room, plus a bedroom. The console under the TV opens the collection (A). The TV (A) plays a nonstop reel of scraped videos of the games on sale in town today (`stores.onSale`), shuffled; videos that won't play drop out of the reel. Walls are `TilesetWallSimple` pieces. The wall between two rooms is one tile thick, made from the halves of the pieces on either side (see `WALLS` in `world/art.lua`).
 
 ## Verifying changes visually
 - **Harness:** for anything visual, copy `src/` into a scratch folder and append a driver to its `main.lua`:
@@ -88,6 +89,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Startup:** parsing a ~9,600-game library takes ~4.5s. The user chose not to add a library cache.
 - **Secrets:** device logs contain the RetroAchievements token. Never echo it back.
 - **FPS:** steady 60. Select toggles the FPS counter.
+- **Videos:** LÖVE only plays Ogg Theora, and scraped videos are MP4, so the TV decodes them with ffmpeg and plays them without sound. The log line `video: ffmpeg <path>` shows whether ffmpeg was found; the TV hasn't been tried on the device yet.
 
 ## Roadmap (as of 2026-11-06)
 - **Not started** (agreed with the user, from the genre-data analysis):

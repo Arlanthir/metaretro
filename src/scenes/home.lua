@@ -1,10 +1,11 @@
--- Inside Home: the console in the living room opens the collection, and the front door leads
--- back to town.
+-- Inside Home: the console in the living room opens the collection, the TV shows videos of the
+-- games on sale in town, and the front door leads back to town.
 local scenes = require("core.scenes")
 local ui = require("ui")
 local art = require("world.art")
 local home = require("world.home")
 local Collection = require("scenes.collection")
+local Tv = require("scenes.tv")
 local Walker = require("scenes.walker")
 
 local Home = Walker.extend({})
@@ -41,9 +42,9 @@ function Home:enter()
   if not canvas then render() end
 end
 
-function Home:facingConsole()
+function Home:isFacing(kind)
   local piece = home.furnitureAt(map, self:facingTile())
-  return piece and piece.kind == "console"
+  return piece ~= nil and piece.kind == kind
 end
 
 function Home:facingExit()
@@ -71,8 +72,10 @@ function Home:update(dt)
 end
 
 function Home:action(name)
-  if name == "a" and self:facingConsole() and not self.move then
+  if name == "a" and self:isFacing("console") and not self.move then
     scenes.push(Collection.new(self.app))
+  elseif name == "a" and self:isFacing("tv") and not self.move then
+    scenes.push(Tv.new(self.app))
   elseif name == "start" then
     self:confirmQuit()
   end
@@ -88,7 +91,8 @@ function Home:draw()
   self:drawFade()
 
   self:drawStatus()
-  local hint = self:facingConsole() and "A: play games" or self:facingExit() and "Down: leave Home" or "Start: quit"
+  local hint = self:isFacing("console") and "A: play games" or self:isFacing("tv") and "A: watch TV"
+    or self:facingExit() and "Down: leave Home" or "Start: quit"
   ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)
 end
 

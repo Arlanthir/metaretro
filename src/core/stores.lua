@@ -86,6 +86,21 @@ function stores.offer(store, state, built, timeline, today, random)
   return games, rerolled, #stock
 end
 
+-- Every game in today's store picks, as { game, store }, each game once (under the first store
+-- that offers it). `eligible(game)` optionally filters games; `random` is only used to roll new picks.
+function stores.onSale(state, built, timeline, today, random, eligible)
+  local sale, seen = {}, {}
+  for _, store in ipairs(stores.list(state, built, timeline)) do
+    for _, game in ipairs((stores.offer(store, state, built, timeline, today, random))) do
+      if not seen[game.id] and (not eligible or eligible(game)) then
+        seen[game.id] = true
+        table.insert(sale, { game = game, store = store })
+      end
+    end
+  end
+  return sale
+end
+
 -- Up to `count` games from today's store picks to advertise, as { game, store }: different stores
 -- first, then more games from the same stores if there are fewer stores than ads. The choice depends
 -- only on the day; `random` is only used to roll new picks. `eligible(game)` optionally filters games.
