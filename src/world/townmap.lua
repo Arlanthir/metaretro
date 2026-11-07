@@ -7,7 +7,7 @@ return {
   "T......................................T",
   "T..BBBB.BBBB.BBBB.BBBB.BBBB.BBBB.BBBB..T",
   "T..BBBB.BBBB.BBBB.BBBB.BBBB.BBBB.BBBB..T",
-  "T..B6BB.B2BB.BHBB%BMBB&BDBB.B1BB.B5BB..T",
+  "T..B6BB.B2BB.BHBB%BBMB&BDBB.B1BB.B5BB..T",
   "T.====================================.T",
   "T................$.@=............####..T",
   "T..........T.......==............####..T",

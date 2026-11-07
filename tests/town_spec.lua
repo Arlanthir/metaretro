@@ -36,6 +36,16 @@ describe("town map", function()
     end
   end)
 
+  it("puts each door where its building's sprite draws the doorway", function()
+    for _, building in ipairs(map.fixed) do
+      local inset = building.kind == "museum" and 2 or 1
+      assert.equal(building.door.x - inset, (town.footprint(building.door)), building.kind)
+    end
+    for _, lot in ipairs(map.lots) do
+      assert.equal(lot.door.x - 1, (town.footprint(lot.door)))
+    end
+  end)
+
   it("lets the player reach every door from below", function()
     for _, door in ipairs(doors) do
       assert.is_true(town.isWalkable(map, door.x, door.y + 1), ("below door %d,%d"):format(door.x, door.y))

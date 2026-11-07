@@ -3,7 +3,8 @@
 --   B  building     H  home door   D  console dealer door   M  game museum door
 --   1-9, a-z  doors of store lots, in the order they get filled
 --   $  signpost (readable)   %  crate   &  barrel   #  billboard (4x3 block of #)
--- Every door sits on the bottom row of a 4x3 building, one tile from its left edge.
+-- Every door sits on the bottom row of a 4x3 building, where the building's sprite draws its doorway
+-- (one tile from the left edge for most, two for the museum).
 local town = {}
 
 town.BUILDING_WIDTH, town.BUILDING_HEIGHT = 4, 3
@@ -13,6 +14,13 @@ local LOT_LABELS = "123456789abcdefghijklmnopqrstuvwxyz"
 local WALKABLE = { ["."] = true, ["="] = true, ["@"] = true }
 local FIXED = { H = "home", D = "dealer", M = "museum" }
 local PROPS = { ["$"] = "sign", ["%"] = "crate", ["&"] = "barrel" }
+
+-- A door at (x, y), with `left`: the left edge of its building, the "B" tiles just before it.
+local function door(row, x, y)
+  local left = x
+  while row:sub(left - 1, left - 1) == "B" do left = left - 1 end
+  return { x = x, y = y, left = left }
+end
 
 function town.parse(rows)
   local map = { rows = rows, width = #rows[1], height = #rows, fixed = {}, lots = {}, props = {}, billboards = {} }
@@ -27,9 +35,9 @@ function town.parse(rows)
       elseif tile == "#" and row:sub(x - 1, x - 1) ~= "#" and (rows[y - 1] or ""):sub(x, x) ~= "#" then
         table.insert(map.billboards, { x = x, y = y }) -- top-left corner
       elseif FIXED[tile] then
-        table.insert(map.fixed, { kind = FIXED[tile], door = { x = x, y = y } })
+        table.insert(map.fixed, { kind = FIXED[tile], door = door(row, x, y) })
       elseif lot then
-        map.lots[lot] = { door = { x = x, y = y } }
+        map.lots[lot] = { door = door(row, x, y) }
       end
     end
   end
@@ -73,7 +81,7 @@ end
 
 -- Top-left tile of the building whose door is at `door`.
 function town.footprint(door)
-  return door.x - 1, door.y - town.BUILDING_HEIGHT + 1
+  return door.left or door.x - 1, door.y - town.BUILDING_HEIGHT + 1
 end
 
 -- Gives each store without a lot the first free one, in list order; existing stores never move.
