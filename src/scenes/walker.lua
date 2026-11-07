@@ -22,10 +22,10 @@ Walker.DIRECTIONS = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right =
 Walker.DIRECTION_ORDER = { "up", "down", "left", "right" }
 Walker.OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
 
--- Makes `class` a kind of walking scene.
-function Walker.extend(class)
+-- Makes `class` a kind of walking scene, or a kind of `parent` (itself made with extend).
+function Walker.extend(class, parent)
   class.__index = class
-  return setmetatable(class, Walker)
+  return setmetatable(class, parent or Walker)
 end
 
 function Walker.heldDirection()

@@ -373,6 +373,18 @@ function ui.prefetchAround(items, cursor, extra)
   covers.prefetch(paths)
 end
 
+-- What a new console came with, for a notice after buying it or getting it as a gift.
+function ui.starterPackMessage(console, games)
+  if #games == 0 then
+    return ("%s is yours!"):format(console.name)
+  end
+  local lines = { ("%s comes with:"):format(console.name), "" }
+  for _, game in ipairs(games) do
+    table.insert(lines, ui.truncate(ui.fonts.body, game.name, 320))
+  end
+  return table.concat(lines, "\n")
+end
+
 -- A game's box art with its year and genre below, each kept to one line.
 function ui.coverWithCaption(game, x, y, width, height)
   ui.drawCover(ui.boxArt(game), x, y, width, height)

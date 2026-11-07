@@ -23,6 +23,17 @@ function progression.timeline(systems)
   return timeline
 end
 
+progression.GIFT_CHOICES = 3
+
+-- The consoles on Professor Cork's table: the oldest in the library.
+function progression.giftChoices(timeline)
+  local choices = {}
+  for i = 1, math.min(progression.GIFT_CHOICES, #timeline) do
+    choices[i] = timeline[i]
+  end
+  return choices
+end
+
 function progression.currentGeneration(state, timeline)
   local current = 0
   for _, console in ipairs(timeline) do

@@ -55,6 +55,7 @@ local TREES = { { 0, 0 }, { 0, 0 }, { 2, 0 } }
 local HOUSES = {
   home = { 0, 0, 4 },
   dealer = { 16, 0, 3 },
+  museum = { 19, 0, 4 },
   console = { { 4, 0, 4 }, { 8, 0, 4 }, { 12, 0, 4 } },
   genre = { { 23, 0, 3 }, { 26, 0, 3 } },
 }
@@ -215,8 +216,11 @@ function art.character(sheet, x, y, facing, frame)
   sprite(sheet, CHARACTER_COLUMNS[facing], frame % frames, x, y - 4)
 end
 
-function art.player(x, y, facing, frame)
-  art.character("Boy", x, y, facing, frame)
+-- The player's look, as chosen in the intro ("boy" or "girl").
+local PLAYER_SHEETS = { boy = "Boy", girl = "Girl" }
+
+function art.player(x, y, facing, frame, look)
+  art.character(PLAYER_SHEETS[look] or "Boy", x, y, facing, frame)
 end
 
 function art.villager(villager, x, y, facing, frame)
@@ -258,6 +262,10 @@ local FURNITURE = {
   desk = { "TilesetElement", 10, 0 },
   chair = { "TilesetElement", 11, 0 },
   dresser = { "TilesetElement", 6, 7, 2, 2 },
+  displayTable = { "TilesetElement", 2, 10, 3, 1 },
+  orbStatue = { "TilesetHouse", 3, 15, 2, 2 },
+  frogStatue = { "TilesetHouse", 3, 17, 2, 2 },
+  pillar = { "TilesetHouse", 0, 15, 1, 3 },
 }
 art.OUTSIDE_COLOR = { 0.08, 0.11, 0.11 } -- the black around the walls
 
@@ -302,6 +310,18 @@ function art.furniture(kind, px, py)
   for _, item in ipairs(piece.on or {}) do
     sprite(item[1], item[2], item[3], px + item[4], py + item[5])
   end
+end
+
+-- A shut door over a building's doorway (the console dealer, before the first console).
+local CLOSED_DOOR = { "TilesetElement", 8, 13 }
+
+function art.closedDoor(px, py)
+  sprite(CLOSED_DOOR[1], CLOSED_DOOR[2], CLOSED_DOOR[3], px, py)
+end
+
+-- Something standing on a table (or another piece of furniture) on the tile at (px, py).
+function art.onTable(kind, px, py)
+  art.furniture(kind, px, py - 12)
 end
 
 -- The villager's portrait for dialogs, as an Image.

@@ -1,99 +1,40 @@
--- Inside Home: the console in the living room opens the collection, the TV shows videos of the
--- games on sale in town, and the front door leads back to town.
+-- Inside Home: the console in the living room opens the collection, and the TV shows videos of the
+-- games on sale in town. The console only shows up once the player has one (Professor Cork's gift).
 local scenes = require("core.scenes")
-local ui = require("ui")
-local art = require("world.art")
-local home = require("world.home")
+local interior = require("world.interior")
 local Collection = require("scenes.collection")
+local Interior = require("scenes.interior")
 local Tv = require("scenes.tv")
 local Walker = require("scenes.walker")
 
-local Home = Walker.extend({})
+local Home = Walker.extend({ place = "Home" }, Interior)
 
-local map = home.parse(require("world.homemap"))
-local canvas -- the house never changes, so it's drawn once
+local map = interior.parse(require("world.homemap"))
 
-local function render()
-  local tile = art.TILE
-  canvas = love.graphics.newCanvas(map.width * tile, map.height * tile)
-  love.graphics.setCanvas(canvas)
-  love.graphics.clear(art.OUTSIDE_COLOR)
-  love.graphics.setColor(1, 1, 1)
-  for y = 1, map.height do
-    for x = 1, map.width do
-      local px, py = (x - 1) * tile, (y - 1) * tile
-      local floor, wall = home.floor(map, x, y), home.wallPiece(map, x, y)
-      if floor then art.floor(floor, x, y, px, py) end
-      if wall then art.wall(wall, px, py) end
-    end
-  end
-  for _, piece in ipairs(map.furniture) do
-    art.furniture(piece.kind, (piece.x - 1) * tile, (piece.y - 1) * tile)
-  end
-  love.graphics.setCanvas()
+-- In through the front door, or (`wakeUp`, a new game) next to the bed.
+function Home.new(app, wakeUp)
+  return Interior.new(Home, app, map, wakeUp and map.spots.wakeUp, wakeUp and "down" or "up")
 end
 
-function Home.new(app)
-  -- In through the front door, fading in.
-  return setmetatable({ app = app, x = map.start.x, y = map.start.y, facing = "up", steps = 0, fadeIn = 1 }, Home)
+function Home:live(piece)
+  return piece.kind == "console"
 end
 
-function Home:enter()
-  if not canvas then render() end
+function Home:absent(piece)
+  return piece.kind == "console" and next(self.app.state.ownedConsoles) == nil
 end
 
-function Home:isFacing(kind)
-  local piece = home.furnitureAt(map, self:facingTile())
-  return piece ~= nil and piece.kind == kind
-end
-
-function Home:facingExit()
-  local x, y = self:facingTile()
-  return self.facing == "down" and x == map.exit.x and y == map.exit.y
-end
-
-function Home:step(direction)
-  self.facing = direction
-  if self:facingExit() then
-    self:startStep("down", map.exit) -- back to town once the step ends
-  elseif home.isWalkable(map, self:facingTile()) then
-    self:startStep(direction)
-  end
-end
-
-function Home:update(dt)
-  self:updateToast(dt)
-  local doorStep, direction = self:updateWalking(dt)
-  if doorStep then
-    scenes.pop()
-  elseif direction then
-    self:step(direction)
-  end
-end
-
-function Home:action(name)
-  if name == "a" and self:isFacing("console") and not self.move then
+function Home:interact(piece)
+  if piece and piece.kind == "console" then
     scenes.push(Collection.new(self.app))
-  elseif name == "a" and self:isFacing("tv") and not self.move then
+  elseif piece and piece.kind == "tv" then
     scenes.push(Tv.new(self.app))
-  elseif name == "start" then
-    self:confirmQuit()
   end
 end
 
-function Home:draw()
-  local camX, camY = self:camera(map.width, map.height)
-  love.graphics.clear(art.OUTSIDE_COLOR)
-  love.graphics.setColor(1, 1, 1)
-  love.graphics.draw(canvas, -camX, -camY)
-  local px, py = self:playerPixels()
-  art.player(math.floor(px - camX), math.floor(py - camY), self.facing, self:walkFrame())
-  self:drawFade()
-
-  self:drawStatus()
-  local hint = self:isFacing("console") and "A: play games" or self:isFacing("tv") and "A: watch TV"
-    or self:facingExit() and "Down: leave Home" or "Start: quit"
-  ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)
+function Home:hintFor(piece)
+  if piece and piece.kind == "console" then return "A: play games" end
+  if piece and piece.kind == "tv" then return "A: watch TV" end
 end
 
 return Home

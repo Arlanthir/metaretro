@@ -76,6 +76,13 @@ function economy.buyConsole(state, console, games, random)
   return true, economy.grantStarterPack(state, games or {}, random, { [console.id] = true })
 end
 
+-- Professor Cork's gift: the console and its starter pack, for free. Returns the granted games.
+function economy.giftConsole(state, console, games, random)
+  state.ownedConsoles[console.id] = true
+  state.giftReceived, state.giftConsole = true, console.id
+  return economy.grantStarterPack(state, games or {}, random, { [console.id] = true })
+end
+
 local function releaseYear(game)
   return tonumber(game.releasedate and game.releasedate:sub(1, 4))
 end

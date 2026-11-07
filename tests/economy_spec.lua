@@ -257,3 +257,18 @@ describe("economy.grantStarterPack", function()
     assert.equal(1, #granted)
   end)
 end)
+
+describe("economy.giftConsole", function()
+  it("gives the console for free with its starter pack, and remembers the gift", function()
+    local state = require("core.save").defaults()
+    local games = {}
+    for i = 1, 5 do table.insert(games, { id = "nes:" .. i, system = "nes", name = "Game " .. i }) end
+    local wallet = state.wallet
+    local granted = economy.giftConsole(state, { id = "nes" }, games, function() return 1 end)
+    assert.is_true(state.ownedConsoles.nes)
+    assert.equal(economy.STARTER_GAMES, #granted)
+    assert.equal(wallet, state.wallet)
+    assert.is_true(state.giftReceived)
+    assert.equal("nes", state.giftConsole)
+  end)
+end)

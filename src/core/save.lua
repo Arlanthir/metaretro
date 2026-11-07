@@ -24,6 +24,11 @@ function save.defaults()
     lastPlayed = {}, -- game id -> epoch of the last play Metaretro noticed
     consumedSessions = 0,
     settings = {},
+    player = "boy", -- the look chosen in the intro: "boy" or "girl"
+    introDone = false,
+    giftOffered = false, -- Professor Cork has offered a console from his table
+    giftReceived = false,
+    giftConsole = "", -- the system id of the console he gave, if any
   }
 end
 
@@ -36,6 +41,10 @@ function save.migrate(data)
     if type(value) == type(state[key]) then
       state[key] = value
     end
+  end
+  -- Saves from before the intro already have their consoles: no intro, and no gift to wait for.
+  if data.introDone == nil and data.initialized then
+    state.introDone, state.giftOffered, state.giftReceived = true, true, true
   end
   state.version = save.VERSION
   return state

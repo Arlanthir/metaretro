@@ -9,6 +9,7 @@ local covers = require("services.covers")
 local townsfolk = require("core.townsfolk")
 local Dialog = require("scenes.dialog")
 local Home = require("scenes.home")
+local Museum = require("scenes.museum")
 local GameDetail = require("scenes.gamedetail")
 local Shop = require("scenes.shop")
 local Walker = require("scenes.walker")
@@ -59,6 +60,7 @@ end
 function Town:label(building)
   if building.kind == "home" then return "Home", "Home" end
   if building.kind == "dealer" then return "Consoles", "Console Dealer" end
+  if building.kind == "museum" then return "Museum", "Game Museum" end
   if building.kind == "store" then return building.store.short, building.store.title end
   return "For sale", "Empty lot"
 end
@@ -148,6 +150,10 @@ function Town:rebuild()
     else
       art.building(object.building, (self:label(object.building)), (object.x - 1) * tile, (object.top - 1) * tile,
         town.BUILDING_WIDTH * tile, ui.fonts.sign)
+      if self:isClosed(object.building) then
+        local door = object.building.door
+        art.closedDoor((door.x - 1) * tile, (door.y - 1) * tile)
+      end
     end
   end
   love.graphics.setCanvas()
@@ -230,6 +236,8 @@ function Town:enterBuilding(building)
   self.inside = true
   if building.kind == "home" then
     scenes.push(Home.new(self.app))
+  elseif building.kind == "museum" then
+    scenes.push(Museum.new(self.app))
   elseif building.kind == "dealer" then
     scenes.push(Shop.dealer(self.app))
   else
@@ -237,12 +245,28 @@ function Town:enterBuilding(building)
   end
 end
 
+-- The console dealer opens once Professor Cork has given the player their first console.
+function Town:isClosed(building)
+  return building.kind == "dealer" and not self.app.state.giftReceived
+end
+
+-- A new game starts at home, next to the bed; walking out leaves the player at Home's door.
+function Town:wakeUpAtHome()
+  for _, building in ipairs(self.buildings) do
+    if building.kind == "home" then
+      self.x, self.y, self.facing = building.door.x, building.door.y + 1, "down"
+    end
+  end
+  self.inside = true
+  scenes.push(Home.new(self.app, true))
+end
+
 function Town:step(direction)
   self.facing = direction
   local targetX, targetY = self:facingTile()
   local building = self:facingBuilding()
   if building and direction == "up" then
-    self:startStep("up", building) -- the building opens once the step ends
+    if not self:isClosed(building) then self:startStep("up", building) end -- it opens once the step ends
   elseif town.isWalkable(self.map, targetX, targetY, self.blocked) and not self.villagerAt[key(targetX, targetY)] then
     self:startStep(direction)
   end
@@ -280,7 +304,7 @@ function Town:draw()
   local frame = self:walkFrame()
   local screenX, screenY = math.floor(px - camX), math.floor(py - camY)
   -- Characters and billboards lower on screen stand in front of the ones above them.
-  local characters = { { y = py, draw = function() art.player(screenX, screenY, self.facing, frame) end } }
+  local characters = { { y = py, draw = function() art.player(screenX, screenY, self.facing, frame, self.app.state.player) end } }
   self:addBillboards(characters, camX, camY)
   for _, villager in ipairs(self.villagers) do
     local vx, vy = self:villagerPixels(villager)
@@ -335,7 +359,8 @@ function Town:drawHud()
   local building, villager = self:facingBuilding(), self:facingVillager()
   local prop = self.props[key(self:facingTile())]
   local ad = self.ads[self.billboardAt[key(self:facingTile())] or 0]
-  local hint = building and ("Up: enter %s"):format(select(2, self:label(building)))
+  local hint = building and self:isClosed(building) and ("The %s is closed"):format(select(2, self:label(building)))
+    or building and ("Up: enter %s"):format(select(2, self:label(building)))
     or ad and ("%s at the %s"):format(ad.game.name, ad.store.title)
     or villager and ("A: talk to %s"):format(villager.name)
     or prop and prop.kind == "sign" and "A: read sign" or "Start: quit"

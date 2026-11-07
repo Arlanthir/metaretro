@@ -83,3 +83,11 @@ describe("progression.syncOwnedConsoles", function()
     assert.same({ gba = true }, state.ownedConsoles)
   end)
 end)
+
+describe("progression.giftChoices", function()
+  it("puts the oldest consoles on the professor's table", function()
+    local timeline = { { id = "a" }, { id = "b" }, { id = "c" }, { id = "d" } }
+    assert.same({ { id = "a" }, { id = "b" }, { id = "c" } }, progression.giftChoices(timeline))
+    assert.same({ { id = "a" } }, progression.giftChoices({ { id = "a" } }))
+  end)
+end)

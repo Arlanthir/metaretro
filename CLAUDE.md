@@ -40,11 +40,12 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - `world/`:
   - `townmap`: the ASCII map; its legend is in `world/town.lua`.
   - `town`: parsing, walkability, plots and lots.
-  - `homemap` and `home`: the inside of Home, as a rooms layer and a furniture layer; wall pieces come from where the floor is (`home.wallPiece`).
+  - `interior`, `homemap` and `museummap`: buildings' insides, as a rooms layer and a furniture layer. The furniture layer also marks spots (`P` the professor, `S` where a new game wakes up). Wall pieces come from where the floor is (`interior.wallPiece`).
   - `art`: all town and Home drawing from the Ninja Adventure sheets, plus our own TV, console and sofa in `assets/metaretro/` (the pack has none).
 - `scenes/`:
-  - `walker`: the base for scenes the player walks around (town and home): steps, door fades, camera, the quit prompt.
-  - title (Continue / New Game), town, home (inside), tv (the reel), shop (store/dealer), collection (opened from the console at home), gamedetail, dialog, confirm, loading.
+  - `walker`: the base for scenes the player walks around (town and interiors): steps, door fades, camera, toasts, the quit prompt.
+  - `interior`: the base for buildings' insides (walking, furniture, people, the door out). `home` and `museum` extend it through hooks (`interact`, `hintFor`, `live`, `absent`, `drawOnTop`).
+  - title (Continue / New Game / Quit), intro (Professor Cork, boy or girl), town, tv (the reel), shop (store/dealer), collection (opened from the console at home), gamedetail, dialog, confirm, loading.
 - `ui.lua`: fonts, panels (nine-slice), hint bars with button icons, lists, covers, and the `ui.boxArt` (thumbnail) / `ui.fullImage` (image) helpers.
 
 ## Rules and numbers (change here, not in the README)
@@ -54,10 +55,13 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Earning coins:**
   - Play: 2 coins per minute, capped at 120 minutes per session.
   - RetroAchievements: 5 coins per point, x2 in hardcore. Unlocks from before tracking started pay x0.5, once.
-  - Game ids: scrapers often give a `cheevosHash` without a `cheevosId`. The sync then fetches the game lists of owned consoles (`API_GetGameList`, with hashes; one console per request), at most weekly, and keeps the ids of library games in `cheevos.txt` in the save folder. Owned games that get an id this way are checked at once, and played games without one wait in `pendingAchievementHashes`. Consoles' RetroAchievements ids are `ra` in `core/consoles.lua`. Matching by hash only is deliberate: a title match without a hash match is a ROM version the emulator won't award achievements for. Checked on the device on 2026-11-07: Tomb Raider II (hash match) showed achievements, and Tomb Raider III (title match only) showed none.
+  - Game ids: scrapers often give a `cheevosHash` without a `cheevosId`. The sync then fetches the game lists of owned consoles (`API_GetGameList`, with hashes; one console per request), at most weekly, and keeps the ids of library games in `cheevos.txt` in the save folder. Owned games that get an id this way are checked at once, and played games without one wait in `pendingAchievementHashes`. Consoles' RetroAchievements ids are `ra` in `core/consoles.lua`. Matching by hash only is deliberate: a title match without a hash match is a ROM version the emulator won't award achievements for. Checked on the device on 2026-11-07: Tomb Raider II (hash match) showed achievements, and Tomb Raider III (title match only) showed none. The lookup itself was confirmed on the device the same day: only the owned consoles were looked up, and Psychic World (hash only) paid out.
 - **Starting out:**
   - New Game resets the save. Play already in `sessions.log` doesn't pay again, and RetroAchievements tracking starts over from then (older unlocks pay x0.5, once).
   - Starter wallet: 1000.
+  - New Game: the intro (pick boy or girl), then waking up at home with no console. Professor Cork, in the museum next to Home, offers one of the 3 oldest consoles in the library (`progression.giftChoices`). Picking it from his table gives it free with its starter pack (`economy.giftConsole`).
+  - The console dealer is closed, with a door over its doorway, until the gift (`Town:isClosed`).
+  - Saves from before the intro skip it, and the gift counts as received (`save.migrate`).
   - Starter packs: 3 games from curated launch titles, then the launch window, then the rest. Japanese-only games are skipped. Buying a console grants its own pack.
 - **Stores:**
   - Genre stores need ≥30 games of that genre across owned consoles (`stores.MIN_GENRE_GAMES`).
@@ -78,7 +82,9 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - The wallet sits in the same spot in town and in menus (`ui.walletPanel`).
 - **Covers:** stores and Home show box art (`thumbnail`); details pages show the composite `image`. Billboards show box art, take the box's shape, and aren't drawn at all without an ad.
 - **Doors:** you enter by walking up into them; A doesn't enter. A talks to villagers and reads the signpost. You leave Home by walking down onto its front door.
-- **Home:** an open-plan kitchen and living room, plus a bedroom. The console under the TV opens the collection (A). The TV (A) plays a nonstop reel of scraped videos of the games on sale in town today (`stores.onSale`), shuffled; videos that won't play drop out of the reel. Walls are `TilesetWallSimple` pieces. The wall between two rooms is one tile thick, made from the halves of the pieces on either side (see `WALLS` in `world/art.lua`).
+- **Home:** an open-plan kitchen and living room, plus a bedroom. The console under the TV opens the collection (A); it only appears once the player owns a console. The TV (A) plays a nonstop reel of scraped videos of the games on sale in town today (`stores.onSale`), shuffled; videos that won't play drop out of the reel. Walls are `TilesetWallSimple` pieces. The wall between two rooms is one tile thick, made from the halves of the pieces on either side (see `WALLS` in `world/art.lua`).
+- **Museum:** one room with statues, pillars, Professor Cork (the `Master` sprite) and his display table. The three consoles on the table all use our console sprite; the hint names each one. The intro's text is original; we don't copy Pokémon's script or names.
+- **Player look:** `state.player` is "boy" (`Boy.png`) or "girl" (`Girl.png`, the pack's SorcererBlack).
 
 ## Verifying changes visually
 - **Harness:** for anything visual, copy `src/` into a scratch folder and append a driver to its `main.lua`:

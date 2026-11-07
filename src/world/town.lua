@@ -1,6 +1,6 @@
 -- Town map logic. Legend for the rows in world/townmap.lua:
 --   .  grass        =  path        T  tree        ~  water        @  player start (path)
---   B  building     H  home door   D  console dealer door
+--   B  building     H  home door   D  console dealer door   M  game museum door
 --   1-9, a-z  doors of store lots, in the order they get filled
 --   $  signpost (readable)   %  crate   &  barrel   #  billboard (4x3 block of #)
 -- Every door sits on the bottom row of a 4x3 building, one tile from its left edge.
@@ -11,7 +11,7 @@ town.BILLBOARD_WIDTH, town.BILLBOARD_HEIGHT = 4, 3
 
 local LOT_LABELS = "123456789abcdefghijklmnopqrstuvwxyz"
 local WALKABLE = { ["."] = true, ["="] = true, ["@"] = true }
-local FIXED = { H = "home", D = "dealer" }
+local FIXED = { H = "home", D = "dealer", M = "museum" }
 local PROPS = { ["$"] = "sign", ["%"] = "crate", ["&"] = "barrel" }
 
 function town.parse(rows)

@@ -83,23 +83,12 @@ function Shop:buy(item, onBought)
     self:refresh()
     if self.section.consoles then
       self.notice = ("Bought %s! Its store opens in town."):format(item.name)
-      scenes.push(Confirm.notice(self:starterPackMessage(item, result)))
+      scenes.push(Confirm.notice(ui.starterPackMessage(item, result)))
     else
       self.notice = ("Bought %s!"):format(item.name)
     end
     if onBought then onBought() end
   end))
-end
-
-function Shop:starterPackMessage(console, games)
-  if #games == 0 then
-    return ("%s is yours!"):format(console.name)
-  end
-  local lines = { ("%s comes with:"):format(console.name), "" }
-  for _, game in ipairs(games) do
-    table.insert(lines, ui.truncate(ui.fonts.body, game.name, 320))
-  end
-  return table.concat(lines, "\n")
 end
 
 function Shop:showDetails(item)

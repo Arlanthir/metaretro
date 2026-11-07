@@ -3,7 +3,6 @@ local achievements = require("core.achievements")
 local catalog = require("core.catalog")
 local consoles = require("core.consoles")
 local covers = require("services.covers")
-local economy = require("core.economy")
 local http = require("services.http")
 local input = require("core.input")
 local launcher = require("services.launcher")
@@ -18,6 +17,7 @@ local stores = require("core.stores")
 local ui = require("ui")
 local town = require("world.town")
 local Loading = require("scenes.loading")
+local Intro = require("scenes.intro")
 local Title = require("scenes.title")
 local Town = require("scenes.town")
 
@@ -88,17 +88,8 @@ local function prepare(newGame)
   local games = catalog.allGames(app.backend)
   app.cheevos = app.listing.cheevos
   achievements.resolveIds(games, app.cheevos.ids)
-  if not app.state.initialized then
-    -- New players start with the oldest console in their library and a few of its games.
-    app:rebuild()
-    pause()
-    local starter = progression.timeline(app.catalog.systems)[1]
-    if starter then
-      app.state.ownedConsoles[starter.id] = true
-      economy.grantStarterPack(app.state, games, love.math.random, { [starter.id] = true })
-    end
-    app.state.initialized = true
-  end
+  -- New players get their first console from Professor Cork, in the museum.
+  app.state.initialized = true
   progression.syncOwnedConsoles(app.state, games)
   local earned, played = playtime.credit(app.state, app.backend, games, sessions)
   if earned > 0 then app:announce(("+%d coins from play"):format(earned)) end
@@ -138,7 +129,13 @@ local function enterTown()
   app:persist()
   retroachievements.sync(app, app.prepared.firstSession)
   input.ignoreFor(0.5)
-  scenes.switch(Town.new(app))
+  local town = Town.new(app)
+  scenes.switch(town)
+  if not app.state.introDone then
+    -- A new game: meet Professor Cork, then wake up at home.
+    town:wakeUpAtHome()
+    scenes.push(Intro.new(app))
+  end
 end
 
 -- Continues (or starts a new game) right away when it's ready; otherwise shows a loading message

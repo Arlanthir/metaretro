@@ -3,7 +3,8 @@ local ui = require("ui")
 
 -- A villager talking (or a sign being read): optional portrait, name and text that types itself
 -- out at the bottom of the screen.
--- `accept` ({ hint, run }) is optional; without it A just closes the dialog.
+-- `accept` ({ hint, run }) is optional; without it A just closes the dialog. `onClose` (optional)
+-- runs whenever the dialog closes without being accepted.
 local Dialog = { drawBelow = true }
 Dialog.__index = Dialog
 
@@ -18,9 +19,9 @@ local function characters(text)
   return list
 end
 
-function Dialog.new(name, portrait, text, accept)
+function Dialog.new(name, portrait, text, accept, onClose)
   return setmetatable({ name = name, portrait = portrait, text = text, total = #characters(text), shown = 0,
-    accept = accept }, Dialog)
+    accept = accept, onClose = onClose }, Dialog)
 end
 
 function Dialog:finished()
@@ -34,11 +35,12 @@ end
 function Dialog:action(name)
   if name == "a" and not self:finished() then
     self.shown = self.total
-  elseif name == "a" then
+  elseif name == "a" and self.accept then
     scenes.pop()
-    if self.accept then self.accept.run() end
-  elseif name == "b" then
+    self.accept.run()
+  elseif name == "a" or name == "b" then
     scenes.pop()
+    if self.onClose then self.onClose() end
   end
 end
 

@@ -90,7 +90,7 @@ townsfolk.CAST = {
       "You have no games? Ula have more games than you, and Ula have rocks.",
       "Empty cave! Go get games from shops.",
     } },
-  { id = "sensei", name = "Sensei", sprite = "Master", kind = "achievements",
+  { id = "sensei", name = "Sensei", sprite = "Monk2", kind = "achievements",
     suggest = {
       "%s hides achievements you have not claimed. Seek them, and coins will follow.",
       "A true master would return to %s. Its challenges still await you.",
