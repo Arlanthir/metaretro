@@ -61,3 +61,42 @@ describe("achievements.credit", function()
     }), SINCE))
   end)
 end)
+
+describe("achievements ids by ROM hash", function()
+  local LIST = '[{"ID":14059,"Title":"Psychic World","Hashes":["52CFDDC12AF6A3A64030F62CCF6ACA83","AAA"]},'
+    .. '{"ID":7,"Title":"No hashes"}]'
+
+  it("reads a console's game list into ids by lowercase hash", function()
+    assert.same({ ["52cfddc12af6a3a64030f62ccf6aca83"] = 14059, aaa = 14059 }, achievements.hashIds(LIST))
+    assert.is_nil(achievements.hashIds("not json"))
+  end)
+
+  it("fills in missing ids from the hash, keeping the ones the scraper gave", function()
+    local unknown = { system = "gamegear", cheevosHash = "52cfddc12af6a3a64030f62ccf6aca83" }
+    local known = { system = "gamegear", cheevosId = 1, cheevosHash = "aaa" }
+    local found = achievements.resolveIds({ unknown, known, { system = "gamegear" } }, achievements.hashIds(LIST))
+    assert.same({ unknown }, found)
+    assert.equal(14059, unknown.cheevosId)
+    assert.equal(1, known.cheevosId)
+  end)
+
+  it("refreshes consoles with games missing an id, once their list is a week old", function()
+    local consoleOf = function(system) return ({ gamegear = 15, nes = 7, snes = 3 })[system] end
+    local games = {
+      { system = "gamegear", cheevosHash = "a" }, { system = "gamegear", cheevosHash = "b" },
+      { system = "nes", cheevosHash = "c" }, { system = "snes", cheevosHash = "d", cheevosId = 5 },
+      { system = "dos", cheevosHash = "e" },
+    }
+    local now, day = 1000000, 86400
+    assert.same({ 7, 15 }, achievements.consolesToRefresh(games, {}, consoleOf, now))
+    assert.same({ 15 }, achievements.consolesToRefresh(games, { ["7"] = now - day }, consoleOf, now))
+    assert.same({ 7, 15 }, achievements.consolesToRefresh(games, { ["7"] = now - 8 * day }, consoleOf, now))
+  end)
+
+  it("saves the id cache as lines and reads it back, starting empty without one", function()
+    local cache = { fetched = { ["15"] = 1731000000 }, ids = { ["52cfddc1"] = 14059, abc = 9 } }
+    assert.same(cache, achievements.decodeIdCache(achievements.encodeIdCache(cache)))
+    assert.same({ fetched = {}, ids = {} }, achievements.decodeIdCache(nil))
+    assert.same({ fetched = {}, ids = {} }, achievements.decodeIdCache("{broken"))
+  end)
+end)

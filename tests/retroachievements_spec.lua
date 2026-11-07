@@ -20,6 +20,15 @@ describe("retroachievements.queue", function()
     retroachievements.queue(state, { owned, { id = "gb:other", cheevosId = 9 }, { id = "gb:none" } })
     assert.same({ ["508"] = true }, state.pendingAchievementGames)
   end)
+
+  it("queues the ROM hash of owned games with no id, to look it up", function()
+    local state = save.defaults()
+    local owned = { id = "gamegear:psychic", cheevosHash = "52cfddc12af6a3a64030f62ccf6aca83" }
+    state.owned[owned.id] = true
+    retroachievements.queue(state, { owned })
+    assert.same({}, state.pendingAchievementGames)
+    assert.same({ ["52cfddc12af6a3a64030f62ccf6aca83"] = true }, state.pendingAchievementHashes)
+  end)
 end)
 
 describe("retroachievements.trackingSince", function()

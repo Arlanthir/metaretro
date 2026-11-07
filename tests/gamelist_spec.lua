@@ -24,6 +24,7 @@ describe("gamelist.parse", function()
     assert.equal("en", game.lang)
     assert.equal("us", game.region)
     assert.equal(1446, game.cheevosId)
+    assert.equal("a8d29e1b1f6bc5b38d9c3a5b7c3a9f10", game.cheevosHash)
   end)
 
   it("reads the game id only when ScreenScraper filled the entry", function()

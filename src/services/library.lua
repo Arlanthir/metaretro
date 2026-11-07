@@ -13,7 +13,8 @@ end
 
 -- Takes at most one message per call (turning a big one into Lua tables takes a while on the
 -- device). Returns the listing once it's complete:
--- { systems, games = { [systemId] = games }, saved = the save's state, timings, seconds }.
+-- { systems, games = { [systemId] = games }, saved = the save's state, cheevos = the RetroAchievements
+-- id cache (see core/achievements), timings, seconds }.
 function library.poll()
   local err = thread:getError()
   if err then error("library worker: " .. err) end

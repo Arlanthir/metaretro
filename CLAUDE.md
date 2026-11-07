@@ -15,7 +15,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - **Preparing ahead:** once the library is read, `prepare` sets up the title's first option (Continue, or New Game without a save) without saving anything. It runs as a coroutine, a step per frame, so the title keeps responding.
   - **Choosing:** `start` goes straight to town if that choice is ready; otherwise it shows "Loading your library..." until it is.
   - **Entering town** (`enterTown`) saves and starts the RetroAchievements sync.
-  - **After a game:** the launcher leaves `resume.txt` in the save folder. The next start removes it and skips the title. This replaced a `--resume` argument, which PortMaster's `$LOVE_RUN` didn't seem to pass through. Startup logs `started with: <args>` to check what arrives. The title, preparing ahead and coming back from a game all work on the device (2026-11-07).
+  - **After a game:** the launcher leaves `resume.txt` in the save folder. The next start removes it and skips the title. This replaced a `--resume` argument from `Metaretro.sh`, which didn't work on the device for reasons we never pinned down. `$LOVE_RUN` does pass arguments: the log shows `started with: --layout nintendo`. The title, preparing ahead and coming back from a game all work on the device (2026-11-07).
 - `core/`: pure logic, all unit-tested.
   - `economy`: prices, earnings, purchases and starter packs.
   - `progression`: the console timeline and generations.
@@ -23,7 +23,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `catalog`: owned and locked games.
   - `genres`: 12 categories.
   - `townsfolk`: the villager cast, daily roster, wandering rule and recommendations.
-  - `achievements`: RetroAchievements pay rules.
+  - `achievements`: RetroAchievements pay rules, and finding game ids from ROM hashes (`hashIds`, `resolveIds`, `consolesToRefresh`).
   - `daily`: a deterministic random generator keyed by date.
   - `save`: defaults and migration.
   - `input`: key repeat, `stopRepeats`, Nintendo layout.
@@ -31,7 +31,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - `backends/`: `knulli` reads gamelist.xml and lists files with `find`; `mock` is for the desktop; `gamelist` is the parser.
 - `services/`:
   - `covers` and `coverworker`: threaded cover loading with prefetch, an LRU of 64, and GPU shrinking to 320px.
-  - `http` and `httpworker`: curl or wget on a thread.
+  - `http` and `httpworker`: curl or wget on a thread. They retry 429s, which RetroAchievements sends to bursts. A `parser` ("module:function") can decode a big response on the thread.
   - `retroachievements`: the sync.
   - `library` and `libraryworker`: read every system's games on a thread; backends take the result with `useListing`.
   - `playtime`: session log plus gametime.
@@ -54,6 +54,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Earning coins:**
   - Play: 2 coins per minute, capped at 120 minutes per session.
   - RetroAchievements: 5 coins per point, x2 in hardcore. Unlocks from before tracking started pay x0.5, once.
+  - Game ids: scrapers often give a `cheevosHash` without a `cheevosId`. The sync then fetches the game lists of owned consoles (`API_GetGameList`, with hashes; one console per request), at most weekly, and keeps the ids of library games in `cheevos.txt` in the save folder. Owned games that get an id this way are checked at once, and played games without one wait in `pendingAchievementHashes`. Consoles' RetroAchievements ids are `ra` in `core/consoles.lua`. Matching by hash only is deliberate: a title match without a hash match is a ROM version the emulator won't award achievements for. Checked on the device on 2026-11-07: Tomb Raider II (hash match) showed achievements, and Tomb Raider III (title match only) showed none.
 - **Starting out:**
   - New Game resets the save. Play already in `sessions.log` doesn't pay again, and RetroAchievements tracking starts over from then (older unlocks pay x0.5, once).
   - Starter wallet: 1000.

@@ -1,4 +1,5 @@
 local backend = require("backends.backend")
+local achievements = require("core.achievements")
 local catalog = require("core.catalog")
 local consoles = require("core.consoles")
 local covers = require("services.covers")
@@ -85,6 +86,8 @@ local function prepare(newGame)
     app.state.consumedSessions = #sessions
   end
   local games = catalog.allGames(app.backend)
+  app.cheevos = app.listing.cheevos
+  achievements.resolveIds(games, app.cheevos.ids)
   if not app.state.initialized then
     -- New players start with the oldest console in their library and a few of its games.
     app:rebuild()
