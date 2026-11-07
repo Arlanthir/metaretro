@@ -1,5 +1,6 @@
 local save = require("core.save")
 local townsfolk = require("core.townsfolk")
+local town = require("world.town")
 
 local function game(id, fields)
   fields = fields or {}
@@ -13,24 +14,32 @@ describe("townsfolk", function()
   local state
   before_each(function() state = save.defaults() end)
 
-  it("brings one villager of each kind each day, on separate spots", function()
-    local roster = townsfolk.dailyRoster("2026-11-06")
-    assert.equal(#townsfolk.KINDS, #roster)
-    local kinds, spots = {}, {}
-    for _, entry in ipairs(roster) do
-      kinds[entry.villager.kind] = true
-      spots[entry.x .. "," .. entry.y] = true
+  local map = town.parse(require("world.townmap"))
+  local function tileAt(x, y) return town.tile(map, x, y) end
+  local tiles = townsfolk.startTiles(tileAt, map.width, map.height, map.start)
+  local function distance(a, b) return math.abs(a.x - b.x) + math.abs(a.y - b.y) end
+
+  it("brings one villager of each kind each day, spread over town", function()
+    for day = 1, 30 do
+      local roster = townsfolk.dailyRoster(("2026-11-%02d"):format(day), tiles)
+      assert.equal(#townsfolk.KINDS, #roster)
+      local kinds = {}
+      for i, entry in ipairs(roster) do
+        kinds[entry.villager.kind] = true
+        assert.is_true(townsfolk.canWanderTo(tileAt, entry, entry.x, entry.y))
+        assert.is_true(distance(entry, map.start) >= townsfolk.START_CLEARANCE)
+        for j = i + 1, #roster do
+          assert.is_true(distance(entry, roster[j]) >= townsfolk.MIN_SPACING)
+        end
+      end
+      for _, kind in ipairs(townsfolk.KINDS) do assert.is_true(kinds[kind], kind) end
     end
-    for _, kind in ipairs(townsfolk.KINDS) do assert.is_true(kinds[kind], kind) end
-    local count = 0
-    for _ in pairs(spots) do count = count + 1 end
-    assert.equal(#roster, count)
   end)
 
   it("keeps the same roster all day and changes it across days", function()
     local function names(day)
       local list = {}
-      for _, entry in ipairs(townsfolk.dailyRoster(day)) do
+      for _, entry in ipairs(townsfolk.dailyRoster(day, tiles)) do
         table.insert(list, entry.villager.id .. "@" .. entry.x .. "," .. entry.y)
       end
       return table.concat(list, " ")
@@ -41,6 +50,38 @@ describe("townsfolk", function()
       if names(("2026-11-%02d"):format(day)) ~= names("2026-11-06") then different = true end
     end
     assert.is_true(different)
+  end)
+
+  it("starts villagers in many different places over a month", function()
+    local seen, count = {}, 0
+    for day = 1, 30 do
+      for _, entry in ipairs(townsfolk.dailyRoster(("2026-11-%02d"):format(day), tiles)) do
+        local spot = entry.x .. "," .. entry.y
+        if not seen[spot] then seen[spot], count = true, count + 1 end
+      end
+    end
+    assert.is_true(count > 100, count)
+  end)
+
+  it("leaves a villager out when no tile is far enough from the others", function()
+    local roster = townsfolk.dailyRoster("2026-11-06", { { x = 1, y = 1 }, { x = 2, y = 1 } })
+    assert.equal(1, #roster)
+  end)
+
+  it("has several villagers of each kind, each with a sprite and portrait", function()
+    local perKind, ids = {}, {}
+    for _, villager in ipairs(townsfolk.CAST) do
+      assert.is_nil(ids[villager.id], villager.id)
+      ids[villager.id] = true
+      perKind[villager.kind] = (perKind[villager.kind] or 0) + 1
+      for _, suffix in ipairs({ "", "Face" }) do
+        local path = "src/assets/ninja-adventure/villagers/" .. villager.sprite .. suffix .. ".png"
+        local file = io.open(path, "rb")
+        assert.truthy(file, path)
+        file:close()
+      end
+    end
+    for _, kind in ipairs(townsfolk.KINDS) do assert.equal(4, perKind[kind], kind) end
   end)
 
   it("lets villagers wander only on nearby grass that isn't under a tree", function()

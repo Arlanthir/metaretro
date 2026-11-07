@@ -50,7 +50,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Stores:**
   - Genre stores need ≥30 games of that genre across owned consoles (`stores.MIN_GENRE_GAMES`).
   - Daily offer: 5 random games per store.
-- **Villagers:** 10 in the cast, 5 kinds; one villager per kind each day; wander radius 2, grass only.
+- **Villagers:** 20 in the cast, 4 for each of 5 kinds; one villager per kind each day. Each starts on a random grass tile (not above a tree), at least 8 tiles from the others and 3 from the player's start (`townsfolk.MIN_SPACING`, `START_CLEARANCE`); wander radius 2, grass only.
 
 ## What's left out of the library
 - **Non-console systems:** Metaretro only uses the consoles in `core/consoles.lua`. Computers, arcade and engines (dos, amiga, fbneo, devilutionx, cannonball, xash3d…) appear nowhere: not in stores, Home, starter packs or counts.
@@ -92,7 +92,6 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - **RetroAchievements badges:** show progress in game details (e.g. "12 / 40 unlocked", mastery). This needs one more per-game RetroAchievements lookup, which could share the sync's request.
   - **Japanese-only warning in stores:** mark games whose `lang` is only `jp`/`ja` (see `economy.isJapaneseOnly`). Starter packs already skip them.
   - **Hiding categories:** a setting to hide genre categories (e.g. Tabletop, Misc) from genre stores, store picks and villager suggestions.
-  - **Bigger villager cast:** 3–4 villagers per kind so the daily roster repeats less. Candidate sprites in the pack: Hunter, Samurai, Princess, Eskimo, and others.
 - **Parked:**
   - library cache
   - completion times (RetroAchievements `MedianTimeToBeat`)

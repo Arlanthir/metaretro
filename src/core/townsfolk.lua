@@ -30,6 +30,26 @@ townsfolk.CAST = {
       "Not a single unplayed game? I wish my bakery shelves were that tidy.",
       "Everything you own has been played. Now that's a well-stocked pantry!",
     } },
+  { id = "hawk", name = "Hawk", sprite = "Hunter", kind = "neverPlayed",
+    suggest = {
+      "A good hunter never leaves gear unused. %s is still in its wrapping!",
+      "I tracked down an unplayed game on your shelf: %s. Go get it!",
+      "%s has never been played. Even my old traps see more action!",
+    },
+    none = {
+      "Not one unplayed game? There's nothing left for me to track down.",
+      "Every game you own has been played. Fine hunting!",
+    } },
+  { id = "hiro", name = "Farmer Hiro", sprite = "OldMan3", kind = "neverPlayed",
+    suggest = {
+      "Seeds don't grow in the sack, friend. Sit yourself down with %s!",
+      "You've got %s and never played it? That's a field left fallow!",
+      "Reap what you've sown! %s is still waiting to be played.",
+    },
+    none = {
+      "Every game played? Your fields are all harvested. Good work!",
+      "Nothing left unplayed. Now that's a tidy farm.",
+    } },
   { id = "pip", name = "Pip", sprite = "Villager4", kind = "genre",
     suggest = {
       "I'm crazy about %s right now! Have you tried %s? It's one of yours!",
@@ -49,6 +69,26 @@ townsfolk.CAST = {
     none = {
       "Your shelf is empty! Go get some games already.",
       "I'd recommend something, but you don't have anything yet!",
+    } },
+  { id = "amara", name = "Princess Amara", sprite = "Princess", kind = "genre",
+    suggest = {
+      "At the palace we only talk about %s. You simply must play %s!",
+      "I hereby declare %s the finest kind of game. Play %s, by royal order!",
+      "My royal tutor says %s games build character. Do try %s!",
+    },
+    none = {
+      "No games at all? Even the palace jester has a few!",
+      "Your shelf is bare! Visit the shops, then come and see me.",
+    } },
+  { id = "ula", name = "Ula", sprite = "Cavegirl", kind = "genre",
+    suggest = {
+      "Ula like %s! %s is good game. You play!",
+      "%s games make Ula happy. Go play %s!",
+      "%s best kind of game! Ula see %s in your cave. Play it!",
+    },
+    none = {
+      "You have no games? Ula have more games than you, and Ula have rocks.",
+      "Empty cave! Go get games from shops.",
     } },
   { id = "sensei", name = "Sensei", sprite = "Master", kind = "achievements",
     suggest = {
@@ -70,6 +110,26 @@ townsfolk.CAST = {
       "There are no rewards left to seek. Rest, and find new games.",
       "Your collection holds no unclaimed rewards. Be at peace.",
     } },
+  { id = "ronin", name = "Ronin", sprite = "Samurai", kind = "achievements",
+    suggest = {
+      "An unfinished duel brings no honor. Return to %s and claim its achievements.",
+      "%s still holds challenges. A warrior does not leave them unanswered.",
+      "The blade is sharpened by practice. %s has achievements left to earn.",
+    },
+    none = {
+      "Every challenge has been met with honor. Rest your blade, for now.",
+      "No achievements remain unclaimed. Seek new battles in new games.",
+    } },
+  { id = "gareth", name = "Sir Gareth", sprite = "Knight", kind = "achievements",
+    suggest = {
+      "A quest awaits! %s has achievements no hero has claimed.",
+      "By my sword! %s still has glory left to win. Onward!",
+      "The realm whispers of %s and its unclaimed achievements. Will you answer?",
+    },
+    none = {
+      "All quests completed! The realm salutes you, hero.",
+      "There is no glory left to claim. Find new games, and new quests!",
+    } },
   { id = "rose", name = "Granny Rose", sprite = "OldWoman", kind = "forgotten",
     suggest = {
       "Oh dear, it's been ages since you played %s. Old friends like to be visited!",
@@ -89,6 +149,26 @@ townsfolk.CAST = {
     none = {
       "Once you've played a few games, I'll tell you which ones you're neglecting.",
       "Nothing to be nostalgic about yet. Go make some memories!",
+    } },
+  { id = "yuki", name = "Yuki", sprite = "Eskimo", kind = "forgotten",
+    suggest = {
+      "Brr! %s has been left out in the cold. Go warm it up!",
+      "Remember %s? It's been frozen on your shelf for ages.",
+      "Ice keeps things fresh, but not forever. Time to thaw out %s!",
+    },
+    none = {
+      "Nothing's been left out in the cold yet. Go play something!",
+      "Play a few games and I'll tell you which ones are freezing over.",
+    } },
+  { id = "bo", name = "Captain Bo", sprite = "OldMan2", kind = "forgotten",
+    suggest = {
+      "Ahoy! You haven't sailed back to %s in a long while.",
+      "Every ship returns to port. Isn't it time you returned to %s?",
+      "I remember the days you played %s. Hoist the sails and go back!",
+    },
+    none = {
+      "No voyages logged yet! Set sail with a game first.",
+      "Once you've played a few games, I'll tell you which ports you've forgotten.",
     } },
   { id = "scout", name = "Scout", sprite = "Inspector", kind = "storeTip",
     suggest = {
@@ -110,39 +190,91 @@ townsfolk.CAST = {
       "The stores are boring today. Nothing new!",
       "I checked every shop window. Nothing cool today.",
     } },
+  { id = "percy", name = "Lord Percy", sprite = "Noble", kind = "storeTip",
+    suggest = {
+      "Between us, the %s has %s today. I'd buy it myself, but I own three already.",
+      "I've been browsing the %s. %s caught my eye. Quite the find!",
+      "A gentleman notices these things: the %s is selling %s today.",
+    },
+    none = {
+      "The shops have nothing worthy of my attention today.",
+      "Nothing of note in the shops today. How dreadfully dull.",
+    } },
+  { id = "gus", name = "Gus", sprite = "Villager2", kind = "storeTip",
+    suggest = {
+      "Just dropped off a crate at the %s. %s, said the label!",
+      "Delivery day! The %s just got %s in stock.",
+      "My back's sore from carrying boxes to the %s. One of them was %s!",
+    },
+    none = {
+      "No deliveries today. The shops have the same old stock.",
+      "Quiet day on my route. Nothing new in the shops.",
+    } },
 }
 
 townsfolk.KINDS = { "neverPlayed", "genre", "achievements", "forgotten", "storeTip" }
 
--- Grass tiles villagers start the day on; they wander up to WANDER_RADIUS tiles from there.
-townsfolk.SPOTS = {
-  { x = 20, y = 4 }, { x = 24, y = 11 }, { x = 6, y = 11 }, { x = 16, y = 18 },
-  { x = 30, y = 10 }, { x = 10, y = 3 }, { x = 33, y = 18 }, { x = 12, y = 25 },
-}
+-- Villagers start the day on a random grass tile and wander up to WANDER_RADIUS tiles from there.
+-- Starting tiles are at least MIN_SPACING apart, so they spread over town, and START_CLEARANCE
+-- away from the player's start.
 townsfolk.WANDER_RADIUS = 2
+townsfolk.MIN_SPACING = 8
+townsfolk.START_CLEARANCE = 3
 
--- Today's villagers: one of each kind, each on its own spot, as { villager, x, y }.
-function townsfolk.dailyRoster(day)
+local function distance(a, b)
+  return math.abs(a.x - b.x) + math.abs(a.y - b.y)
+end
+
+-- Grass only (so streets and doors stay clear), and not right above a tree whose crown would cover them.
+local function canStand(tileAt, x, y)
+  return tileAt(x, y) == "." and tileAt(x, y + 1) ~= "T"
+end
+
+-- Every tile a villager may start the day on, in map order.
+function townsfolk.startTiles(tileAt, width, height, start)
+  local tiles = {}
+  for y = 1, height do
+    for x = 1, width do
+      local tile = { x = x, y = y }
+      if canStand(tileAt, x, y) and distance(tile, start) >= townsfolk.START_CLEARANCE then
+        table.insert(tiles, tile)
+      end
+    end
+  end
+  return tiles
+end
+
+-- Today's villagers: one of each kind on a random tile from `tiles`, as { villager, x, y }.
+-- A villager is left out only when no tile is far enough from the others.
+function townsfolk.dailyRoster(day, tiles)
   local random = daily.random(day)
-  local spots = {}
-  for i, spot in ipairs(townsfolk.SPOTS) do spots[i] = spot end
+  local free = {}
+  for i, tile in ipairs(tiles) do free[i] = tile end
   local roster = {}
   for _, kind in ipairs(townsfolk.KINDS) do
     local candidates = {}
     for _, villager in ipairs(townsfolk.CAST) do
       if villager.kind == kind then table.insert(candidates, villager) end
     end
-    local spot = table.remove(spots, random(#spots))
-    table.insert(roster, { villager = candidates[random(#candidates)], x = spot.x, y = spot.y })
+    local villager = candidates[random(#candidates)]
+    while #free > 0 do
+      local tile = table.remove(free, random(#free))
+      local spaced = true
+      for _, other in ipairs(roster) do
+        if distance(tile, other) < townsfolk.MIN_SPACING then spaced = false end
+      end
+      if spaced then
+        table.insert(roster, { villager = villager, x = tile.x, y = tile.y })
+        break
+      end
+    end
   end
   return roster
 end
 
--- Whether a villager whose spot is `home` may step onto (x, y): grass only (so streets and doors
--- stay clear), near home, and not right above a tree whose crown would cover them.
+-- Whether a villager whose spot is `home` may step onto (x, y).
 function townsfolk.canWanderTo(tileAt, home, x, y)
-  return tileAt(x, y) == "." and tileAt(x, y + 1) ~= "T"
-    and math.abs(x - home.x) + math.abs(y - home.y) <= townsfolk.WANDER_RADIUS
+  return canStand(tileAt, x, y) and distance(home, { x = x, y = y }) <= townsfolk.WANDER_RADIUS
 end
 
 function townsfolk.ownedGames(built)
