@@ -4,6 +4,8 @@ local log = require("core.log")
 local launcher = {}
 
 launcher.FILE = "launch.txt"
+-- Left for the next start, which then skips the title screen; Metaretro.sh restarts Metaretro after the game.
+launcher.RESUME_FILE = "resume.txt"
 
 function launcher.connectedControllers()
   local controllers = {}
@@ -28,7 +30,15 @@ function launcher.launch(backend, game)
   local request = launcher.request(backend, game, launcher.connectedControllers())
   log("launching: %s", request:match("\n(.-)\n"))
   love.filesystem.write(launcher.FILE, request)
+  love.filesystem.write(launcher.RESUME_FILE, game.id)
   love.event.quit()
+end
+
+-- Whether Metaretro is starting again after a game it launched (only true once).
+function launcher.consumeResume()
+  if not love.filesystem.getInfo(launcher.RESUME_FILE) then return false end
+  love.filesystem.remove(launcher.RESUME_FILE)
+  return true
 end
 
 return launcher

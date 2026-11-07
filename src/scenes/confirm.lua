@@ -1,3 +1,4 @@
+local log = require("core.log")
 local scenes = require("core.scenes")
 local ui = require("ui")
 
@@ -11,6 +12,14 @@ end
 -- A message with only an OK button.
 function Confirm.notice(message)
   return Confirm.new(message, nil)
+end
+
+-- Asks whether to quit Metaretro (Start, wherever the player is).
+function Confirm.quit()
+  scenes.push(Confirm.new("Quit Metaretro?", function()
+    log("quit confirmed by player")
+    love.event.quit()
+  end))
 end
 
 function Confirm:action(name)

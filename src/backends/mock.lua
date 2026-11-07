@@ -57,6 +57,9 @@ function mock.listGames(systemId)
   return gamesBySystem[systemId] or {}
 end
 
+-- The mock's games are built in, so there's nothing to take from the library thread.
+function mock.useListing() end
+
 function mock.launchCommand(game)
   return ("echo 'Launching %s (%s)'; sleep 2"):format(game.name:gsub("'", ""), game.system)
 end

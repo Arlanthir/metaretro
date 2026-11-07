@@ -96,6 +96,11 @@ function knulli.listGames(systemId)
   return gamesBySystem[systemId]
 end
 
+-- Takes the systems and games read on the library thread, as { systems, games = { [id] = games } }.
+function knulli.useListing(listing)
+  systems, gamesBySystem = listing.systems, listing.games
+end
+
 knulli.inputDevicesPath = "/proc/bus/input/devices"
 
 -- Maps device names to their /dev/input/eventN node.

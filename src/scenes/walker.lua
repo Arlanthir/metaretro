@@ -2,8 +2,6 @@
 -- facing and steps; while a step is under way, `move` is { dx, dy, t, door? }. A step with `door`
 -- walks into a doorway while the screen fades out, and leaves the player where they were.
 local input = require("core.input")
-local log = require("core.log")
-local scenes = require("core.scenes")
 local ui = require("ui")
 local art = require("world.art")
 local Confirm = require("scenes.confirm")
@@ -138,12 +136,8 @@ function Walker:drawStatus()
   end
 end
 
--- Start asks whether to quit, wherever the player is walking.
 function Walker:confirmQuit()
-  scenes.push(Confirm.new("Quit Metaretro?", function()
-    log("quit confirmed by player")
-    love.event.quit()
-  end))
+  Confirm.quit()
 end
 
 return Walker

@@ -4,6 +4,8 @@
 --   detect()              -> boolean, whether this backend applies to the running system
 --   listSystems()         -> { { id, name }, ... }
 --   listGames(systemId)   -> { game, ... } where game has at least id, system, path, name
+--   useListing(listing)   takes { systems, games = { [systemId] = games } } as read on the library
+--                         thread (services/library), instead of reading them again
 --   launchCommand(game, controllers)
 --                         -> shell command that runs the game and blocks until it exits;
 --                            controllers is { { index, guid, name, buttons, hats, axes }, ... }

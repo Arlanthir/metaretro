@@ -10,7 +10,12 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - Launch titles: `scripts/generate-launch-titles.py [page.html] [roms dir]` regenerates `src/core/launchtitles.lua`. Never edit that file by hand.
 
 ## Code map (src/)
-- `main.lua`: the `app` table (state, backend, catalog, stores, town), `loadLibrary` (save, starter console and pack, play credit, RetroAchievements sync), and the LÖVE callbacks.
+- `main.lua`: the `app` table (state, backend, catalog, stores, town), startup, and the LÖVE callbacks.
+  - **Startup:** the title screen shows while `services/library` reads the gamelists and the save on a thread. It sends one system per message, and the main thread takes one per frame.
+  - **Preparing ahead:** once the library is read, `prepare` sets up the title's first option (Continue, or New Game without a save) without saving anything. It runs as a coroutine, a step per frame, so the title keeps responding.
+  - **Choosing:** `start` goes straight to town if that choice is ready; otherwise it shows "Loading your library..." until it is.
+  - **Entering town** (`enterTown`) saves and starts the RetroAchievements sync.
+  - **After a game:** the launcher leaves `resume.txt` in the save folder. The next start removes it and skips the title. This replaced a `--resume` argument, which PortMaster's `$LOVE_RUN` didn't seem to pass through. Startup logs `started with: <args>` to check what arrives. The title, preparing ahead and coming back from a game all work on the device (2026-11-07).
 - `core/`: pure logic, all unit-tested.
   - `economy`: prices, earnings, purchases and starter packs.
   - `progression`: the console timeline and generations.
@@ -28,6 +33,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `covers` and `coverworker`: threaded cover loading with prefetch, an LRU of 64, and GPU shrinking to 320px.
   - `http` and `httpworker`: curl or wget on a thread.
   - `retroachievements`: the sync.
+  - `library` and `libraryworker`: read every system's games on a thread; backends take the result with `useListing`.
   - `playtime`: session log plus gametime.
   - `video` and `videoworker`: video playback for the TV. ffmpeg decodes the picture (320x240 at 20fps) and the sound (44.1kHz stereo, into a QueueableSource) on two threads; both start together.
   - `launcher`.
@@ -38,7 +44,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `art`: all town and Home drawing from the Ninja Adventure sheets, plus our own TV, console and sofa in `assets/metaretro/` (the pack has none).
 - `scenes/`:
   - `walker`: the base for scenes the player walks around (town and home): steps, door fades, camera, the quit prompt.
-  - town, home (inside), tv (the reel), shop (store/dealer), collection (opened from the console at home), gamedetail, dialog, confirm, loading.
+  - title (Continue / New Game), town, home (inside), tv (the reel), shop (store/dealer), collection (opened from the console at home), gamedetail, dialog, confirm, loading.
 - `ui.lua`: fonts, panels (nine-slice), hint bars with button icons, lists, covers, and the `ui.boxArt` (thumbnail) / `ui.fullImage` (image) helpers.
 
 ## Rules and numbers (change here, not in the README)
@@ -49,6 +55,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - Play: 2 coins per minute, capped at 120 minutes per session.
   - RetroAchievements: 5 coins per point, x2 in hardcore. Unlocks from before tracking started pay x0.5, once.
 - **Starting out:**
+  - New Game resets the save. Play already in `sessions.log` doesn't pay again, and RetroAchievements tracking starts over from then (older unlocks pay x0.5, once).
   - Starter wallet: 1000.
   - Starter packs: 3 games from curated launch titles, then the launch window, then the rest. Japanese-only games are skipped. Buying a console grants its own pack.
 - **Stores:**
@@ -86,7 +93,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **No JIT:** LÖVE turns LuaJIT's JIT off on arm64, so per-pixel Lua work is slow there. Use the GPU (canvases) instead.
 - **Launching:** `emulatorlauncher` needs ES's `%CONTROLLERSCONFIG%` args (see `backends/knulli.lua`).
 - **Play time:** games launched from Metaretro don't update gamelist `gametime`, so play is credited from `sessions.log` as well (the larger of the two).
-- **Startup:** parsing a ~9,600-game library takes ~4.5s. The user chose not to add a library cache.
+- **Startup:** parsing a ~9,600-game library takes ~4.5s, now on a thread behind the title screen. The user chose not to add a library cache. Setting up the save afterwards runs on the main thread; it's about 10% of the parse time on the desktop with the JIT off.
 - **Secrets:** device logs contain the RetroAchievements token. Never echo it back.
 - **FPS:** steady 60. Select toggles the FPS counter.
 - **Videos:** LÖVE only plays Ogg Theora, and scraped videos are MP4, so the TV decodes them with ffmpeg. The log line `video: ffmpeg <path>` shows whether ffmpeg was found. Picture and sound play smoothly and in step on the device (2026-11-07).

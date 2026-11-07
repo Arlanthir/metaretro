@@ -1,15 +1,16 @@
 local ui = require("ui")
 
--- Shows a message, then runs blocking work once that frame has been presented.
+-- Shows a message, then runs blocking work once that frame has been presented and `ready()`
+-- (optional) says it can start.
 local Loading = {}
 Loading.__index = Loading
 
-function Loading.new(message, work)
-  return setmetatable({ message = message, work = work, drawn = false }, Loading)
+function Loading.new(message, work, ready)
+  return setmetatable({ message = message, work = work, ready = ready, drawn = false }, Loading)
 end
 
 function Loading:update()
-  if self.drawn and self.work then
+  if self.drawn and self.work and (not self.ready or self.ready()) then
     local work = self.work
     self.work = nil
     work()
