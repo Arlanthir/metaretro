@@ -9,19 +9,25 @@ local DIR = "assets/ninja-adventure/"
 
 local images, quads = {}, {}
 
+-- Sheets from the pack, or "metaretro/..." for Metaretro's own art in assets/metaretro.
 local function image(name)
-  images[name] = images[name] or love.graphics.newImage(DIR .. name .. ".png")
+  local path = name:match("^metaretro/") and "assets/" .. name or DIR .. name
+  images[name] = images[name] or love.graphics.newImage(path .. ".png")
   return images[name]
+end
+
+-- Draws the `width` x `height` region at source pixel (`left`, `top`) of a sheet, with its top-left at (x, y).
+local function region(name, left, top, width, height, x, y)
+  local key = table.concat({ name, left, top, width, height }, ",")
+  local img = image(name)
+  quads[key] = quads[key] or love.graphics.newQuad(left, top, width, height, img:getDimensions())
+  love.graphics.draw(img, quads[key], x, y, 0, SCALE, SCALE)
 end
 
 -- Draws the `columns` x `rows` tile region at (`column`, `row`) of a sheet, with its top-left at (x, y).
 local function sprite(name, column, row, x, y, columns, rows)
   columns, rows = columns or 1, rows or 1
-  local key = table.concat({ name, column, row, columns, rows }, ",")
-  local img = image(name)
-  quads[key] = quads[key] or love.graphics.newQuad(column * SOURCE, row * SOURCE, columns * SOURCE, rows * SOURCE,
-    img:getDimensions())
-  love.graphics.draw(img, quads[key], x, y, 0, SCALE, SCALE)
+  region(name, column * SOURCE, row * SOURCE, columns * SOURCE, rows * SOURCE, x, y)
 end
 
 -- Autotile layout shared by the path and water sheets: a 3x3 blob, a horizontal strip below it,
@@ -215,6 +221,87 @@ end
 
 function art.villager(villager, x, y, facing, frame)
   art.character("villagers/" .. villager.sprite, x, y, facing, frame or 0)
+end
+
+-- Inside Home (see world/home.lua). Pieces of wall by home.wallPiece's names, from TilesetWallSimple.
+local WALLS = {
+  topLeft = { 0, 0 }, top = { 3, 0 }, topBeforeGap = { 1, 0 }, topAfterGap = { 2, 0 }, topRight = { 4, 0 },
+  left = { 0, 1 }, leftBeforeGap = { 0, 2 }, leftAfterGap = { 0, 3 },
+  right = { 4, 1 }, rightBeforeGap = { 4, 2 }, rightAfterGap = { 4, 3 },
+  bottomLeft = { 0, 4 }, bottom = { 3, 4 }, bottomBeforeGap = { 1, 4 }, bottomAfterGap = { 2, 4 }, bottomRight = { 4, 4 },
+  -- A wall between two rooms is the left half of one piece next to the right half of another.
+  -- Where it meets an outer wall, that wall's straight piece covers the outer half (`top` or `bottom`).
+  between = { left = "right", right = "left" },
+  betweenBeforeGap = { left = "rightBeforeGap", right = "leftBeforeGap" },
+  betweenAfterGap = { left = "rightAfterGap", right = "leftAfterGap" },
+  topJoin = { left = "topRight", right = "topLeft", top = "top" },
+  bottomJoin = { left = "bottomRight", right = "bottomLeft", bottom = "bottom" },
+}
+-- Floors repeat a `size` x `size` block of tiles from TilesetInteriorFloor, starting at `column, row`.
+local FLOORS = { wood = { column = 11, row = 0, size = 3 }, kitchen = { column = 1, row = 1, size = 1 } }
+-- Sheet, column, row, and size in tiles (1x1 when left out). `on` lists things standing on the
+-- piece, as sheet, column, row and pixel offset. A one-tile sprite drawn wider has `widen`: the
+-- source pixel columns (first, last + 1) repeated between its halves.
+local FURNITURE = {
+  counter = { "TilesetHouse", 17, 18, 2, 1, on = {
+    { "TilesetElement", 0, 10, 2, -10 }, { "TilesetElement", 1, 10, art.TILE + 2, -6 },
+  } },
+  cupboard = { "TilesetElement", 1, 7, 1, 2 },
+  table = { "TilesetElement", 14, 0, 2, 1, widen = { 6, 10 } },
+  stool = { "TilesetElement", 5, 7 },
+  tv = { "metaretro/Tv", 0, 0, 2, 2 },
+  console = { "metaretro/Console", 0, 0 },
+  sofa = { "metaretro/Sofa", 0, 0, 3, 1 },
+  bookshelf = { "TilesetElement", 8, 7, 2, 2 },
+  plant = { "TilesetElement", 0, 7, 1, 2 },
+  bed = { "TilesetBed", 7, 3, 2, 3 },
+  desk = { "TilesetElement", 10, 0 },
+  chair = { "TilesetElement", 11, 0 },
+  dresser = { "TilesetElement", 6, 7, 2, 2 },
+}
+art.OUTSIDE_COLOR = { 0.08, 0.11, 0.11 } -- the black around the walls
+
+-- The floor of tile (x, y); patterns line up with the living room's left wall.
+function art.floor(kind, x, y, px, py)
+  local floor = FLOORS[kind]
+  sprite("TilesetInteriorFloor", floor.column + x % floor.size, floor.row + (y + 1) % floor.size, px, py)
+end
+
+function art.wall(piece, px, py)
+  local wall = WALLS[piece]
+  if wall.left then
+    local left, right, half = WALLS[wall.left], WALLS[wall.right], SOURCE / 2
+    region("TilesetWallSimple", left[1] * SOURCE, left[2] * SOURCE, half, SOURCE, px, py)
+    region("TilesetWallSimple", right[1] * SOURCE + half, right[2] * SOURCE, half, SOURCE, px + art.TILE / 2, py)
+    local top, bottom = WALLS[wall.top], WALLS[wall.bottom]
+    if top then region("TilesetWallSimple", top[1] * SOURCE, top[2] * SOURCE, SOURCE, half, px, py) end
+    if bottom then
+      region("TilesetWallSimple", bottom[1] * SOURCE, bottom[2] * SOURCE + half, SOURCE, half, px, py + art.TILE / 2)
+    end
+  else
+    sprite("TilesetWallSimple", wall[1], wall[2], px, py)
+  end
+end
+
+local function widened(name, column, row, x, y, width, from, to)
+  local left, top, half, slice = column * SOURCE, row * SOURCE, SOURCE / 2, to - from
+  region(name, left, top, half, SOURCE, x, y)
+  for i = 0, (width - 1) * SOURCE / slice - 1 do
+    region(name, left + from, top, slice, SOURCE, x + (half + i * slice) * SCALE, y)
+  end
+  region(name, left + half, top, half, SOURCE, x + (width * SOURCE - half) * SCALE, y)
+end
+
+function art.furniture(kind, px, py)
+  local piece = FURNITURE[kind]
+  if piece.widen then
+    widened(piece[1], piece[2], piece[3], px, py, piece[4], piece.widen[1], piece.widen[2])
+  else
+    sprite(piece[1], piece[2], piece[3], px, py, piece[4], piece[5])
+  end
+  for _, item in ipairs(piece.on or {}) do
+    sprite(item[1], item[2], item[3], px + item[4], py + item[5])
+  end
 end
 
 -- The villager's portrait for dialogs, as an Image.

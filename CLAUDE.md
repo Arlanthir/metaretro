@@ -33,8 +33,11 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - `world/`:
   - `townmap`: the ASCII map; its legend is in `world/town.lua`.
   - `town`: parsing, walkability, plots and lots.
-  - `art`: all town drawing from the Ninja Adventure sheets.
-- `scenes/`: town, shop (store/dealer), collection (Home), gamedetail, dialog, confirm, loading.
+  - `homemap` and `home`: the inside of Home, as a rooms layer and a furniture layer; wall pieces come from where the floor is (`home.wallPiece`).
+  - `art`: all town and Home drawing from the Ninja Adventure sheets, plus our own TV, console and sofa in `assets/metaretro/` (the pack has none).
+- `scenes/`:
+  - `walker`: the base for scenes the player walks around (town and home): steps, door fades, camera, the quit prompt.
+  - town, home (inside), shop (store/dealer), collection (opened from the console at home), gamedetail, dialog, confirm, loading.
 - `ui.lua`: fonts, panels (nine-slice), hint bars with button icons, lists, covers, and the `ui.boxArt` (thumbnail) / `ui.fullImage` (image) helpers.
 
 ## Rules and numbers (change here, not in the README)
@@ -65,7 +68,8 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - Panels have a thin orange frame and a dark brown fill (`ui.colors.panelFill`) with cream text.
   - The wallet sits in the same spot in town and in menus (`ui.walletPanel`).
 - **Covers:** stores and Home show box art (`thumbnail`); details pages show the composite `image`. Billboards show box art, take the box's shape, and aren't drawn at all without an ad.
-- **Doors:** you enter by walking up into them; A doesn't enter. A talks to villagers and reads the signpost.
+- **Doors:** you enter by walking up into them; A doesn't enter. A talks to villagers and reads the signpost. You leave Home by walking down onto its front door.
+- **Home:** an open-plan kitchen and living room, plus a bedroom. The console under the TV opens the collection (A). Walls are `TilesetWallSimple` pieces. The wall between two rooms is one tile thick, made from the halves of the pieces on either side (see `WALLS` in `world/art.lua`).
 
 ## Verifying changes visually
 - **Harness:** for anything visual, copy `src/` into a scratch folder and append a driver to its `main.lua`:

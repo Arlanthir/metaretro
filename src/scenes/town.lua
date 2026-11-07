@@ -1,6 +1,4 @@
 local catalog = require("core.catalog")
-local input = require("core.input")
-local log = require("core.log")
 local scenes = require("core.scenes")
 local ui = require("ui")
 local art = require("world.art")
@@ -9,28 +7,17 @@ local progression = require("core.progression")
 local stores = require("core.stores")
 local covers = require("services.covers")
 local townsfolk = require("core.townsfolk")
-local Collection = require("scenes.collection")
-local Confirm = require("scenes.confirm")
 local Dialog = require("scenes.dialog")
+local Home = require("scenes.home")
 local GameDetail = require("scenes.gamedetail")
 local Shop = require("scenes.shop")
+local Walker = require("scenes.walker")
 
-local Town = {}
-Town.__index = Town
+local Town = Walker.extend({})
 
-local STEPS_PER_SECOND = 6
--- Walking into a door is slower, while the screen fades out; coming back fades in.
-local DOOR_STEP_SPEED = 0.5
-local FADE_IN_SECONDS = 0.25
-local TOAST_SECONDS = 4
 local VILLAGER_STEPS_PER_SECOND = 3
 local VILLAGER_PAUSE = { 1.5, 4 } -- seconds between villager steps
-local DIRECTIONS = {
-  up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 },
-}
-local DIRECTION_ORDER = { "up", "down", "left", "right" }
 local GROUND = { ["="] = "path", ["@"] = "path", ["~"] = "water" }
-local OPPOSITE = { up = "down", down = "up", left = "right", right = "left" }
 local WELCOME = "Welcome to Metaretro! Play your games to earn coins, then spend them in the shops. "
   .. "The townsfolk always have a tip or two."
 
@@ -52,8 +39,6 @@ function Town.new(app)
   return setmetatable({
     app = app, map = map, villagers = villagers, villagerAt = villagerAt,
     x = map.start.x, y = map.start.y, facing = "down", steps = 0,
-    toast = app.earned > 0 and ("+%d coins from play"):format(app.earned) or nil,
-    toastTime = TOAST_SECONDS,
   }, Town)
 end
 
@@ -66,8 +51,7 @@ function Town:resume()
   if self.inside then
     self.inside = false
     self:rebuild()
-    self.waitForRelease = true
-    self.fadeIn = 1
+    self:fadeInNow()
   end
 end
 
@@ -112,8 +96,8 @@ function Town:rebuild()
   -- Billboards advertise games from today's store picks; drawn live since their images load later.
   self.ads = stores.featured(self.app.state, self.app.catalog, progression.timeline(self.app.catalog.systems),
     os.date("%Y-%m-%d"), #map.billboards, love.math.random, function(game) return ui.boxArt(game) ~= nil end)
-  -- Load in the background what's likely to be seen first: the billboards, and the game Home
-  -- opens on (its first console's first game), so entering Home shows its cover straight away.
+  -- Load in the background what's likely to be seen first: the billboards, and the game the
+  -- collection opens on (its first console's first game), so its cover shows straight away.
   local images = {}
   for _, ad in ipairs(self.ads) do table.insert(images, ui.boxArt(ad.game)) end
   local homeSystem = catalog.ownedSystems(self.app.catalog)[1]
@@ -169,11 +153,6 @@ function Town:rebuild()
   love.graphics.setCanvas()
 end
 
-function Town:facingTile()
-  local d = DIRECTIONS[self.facing]
-  return self.x + d[1], self.y + d[2]
-end
-
 function Town:facingBuilding()
   local building = self.doors[key(self:facingTile())]
   return building and building.kind ~= "lot" and building or nil
@@ -203,8 +182,8 @@ function Town:updateVillagers(dt)
       villager.pause = villager.pause - dt
       if villager.pause <= 0 then
         villager.pause = VILLAGER_PAUSE[1] + love.math.random() * (VILLAGER_PAUSE[2] - VILLAGER_PAUSE[1])
-        local direction = DIRECTION_ORDER[love.math.random(#DIRECTION_ORDER)]
-        local d = DIRECTIONS[direction]
+        local direction = Walker.DIRECTION_ORDER[love.math.random(#Walker.DIRECTION_ORDER)]
+        local d = Walker.DIRECTIONS[direction]
         local x, y = villager.x + d[1], villager.y + d[2]
         local spot = key(x, y)
         villager.facing = direction
@@ -233,7 +212,7 @@ function Town:talkTo(villager)
     finishVillagerStep(self, villager)
   end
   villager.pause = VILLAGER_PAUSE[2]
-  villager.facing = OPPOSITE[self.facing]
+  villager.facing = Walker.OPPOSITE[self.facing]
   local app = self.app
   local reply = townsfolk.talk(villager, {
     state = app.state, catalog = app.catalog, timeline = progression.timeline(app.catalog.systems),
@@ -250,7 +229,7 @@ end
 function Town:enterBuilding(building)
   self.inside = true
   if building.kind == "home" then
-    scenes.push(Collection.new(self.app))
+    scenes.push(Home.new(self.app))
   elseif building.kind == "dealer" then
     scenes.push(Shop.dealer(self.app))
   else
@@ -263,65 +242,20 @@ function Town:step(direction)
   local targetX, targetY = self:facingTile()
   local building = self:facingBuilding()
   if building and direction == "up" then
-    self:walkInto(building)
+    self:startStep("up", building) -- the building opens once the step ends
   elseif town.isWalkable(self.map, targetX, targetY, self.blocked) and not self.villagerAt[key(targetX, targetY)] then
-    self.move = { dx = targetX - self.x, dy = targetY - self.y, t = 0 }
-  end
-end
-
--- Steps onto the doorway; the building opens once the step ends (see Town:update).
-function Town:walkInto(building)
-  self.facing = "up"
-  self.move = { dx = building.door.x - self.x, dy = building.door.y - self.y, t = 0, enter = building }
-end
-
-function Town:heldDirection()
-  for _, direction in ipairs(DIRECTION_ORDER) do
-    if input.isDown(direction) then
-      return direction
-    end
+    self:startStep(direction)
   end
 end
 
 function Town:update(dt)
-  if self.app.announcement then
-    self.toast, self.toastTime = self.app.announcement, TOAST_SECONDS
-    self.app.announcement = nil
-  end
-  if self.toast then
-    self.toastTime = self.toastTime - dt
-    if self.toastTime <= 0 then self.toast = nil end
-  end
-
+  self:updateToast(dt)
   self:updateVillagers(dt)
 
-  if self.fadeIn then
-    self.fadeIn = self.fadeIn - dt / FADE_IN_SECONDS
-    if self.fadeIn <= 0 then self.fadeIn = nil end
-  end
-
-  local move = self.move
-  if move then
-    move.t = move.t + dt * STEPS_PER_SECOND * (move.enter and DOOR_STEP_SPEED or 1)
-    if move.t < 1 then return end
-    self.move = nil
-    self.steps = self.steps + 1
-    if move.enter then
-      -- The player stays outside the door, so they step out of it facing the street.
-      self.facing = "down"
-      self:enterBuilding(move.enter)
-      return
-    end
-    self.x, self.y = self.x + move.dx, self.y + move.dy
-  end
-
-  local direction = self:heldDirection()
-  -- After leaving a building, wait for the d-pad to be released so "up" doesn't walk straight back in.
-  if self.waitForRelease then
-    self.waitForRelease = direction ~= nil
-    return
-  end
-  if direction then
+  local doorStep, direction = self:updateWalking(dt)
+  if doorStep then
+    self:enterBuilding(doorStep.door)
+  elseif direction then
     self:step(direction)
   end
 end
@@ -333,31 +267,17 @@ function Town:action(name)
   elseif name == "a" and prop and prop.kind == "sign" and not self.move then
     scenes.push(Dialog.new("Signpost", nil, WELCOME))
   elseif name == "start" then
-    scenes.push(Confirm.new("Quit Metaretro?", function()
-      log("quit confirmed by player")
-      love.event.quit()
-    end))
+    self:confirmQuit()
   end
-end
-
-function Town:playerPixels()
-  local t = self.move and self.move.t or 0
-  local dx, dy = self.move and self.move.dx or 0, self.move and self.move.dy or 0
-  return (self.x - 1 + dx * t) * art.TILE, (self.y - 1 + dy * t) * art.TILE
-end
-
-local function clamp(value, low, high)
-  return math.max(low, math.min(high, value))
 end
 
 function Town:draw()
   local px, py = self:playerPixels()
-  local camX = clamp(math.floor(px + art.TILE / 2 - ui.WIDTH / 2), 0, self.map.width * art.TILE - ui.WIDTH)
-  local camY = clamp(math.floor(py + art.TILE / 2 - ui.HEIGHT / 2), 0, self.map.height * art.TILE - ui.HEIGHT)
+  local camX, camY = self:camera(self.map.width, self.map.height)
 
   love.graphics.setColor(1, 1, 1)
   love.graphics.draw(self.canvas, -camX, -camY)
-  local frame = self.move and self.steps * 2 + math.floor(self.move.t * 2) or 0
+  local frame = self:walkFrame()
   local screenX, screenY = math.floor(px - camX), math.floor(py - camY)
   -- Characters and billboards lower on screen stand in front of the ones above them.
   local characters = { { y = py, draw = function() art.player(screenX, screenY, self.facing, frame) end } }
@@ -373,12 +293,7 @@ function Town:draw()
   for _, character in ipairs(characters) do character.draw() end
   self:drawTreesInFront(camX, camY, screenX, screenY)
 
-  local fade = self.move and self.move.enter and self.move.t or self.fadeIn
-  if fade then
-    love.graphics.setColor(0, 0, 0, math.min(1, fade))
-    love.graphics.rectangle("fill", 0, 0, ui.WIDTH, ui.HEIGHT)
-  end
-
+  self:drawFade()
   self:drawHud()
 end
 
@@ -416,12 +331,7 @@ function Town:drawTreesInFront(camX, camY, screenX, screenY)
 end
 
 function Town:drawHud()
-  ui.walletPanel(self.app.state.wallet)
-
-  if self.toast then
-    ui.messagePanel(self.toast, ui.WIDTH / 2, 48, "coin")
-  end
-
+  self:drawStatus()
   local building, villager = self:facingBuilding(), self:facingVillager()
   local prop = self.props[key(self:facingTile())]
   local ad = self.ads[self.billboardAt[key(self:facingTile())] or 0]

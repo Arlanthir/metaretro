@@ -25,7 +25,7 @@ function app:persist()
   save.write(love.filesystem, self.state)
 end
 
--- Shows a short message in town (now, or when the player returns there).
+-- Shows a short message where the player walks, in town or at home (now, or when they're back from a menu).
 function app:announce(message)
   self.announcement = message
 end
@@ -73,7 +73,9 @@ local function loadLibrary(args)
   progression.syncOwnedConsoles(app.state, games)
   local sessions = playtime.parseLog(love.filesystem.read(playtime.LOG))
   local played
-  app.earned, played = playtime.credit(app.state, app.backend, games, sessions)
+  local earned
+  earned, played = playtime.credit(app.state, app.backend, games, sessions)
+  if earned > 0 then app:announce(("+%d coins from play"):format(earned)) end
   for _, game in ipairs(played) do
     app.state.lastPlayed[game.id] = os.time()
   end
