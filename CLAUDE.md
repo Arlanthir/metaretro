@@ -29,7 +29,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `http` and `httpworker`: curl or wget on a thread.
   - `retroachievements`: the sync.
   - `playtime`: session log plus gametime.
-  - `video` and `videoworker`: silent video playback for the TV. ffmpeg decodes the video on a thread into 320x240 frames at 20fps.
+  - `video` and `videoworker`: video playback for the TV. ffmpeg decodes the picture (320x240 at 20fps) and the sound (44.1kHz stereo, into a QueueableSource) on two threads; both start together.
   - `launcher`.
 - `world/`:
   - `townmap`: the ASCII map; its legend is in `world/town.lua`.
@@ -89,7 +89,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Startup:** parsing a ~9,600-game library takes ~4.5s. The user chose not to add a library cache.
 - **Secrets:** device logs contain the RetroAchievements token. Never echo it back.
 - **FPS:** steady 60. Select toggles the FPS counter.
-- **Videos:** LÖVE only plays Ogg Theora, and scraped videos are MP4, so the TV decodes them with ffmpeg and plays them without sound. The log line `video: ffmpeg <path>` shows whether ffmpeg was found; the TV hasn't been tried on the device yet.
+- **Videos:** LÖVE only plays Ogg Theora, and scraped videos are MP4, so the TV decodes them with ffmpeg. The log line `video: ffmpeg <path>` shows whether ffmpeg was found. The picture is smooth on the device (2026-11-07); the sound hasn't been tried there yet.
 
 ## Roadmap (as of 2026-11-06)
 - **Not started** (agreed with the user, from the genre-data analysis):

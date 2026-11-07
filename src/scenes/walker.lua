@@ -15,6 +15,9 @@ local STEPS_PER_SECOND = 6
 -- Walking into a door is slower, while the screen fades out; coming back fades in.
 local DOOR_STEP_SPEED = 0.5
 local FADE_IN_SECONDS = 0.25
+-- Coming back redraws the town, which makes one long frame on the device; counting all of it
+-- would finish the fade before it's ever drawn.
+local FADE_MAX_STEP = 1 / 30
 local TOAST_SECONDS = 4
 
 Walker.DIRECTIONS = { up = { 0, -1 }, down = { 0, 1 }, left = { -1, 0 }, right = { 1, 0 } }
@@ -57,7 +60,7 @@ end
 -- straight back in.
 function Walker:updateWalking(dt)
   if self.fadeIn then
-    self.fadeIn = self.fadeIn - dt / FADE_IN_SECONDS
+    self.fadeIn = self.fadeIn - math.min(dt, FADE_MAX_STEP) / FADE_IN_SECONDS
     if self.fadeIn <= 0 then self.fadeIn = nil end
   end
   local move = self.move
