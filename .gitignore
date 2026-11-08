@@ -5,4 +5,5 @@ dist/
 
 .DS_Store
 retroachievements.txt
-example-data/ninja-adventure/
+# Real scraped gamelists and media for local testing; never committed.
+example-data/
