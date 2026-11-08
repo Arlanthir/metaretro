@@ -8,6 +8,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - Screenshot: `love src --screenshot 1` writes `~/Library/Application Support/LOVE/metaretro/screenshot.png`.
 - Port: `scripts/build-port.sh` builds `dist/ports/`. The user copies that to the device and pastes back `log.txt`.
 - Launch titles: `scripts/generate-launch-titles.py [page.html] [roms dir]` regenerates `src/core/launchtitles.lua`. Never edit that file by hand.
+- Console sprites: `love scripts/draw-consoles src` redraws `src/assets/metaretro/Consoles.png` and `src/world/consolelooks.lua` from the drawings in the script. Never edit those two files by hand. A preview with names goes to the script's LÖVE save folder.
 
 ## Code map (src/)
 - `main.lua`: the `app` table (state, backend, catalog, stores, town), startup, and the LÖVE callbacks.
@@ -83,7 +84,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Covers:** stores and Home show box art (`thumbnail`); details pages show the composite `image`. Billboards show box art, take the box's shape, and aren't drawn at all without an ad.
 - **Doors:** you enter by walking up into them; A doesn't enter. In the town map, a door goes where its building's sprite draws the doorway: one tile from the left for most buildings, two for the museum. Each building's left edge comes from its `B` tiles. A talks to villagers and reads the signpost. You leave Home by walking down onto its front door.
 - **Home:** an open-plan kitchen and living room, plus a bedroom. The console under the TV opens the collection (A); it only appears once the player owns a console. The TV (A) plays a nonstop reel of scraped videos of the games on sale in town today (`stores.onSale`), shuffled; videos that won't play drop out of the reel. Walls are `TilesetWallSimple` pieces. The wall between two rooms is one tile thick, made from the halves of the pieces on either side (see `WALLS` in `world/art.lua`).
-- **Museum:** one room with statues, pillars, Professor Cork (the `Master` sprite) and his display table. The three consoles on the table all use our console sprite; the hint names each one. The intro's text is original; we don't copy Pokémon's script or names.
+- **Museum:** one room with statues, pillars, Professor Cork (the `Master` sprite) and his display table. Every console in `core/consoles.lua` has a sprite after the real hardware (drawn by `scripts/draw-consoles`). The controller sits one empty row below the console, joined by a one-pixel black cable. Wireless controllers have no cable, and handhelds have no controller. Unknown systems use the generic sprite. The console under the TV at home is the one the player last played an owned game on (`townsfolk.lastPlayedGame`, either record of play). Before any play, it's the gift, then the oldest owned console. The intro's text is original; we don't copy Pokémon's script or names.
 - **Player look:** `state.player` is "boy" (`Boy.png`) or "girl" (`Girl.png`, the pack's SorcererBlack).
 
 ## Verifying changes visually

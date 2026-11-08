@@ -5,6 +5,7 @@
 --   hintFor(piece, person)   the hint shown while facing them, or nil
 --   live(piece)              drawn every frame instead of once, for pieces that come and go
 --   absent(piece)            not there right now (not drawn, and free to walk on)
+--   drawLive(piece, px, py)  draws a live piece (by default, as its furniture sprite)
 --   drawOnTop(camX, camY)    anything else to draw over the furniture
 -- People are { x, y, facing, look = { name, sprite } }; they stand still and face whoever talks to them.
 -- `place` names the building, for the hint at the door.
@@ -51,6 +52,10 @@ function Interior:hintFor() end
 function Interior:live() return false end
 function Interior:absent() return false end
 function Interior:drawOnTop() end
+
+function Interior:drawLive(piece, px, py)
+  art.furniture(piece.kind, px, py)
+end
 
 function Interior:enter()
   canvases[self.map] = canvases[self.map] or render(self.map, function(piece) return self:live(piece) end)
@@ -115,7 +120,7 @@ function Interior:draw()
   love.graphics.draw(canvases[map], -camX, -camY)
   for _, piece in ipairs(map.furniture) do
     if self:live(piece) and not self:absent(piece) then
-      art.furniture(piece.kind, (piece.x - 1) * art.TILE - camX, (piece.y - 1) * art.TILE - camY)
+      self:drawLive(piece, (piece.x - 1) * art.TILE - camX, (piece.y - 1) * art.TILE - camY)
     end
   end
   self:drawOnTop(camX, camY)

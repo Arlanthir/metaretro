@@ -296,6 +296,16 @@ function townsfolk.lastPlayed(state, game)
   return math.max(fromBackend, fromMetaretro)
 end
 
+-- Of `games`, the one played most recently (by either record), or nil when none has been played.
+function townsfolk.lastPlayedGame(state, games)
+  local latest, latestTime = nil, 0
+  for _, game in ipairs(games) do
+    local time = townsfolk.lastPlayed(state, game)
+    if time > latestTime then latest, latestTime = game, time end
+  end
+  return latest
+end
+
 local function played(state, game)
   return (tonumber(game.playcount) or 0) > 0 or (tonumber(game.gametime) or 0) > 0
     or townsfolk.lastPlayed(state, game) > 0

@@ -254,7 +254,7 @@ local FURNITURE = {
   table = { "TilesetElement", 14, 0, 2, 1, widen = { 6, 10 } },
   stool = { "TilesetElement", 5, 7 },
   tv = { "metaretro/Tv", 0, 0, 2, 2 },
-  console = { "metaretro/Console", 0, 0 },
+  console = { "metaretro/Consoles", 0, 0 },
   sofa = { "metaretro/Sofa", 0, 0, 3, 1 },
   bookshelf = { "TilesetElement", 8, 7, 2, 2 },
   plant = { "TilesetElement", 0, 7, 1, 2 },
@@ -319,9 +319,13 @@ function art.closedDoor(px, py)
   sprite(CLOSED_DOOR[1], CLOSED_DOOR[2], CLOSED_DOOR[3], px, py)
 end
 
--- Something standing on a table (or another piece of furniture) on the tile at (px, py).
-function art.onTable(kind, px, py)
-  art.furniture(kind, px, py - 12)
+-- Consoles drawn after the real hardware (by scripts/draw-consoles), by system id: their column in
+-- Consoles.png. Others get the generic console in column 0.
+local CONSOLE_LOOKS = require("world.consolelooks")
+art.TABLE_TOP = 12 -- how far up something standing on a table is drawn
+
+function art.console(systemId, px, py)
+  sprite("metaretro/Consoles", CONSOLE_LOOKS[systemId] or 0, 0, px, py)
 end
 
 -- The villager's portrait for dialogs, as an Image.

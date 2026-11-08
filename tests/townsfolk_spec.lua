@@ -158,3 +158,19 @@ describe("townsfolk", function()
     end
   end)
 end)
+
+describe("townsfolk.lastPlayedGame", function()
+  it("finds the game played most recently by either record", function()
+    local state = save.defaults()
+    local old = { id = "nes:old", system = "nes", lastplayed = "20240101T120000" }
+    local recent = { id = "snes:recent", system = "snes", lastplayed = "20250101T120000" }
+    local ours = { id = "gb:ours", system = "gb" }
+    assert.equal(recent, townsfolk.lastPlayedGame(state, { old, recent, ours }))
+    state.lastPlayed[ours.id] = os.time({ year = 2026, month = 1, day = 1, hour = 12 })
+    assert.equal(ours, townsfolk.lastPlayedGame(state, { old, recent, ours }))
+  end)
+
+  it("finds nothing when no game has been played", function()
+    assert.is_nil(townsfolk.lastPlayedGame(save.defaults(), { { id = "nes:new", system = "nes" } }))
+  end)
+end)

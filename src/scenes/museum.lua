@@ -90,7 +90,8 @@ end
 function Museum:drawOnTop(camX, camY)
   for x = displayTable.x, displayTable.x + displayTable.width - 1 do
     if self:consoleAt(x, displayTable.y) then
-      art.onTable("console", (x - 1) * art.TILE - camX, (displayTable.y - 1) * art.TILE - camY)
+      local console = self:consoleAt(x, displayTable.y)
+      art.console(console.id, (x - 1) * art.TILE - camX, (displayTable.y - 1) * art.TILE - art.TABLE_TOP - camY)
     end
   end
 end

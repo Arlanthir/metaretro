@@ -91,3 +91,13 @@ describe("progression.giftChoices", function()
     assert.same({ { id = "a" } }, progression.giftChoices({ { id = "a" } }))
   end)
 end)
+
+describe("console sprites", function()
+  it("has a drawing for every console", function()
+    local looks = require("world.consolelooks")
+    for line in io.lines("src/core/consoles.lua") do
+      local id = line:match('^%s*%[?"?([%w]+)"?%]?%s*=%s*console%(')
+      if id then assert.truthy(looks[id], id) end
+    end
+  end)
+end)
