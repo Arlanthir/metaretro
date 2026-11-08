@@ -10,10 +10,10 @@ The games come from the player's own collection and its scraped metadata, so sto
 
 - **Home:** the console under the TV opens your collection, by console, and plays your games. The TV shows videos of the games on sale in town today. Your own arcade cabinet appears in the office once you buy an arcade game.
 - **Museum:** Professor Cork gives you your first console. Glass cases show the best-selling consoles in your library.
-- **Console Dealer:** buy more consoles, each with a starter pack of three games. Handhelds count a generation below the home consoles of their time.
-- **Mall:** a store per console you own, plus stores per genre once you have enough games of one, all open onto one corridor. New picks every day; posters and billboards show what's on sale.
+- **Console Dealer:** buy more consoles, each with a starter pack of three games.
+- **Mall:** a store per console you own, plus stores per game genre, all in a large mall. New picks every day; posters and billboards show what's on sale.
 - **Arcade Club:** four cabinets with new arcade games every week, a coin a play. The clerk sells them for your cabinet at home.
-- **Townsfolk:** five villagers wander town each day, each with a different kind of tip on what to play next. Residents in their houses explain how things work, and Granny Rose buys games you're done with for half their price.
+- **Townsfolk:** villagers wander town each day, each with a different kind of tip on what to play next. Residents in their houses explain how things work, and Granny Rose buys games you're done with for half their price.
 - Coming back from a game puts you right where you left off.
 
 ## Development
@@ -48,8 +48,6 @@ After you play an owned game, the next launch checks its achievements online (ga
 ## Wishlist
 
 - Integrate with [Games of the Month](https://retrohandhelds.gg/games-of-the-month/), its GotX and RetroBits (Saturday Nights), to have strong recommendations for popular games that the player may have in their collection.
-- Recommend games from the favorites EmulationStation collection the player may already have.
-- Integrate with Time To Beat.
 - Release date flashbacks (this game came out on this day X years ago!)
 - Have some trivia about games.
 - Have different types of store, like a more expensive "system sellers" store or a "deep cuts" / underrated game store for cheaper.

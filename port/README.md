@@ -5,18 +5,22 @@ town's stores to unlock more of your collection.
 
 - Earn 2 coins per minute of play (up to 2 hours a session), and coins for RetroAchievements.
 - Get your first console from Professor Cork at the museum; buy more at the Console Dealer.
-- Each console you own opens a store in the mall, with new picks every day.
-- The townsfolk suggest what to play next; the Arcade Club has new cabinets every week.
+- Each console you own opens a game store in the mall, with new picks every day.
+- Play and buy Arcade games at the Arcade Club, with new cabinets every week.
+- Watch trailers for new games on TV, or ask the townsfolk to suggest what to play next.
 
 ## Setup
 
-Ready to run on EmulationStation (Knulli, Batocera): it reads your scraped library. For coins from
-RetroAchievements, create `retroachievements.txt` in `ports/retrotownstory/`:
+Ready to run on EmulationStation (Knulli, Batocera): it reads your scraped library.
+
+For coins from RetroAchievements, create `retroachievements.txt` in `ports/retrotownstory/`:
 
 ```
 apikey=YOUR_WEB_API_KEY
 username=YourName
 ```
+
+Grab your key from the [retroachievements website](https://retroachievements.org/settings?tab=applications).
 
 ## Controls
 
@@ -27,9 +31,10 @@ username=YourName
 | B | Back; hold to run |
 | L / R | Switch consoles in your collection |
 | Start | Quit |
-| Select | Hold for the FPS counter |
 
 ## Credits
 
-Art from the Ninja Adventure asset pack by Pixel-boy and AAA (CC0). Font: Ark Pixel (SIL Open Font
-License). Runs on LÖVE 11.5.
+Inspiration from PakUI's BitPal.
+Art from the [Ninja Adventure asset pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-boy and AAA (CC0).
+Font: [Ark Pixel](https://github.com/TakWolf/ark-pixel-font) (SIL Open Font License).
+Runs on LÖVE 11.5.
