@@ -101,3 +101,21 @@ describe("console sprites", function()
     end
   end)
 end)
+
+describe("progression.mostPopular", function()
+  it("ranks the library's consoles by units sold", function()
+    local timeline = { { id = "nes", sold = 61.9 }, { id = "ps2", sold = 155 }, { id = "lynx", sold = 3 }, { id = "snes", sold = 49.1 } }
+    local ids = {}
+    for _, console in ipairs(progression.mostPopular(timeline, 3)) do table.insert(ids, console.id) end
+    assert.same({ "ps2", "nes", "snes" }, ids)
+    assert.equal(4, #timeline)
+  end)
+
+  it("has a rough units-sold figure for every console", function()
+    local consoles = require("core.consoles")
+    for line in io.lines("src/core/consoles.lua") do
+      local id = line:match('^%s*%[?"?([%w]+)"?%]?%s*=%s*console%(')
+      if id then assert.is_true(consoles.get(id).sold > 0, id) end
+    end
+  end)
+end)

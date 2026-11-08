@@ -19,7 +19,8 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - **After a game:** the launcher leaves `resume.txt` in the save folder. The next start removes it and skips the title. This replaced a `--resume` argument from `Metaretro.sh`, which didn't work on the device for reasons we never pinned down. `$LOVE_RUN` does pass arguments: the log shows `started with: --layout nintendo`. The title, preparing ahead and coming back from a game all work on the device (2026-11-07).
 - `core/`: pure logic, all unit-tested.
   - `economy`: prices, earnings, purchases and starter packs.
-  - `progression`: the console timeline and generations.
+  - `progression`: the console timeline and generations, the gift's choices (oldest), the museum's best sellers (`mostPopular`, by `sold` in `core/consoles.lua`).
+  - `arcade`: the Arcade Club's systems, its weekly cabinets (`arcade.week`, Monday to Sunday) and its price.
   - `stores`: the store list, daily offers and billboard `featured` picks.
   - `catalog`: owned and locked games.
   - `genres`: 12 categories.
@@ -40,13 +41,15 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `launcher`.
 - `world/`:
   - `townmap`: the ASCII map; its legend is in `world/town.lua`.
-  - `town`: parsing, walkability, plots and lots.
+  - `town`: parsing, walkability and plots. The town has fixed buildings only (home, museum, dealer, mall); stores live in the mall.
+  - `mall`: the mall's inside, laid out for the open stores: storefront doors (`S`) alternating along the top and bottom walls, longer as stores open.
+  - `storemap`: the inside of a store or the dealer: shelves, and the clerk (`C`) behind the counter.
   - `interior`, `homemap` and `museummap`: buildings' insides, as a rooms layer and a furniture layer. The furniture layer also marks spots (`P` the professor, `S` where a new game wakes up). Wall pieces come from where the floor is (`interior.wallPiece`).
   - `art`: all town and Home drawing from the Ninja Adventure sheets, plus our own TV, console and sofa in `assets/metaretro/` (the pack has none).
 - `scenes/`:
   - `walker`: the base for scenes the player walks around (town and interiors): steps, door fades, camera, toasts, the quit prompt.
-  - `interior`: the base for buildings' insides (walking, furniture, people, the door out). `home` and `museum` extend it through hooks (`interact`, `hintFor`, `live`, `absent`, `drawOnTop`).
-  - title (Continue / New Game / Quit), intro (Professor Cork, boy or girl), town, tv (the reel), shop (store/dealer), collection (opened from the console at home), gamedetail, dialog, confirm, loading.
+  - `interior`: the base for buildings' insides (walking, furniture, people, storefront doors, the door out). `home`, `museum`, `mall` and `store` extend it through hooks (`interact`, `hintFor`, `live`, `absent`, `drawOnTop`, `enterStorefront`, `storefrontHint`).
+  - title (Continue / New Game / Quit), intro (Professor Cork, boy or girl), town, museum, arcade (the Arcade Club), mall (the corridor of storefronts), store (a store or the dealer inside; A on the clerk or the counter in front of them opens the shop menu), tv (the reel), shop (the store/dealer menu), collection (opened from the console at home), gamedetail, dialog, confirm, loading.
 - `ui.lua`: fonts, panels (nine-slice), hint bars with button icons, lists, covers, and the `ui.boxArt` (thumbnail) / `ui.fullImage` (image) helpers.
 
 ## Rules and numbers (change here, not in the README)
@@ -70,7 +73,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Villagers:** 20 in the cast, 4 for each of 5 kinds; one villager per kind each day. Each starts on a random grass tile (not above a tree), at least 8 tiles from the others and 3 from the player's start (`townsfolk.MIN_SPACING`, `START_CLEARANCE`); wander radius 2, grass only.
 
 ## What's left out of the library
-- **Non-console systems:** Metaretro only uses the consoles in `core/consoles.lua`. Computers, arcade and engines (dos, amiga, fbneo, devilutionx, cannonball, xash3d…) appear nowhere: not in stores, Home, starter packs or counts.
+- **Non-console systems:** Metaretro's library only uses the consoles in `core/consoles.lua`. Computers and engines (dos, amiga, devilutionx, cannonball, xash3d…) appear nowhere. Arcade systems (fbneo, mame, arcade, naomi, cps…, see `arcade.SYSTEMS`) appear only in the Arcade Club's cabinets, never in stores, Home, starter packs or counts.
 - **Ports:** Knulli's `ports` folder is ignored; Metaretro itself lives there.
 - **Gamelist entries:** entries marked `<hidden>`, and entries whose ROM file is missing (gamelists keep stale ones), are skipped by `backends/knulli.lua`.
 - **No genre setting yet:** no genres are hidden by choice. Small genres only lack a genre store (see the rules above; Music, in the user's library); their games still sell in console stores.
@@ -84,7 +87,8 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Covers:** stores and Home show box art (`thumbnail`); details pages show the composite `image`. Billboards show box art, take the box's shape, and aren't drawn at all without an ad.
 - **Doors:** you enter by walking up into them; A doesn't enter. In the town map, a door goes where its building's sprite draws the doorway: one tile from the left for most buildings, two for the museum. Each building's left edge comes from its `B` tiles. A talks to villagers and reads the signpost. You leave Home by walking down onto its front door.
 - **Home:** an open-plan kitchen and living room, plus a bedroom. The console under the TV opens the collection (A); it only appears once the player owns a console. The TV (A) plays a nonstop reel of scraped videos of the games on sale in town today (`stores.onSale`), shuffled; videos that won't play drop out of the reel. Walls are `TilesetWallSimple` pieces. The wall between two rooms is one tile thick, made from the halves of the pieces on either side (see `WALLS` in `world/art.lua`).
-- **Museum:** one room with statues, pillars, Professor Cork (the `Master` sprite) and his display table. Every console in `core/consoles.lua` has a sprite after the real hardware (drawn by `scripts/draw-consoles`). The controller sits one empty row below the console, joined by a one-pixel black cable. Wireless controllers have no cable, and handhelds have no controller. Unknown systems use the generic sprite. The console under the TV at home is the one the player last played an owned game on (`townsfolk.lastPlayedGame`, either record of play). Before any play, it's the gift, then the oldest owned console. The intro's text is original; we don't copy Pokémon's script or names.
+- **Museum:** the big wooden hall in town. Inside are pillars and statues, six glass cases with the library's best-selling consoles (A: the year and roughly how many were sold), and Professor Cork with his gift table. Every console in `core/consoles.lua` has a sprite after the real hardware (drawn by `scripts/draw-consoles`, which also draws the glass case and the cabinets). The controller sits one empty row below the console, joined by a one-pixel black cable. Wireless controllers have no cable, and handhelds have no controller. Unknown systems use the generic sprite. The console under the TV at home is the one the player last played an owned game on (`townsfolk.lastPlayedGame`). Before any play, it's the gift, then the oldest owned console. The intro's text is original; we don't copy Pokémon's script or names.
+- **Arcade Club:** four cabinets with this week's arcade games, the same for everyone that week (`arcade.cabinets`). A play costs 1 coin and launches the game like the collection does. Play pays coins as usual, through `sessions.log`.
 - **Player look:** `state.player` is "boy" (`Boy.png`) or "girl" (`Girl.png`, the pack's SorcererBlack).
 
 ## Verifying changes visually
@@ -116,7 +120,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Parked:**
   - library cache
   - completion times (RetroAchievements `MedianTimeToBeat`)
-  - computers, arcade and engines (dos, amiga, fbneo…), which are excluded from consoles for now
+  - computers and engines (dos, amiga…), which are excluded from consoles for now (arcade systems are only in the Arcade Club)
 - **Wishlist (README):**
   - Games of the Month
   - ES favorites

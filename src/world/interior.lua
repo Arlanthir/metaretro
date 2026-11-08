@@ -1,6 +1,7 @@
 -- Inside buildings (world/homemap.lua, world/museummap.lua). Legend for the `rooms` rows:
 --   #  wall          .  wooden floor     ,  kitchen floor     (space)  outside
 --   _  doorway between rooms             E  front door (walk down onto it to leave)
+--   S  a storefront's door, in the top or bottom wall (walk up or down into it)
 -- A wall between two rooms side by side is one tile thick.
 -- The `furniture` rows place furniture (see FURNITURE); a piece fills its whole footprint with its letter.
 -- Tall pieces against the top wall may reach into the wall row, covering the wall behind them.
@@ -25,16 +26,20 @@ interior.FURNITURE = {
   o = { kind = "orbStatue", width = 2, height = 2 },
   q = { kind = "frogStatue", width = 2, height = 2 },
   i = { kind = "pillar", width = 1, height = 3 },
+  z = { kind = "shopCounter", width = 2, height = 1 },
+  c = { kind = "displayCase", width = 1, height = 2 },
+  a = { kind = "cabinet", width = 1, height = 2 },
 }
 
 interior.SPOTS = {
   P = "professor", -- where Professor Cork stands in the museum
   S = "wakeUp", -- where a new game starts, at home
+  C = "clerk", -- where a store's clerk stands, behind the counter
 }
 
-local FLOORS = { ["."] = "wood", [","] = "kitchen", ["_"] = "wood", E = "wood" }
+local FLOORS = { ["."] = "wood", [","] = "kitchen", ["_"] = "wood", E = "wood", S = "wood" }
 local ROOM = { ["."] = true, [","] = true }
-local GAP = { ["_"] = true, E = true }
+local GAP = { ["_"] = true, E = true, S = true }
 
 local function key(x, y)
   return x .. "," .. y
@@ -71,8 +76,16 @@ end
 
 function interior.parse(layout)
   local rows = layout.rooms
-  local map = { rows = rows, width = #rows[1], height = #rows, furniture = {}, furnitureAt = {}, spots = {} }
+  local map = { rows = rows, width = #rows[1], height = #rows, furniture = {}, furnitureAt = {}, spots = {},
+    storefronts = {} }
   for y, row in ipairs(rows) do
+    -- Storefronts in reading order, each entered from the room's side of the wall.
+    for x = 1, #row do
+      if row:sub(x, x) == "S" then
+        local below = ROOM[interior.tile(map, x, y + 1)]
+        table.insert(map.storefronts, { x = x, y = y, direction = below and "up" or "down" })
+      end
+    end
     local x = row:find("E", 1, true)
     if x then
       map.exit = { x = x, y = y }

@@ -51,13 +51,14 @@ local DECORATIONS = {
 local DECORATION_CHANCE = 0.12
 local TREES = { { 0, 0 }, { 0, 0 }, { 2, 0 } }
 
--- Buildings are 4x3 tiles with the door one tile in from the left; these sprites all match that.
+-- The town's buildings: column, row, width and height (in tiles) of their sprite in TilesetHouse.
+-- Their doors sit where world/townmap.lua says (where each sprite draws its doorway).
 local HOUSES = {
-  home = { 0, 0, 4 },
-  dealer = { 16, 0, 3 },
-  museum = { 19, 0, 4 },
-  console = { { 4, 0, 4 }, { 8, 0, 4 }, { 12, 0, 4 } },
-  genre = { { 23, 0, 3 }, { 26, 0, 3 } },
+  home = { 0, 0, 4, 3 },
+  dealer = { 16, 0, 3, 3 },
+  museum = { 25, 14, 4, 5 },
+  mall = { 12, 0, 4, 3 },
+  arcade = { 23, 0, 3, 3 },
 }
 
 -- Cloth banners (1x2 tiles) hung by store doors, one design per store (the pack's snake and skull
@@ -113,7 +114,8 @@ function art.tree(x, y, px, py)
   sprite("TilesetNature", tree[1], tree[2], px - art.TILE / 2, py - art.TILE, 2, 2)
 end
 
-local function storeHash(store)
+-- A stable number per store, so each one always gets the same banner and clerk.
+function art.storeHash(store)
   local sum = 0
   for i = 1, #store.id do
     sum = sum + store.id:byte(i) * i
@@ -121,21 +123,19 @@ local function storeHash(store)
   return sum
 end
 
-local function house(building)
-  if building.kind ~= "store" then
-    return HOUSES[building.kind]
-  end
-  local pool = HOUSES[building.store.kind] or HOUSES.console
-  return pool[storeHash(building.store) % #pool + 1]
-end
-
 -- How many tiles wide the building's sprite is (3 or 4).
 function art.buildingWidth(building)
-  return house(building)[3]
+  return HOUSES[building.kind][3]
+end
+
+-- A store's cloth banner (1x2 tiles), hung by its door in the mall.
+function art.banner(store, px, py)
+  local banner = BANNERS[art.storeHash(store) % #BANNERS + 1]
+  sprite("TilesetHouse", banner[1], banner[2], px, py, 1, 2)
 end
 
 -- A plaque sized to the letters themselves rather than the font's full line height.
-local function sign(text, centerX, y, font)
+function art.sign(text, centerX, y, font)
   local width, height = font:getWidth(text) + 10, 22
   local x = math.floor(centerX - width / 2)
   love.graphics.setColor(0.27, 0.16, 0.10)
@@ -150,25 +150,9 @@ end
 
 -- `x, y` is the building's top-left pixel and `width` its width in pixels.
 function art.building(building, label, x, y, width, font)
-  local tile = art.TILE
-  if building.kind == "lot" then
-    for column = 0, 3 do
-      for row = 1, 2 do
-        local inLot = function(cx, cy) return cx >= 0 and cx <= 3 and cy >= 1 and cy <= 2 end
-        autotile(PATH, inLot, column, row, x + column * tile, y + row * tile)
-      end
-    end
-    sign(label, x + width / 2, y + tile + 10, font)
-    return
-  end
-  local look = house(building)
-  sprite("TilesetHouse", look[1], look[2], x, y, look[3], 3)
-  if building.kind == "store" then
-    -- A banner hanging on the wall to the right of the door marks it as a shop.
-    local banner = BANNERS[storeHash(building.store) % #BANNERS + 1]
-    sprite("TilesetHouse", banner[1], banner[2], x + (look[3] - 1) * tile, y + tile, 1, 2)
-  end
-  sign(label, x + look[3] * tile / 2, y + 6, font)
+  local look = HOUSES[building.kind]
+  sprite("TilesetHouse", look[1], look[2], x, y, look[3], look[4])
+  art.sign(label, x + look[3] * art.TILE / 2, y + 6, font)
 end
 
 -- A billboard on two posts standing on a 4x3-tile base at (px, py), advertising `title`.
@@ -266,6 +250,7 @@ local FURNITURE = {
   orbStatue = { "TilesetHouse", 3, 15, 2, 2 },
   frogStatue = { "TilesetHouse", 3, 17, 2, 2 },
   pillar = { "TilesetHouse", 0, 15, 1, 3 },
+  shopCounter = { "TilesetHouse", 17, 18, 2, 1 },
 }
 art.OUTSIDE_COLOR = { 0.08, 0.11, 0.11 } -- the black around the walls
 
@@ -326,6 +311,17 @@ art.TABLE_TOP = 12 -- how far up something standing on a table is drawn
 
 function art.console(systemId, px, py)
   sprite("metaretro/Consoles", CONSOLE_LOOKS[systemId] or 0, 0, px, py)
+end
+
+-- The museum's glass case (1x2 tiles) at (px, py), with `systemId`'s console inside (or empty).
+function art.displayCase(systemId, px, py)
+  if systemId then art.console(systemId, px, py) end
+  sprite("metaretro/DisplayCase", 0, 0, px, py, 1, 2)
+end
+
+-- Arcade cabinet `index` (1x2 tiles; four colors, repeating).
+function art.cabinet(index, px, py)
+  sprite("metaretro/Cabinets", (index - 1) % 4, 0, px, py, 1, 2)
 end
 
 -- The villager's portrait for dialogs, as an Image.

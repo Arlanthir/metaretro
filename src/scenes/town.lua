@@ -11,7 +11,9 @@ local Dialog = require("scenes.dialog")
 local Home = require("scenes.home")
 local Museum = require("scenes.museum")
 local GameDetail = require("scenes.gamedetail")
-local Shop = require("scenes.shop")
+local Arcade = require("scenes.arcade")
+local Mall = require("scenes.mall")
+local Store = require("scenes.store")
 local Walker = require("scenes.walker")
 
 local Town = Walker.extend({})
@@ -57,12 +59,13 @@ function Town:resume()
 end
 
 -- Short text for the building's sign, and the full name used in hints.
+local LABELS = {
+  home = { "Home", "Home" }, dealer = { "Consoles", "Console Dealer" }, museum = { "Museum", "Game Museum" },
+  mall = { "Mall", "Mall" }, arcade = { "Arcade", "Arcade Club" },
+}
+
 function Town:label(building)
-  if building.kind == "home" then return "Home", "Home" end
-  if building.kind == "dealer" then return "Consoles", "Console Dealer" end
-  if building.kind == "museum" then return "Museum", "Game Museum" end
-  if building.kind == "store" then return building.store.short, building.store.title end
-  return "For sale", "Empty lot"
+  return unpack(LABELS[building.kind])
 end
 
 local function groundKind(map, x, y)
@@ -73,7 +76,7 @@ end
 function Town:rebuild()
   local tile = art.TILE
   local map = self.map
-  self.buildings = town.layout(map, self.app.state, self.app.stores)
+  self.buildings = town.layout(map)
   self.blocked = town.blockedTiles(self.buildings, art.buildingWidth)
   self.doors = {}
   for _, building in ipairs(self.buildings) do
@@ -93,7 +96,7 @@ function Town:rebuild()
   end
   for _, building in ipairs(self.buildings) do
     local left, top = town.footprint(building.door)
-    table.insert(objects, { row = top + town.BUILDING_HEIGHT - 1, x = left, building = building, top = top })
+    table.insert(objects, { row = building.door.y, x = left, building = building, top = top })
   end
   -- Billboards advertise games from today's store picks; drawn live since their images load later.
   self.ads = stores.featured(self.app.state, self.app.catalog, progression.timeline(self.app.catalog.systems),
@@ -161,7 +164,7 @@ end
 
 function Town:facingBuilding()
   local building = self.doors[key(self:facingTile())]
-  return building and building.kind ~= "lot" and building or nil
+  return building
 end
 
 function Town:facingVillager()
@@ -239,9 +242,11 @@ function Town:enterBuilding(building)
   elseif building.kind == "museum" then
     scenes.push(Museum.new(self.app))
   elseif building.kind == "dealer" then
-    scenes.push(Shop.dealer(self.app))
-  else
-    scenes.push(Shop.store(self.app, building.store))
+    scenes.push(Store.new(self.app))
+  elseif building.kind == "mall" then
+    scenes.push(Mall.new(self.app))
+  elseif building.kind == "arcade" then
+    scenes.push(Arcade.new(self.app))
   end
 end
 

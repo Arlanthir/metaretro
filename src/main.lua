@@ -42,7 +42,6 @@ end
 function app:rebuild()
   self.catalog = catalog.build(self.backend, self.state, isConsole)
   self.stores = stores.list(self.state, self.catalog, progression.timeline(self.catalog.systems))
-  town.assignLots(self.state, self.stores, #self.town.lots)
 end
 
 -- Rebuilds after the save changes, then saves it.

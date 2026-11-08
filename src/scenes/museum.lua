@@ -15,8 +15,10 @@ local Museum = Walker.extend({ place = "the museum" }, Interior)
 
 local map = interior.parse(require("world.museummap"))
 local displayTable
+local cases = {} -- the glass cases, in reading order: best-selling console first
 for _, piece in ipairs(map.furniture) do
   if piece.kind == "displayTable" then displayTable = piece end
+  if piece.kind == "displayCase" then table.insert(cases, piece) end
 end
 
 Museum.PROFESSOR = { name = "Professor Cork", sprite = "Master" }
@@ -31,7 +33,30 @@ function Museum.new(app)
   local self = Interior.new(Museum, app, map)
   local spot = map.spots.professor
   self.people = { { x = spot.x, y = spot.y, facing = "down", look = Museum.PROFESSOR } }
+  self.exhibits = progression.mostPopular(progression.timeline(app.catalog.systems), #cases)
   return self
+end
+
+function Museum:live(piece)
+  return piece.kind == "displayCase"
+end
+
+-- The console in a glass case, if the library has enough consoles to fill it.
+function Museum:exhibit(piece)
+  for i, case in ipairs(cases) do
+    if case == piece then return self.exhibits[i] end
+  end
+end
+
+function Museum:drawLive(piece, px, py)
+  local console = self:exhibit(piece)
+  art.displayCase(console and console.id, px, py)
+end
+
+local function describe(console)
+  local sold = console.sold >= 1 and ("%g million"):format(console.sold)
+    or ("%d thousand"):format(math.floor(console.sold * 1000 + 0.5))
+  return ("The %s, from %d. About %s sold."):format(console.name, console.year, sold)
 end
 
 -- The console on the table at (x, y), unless it's the one already given away.
@@ -59,6 +84,11 @@ end
 
 function Museum:interact(piece, person)
   local state = self.app.state
+  local exhibit = piece and piece.kind == "displayCase" and self:exhibit(piece)
+  if exhibit then
+    scenes.push(Dialog.new("", nil, describe(exhibit)))
+    return
+  end
   if person then
     if state.giftReceived then
       self:say(AFTER)
@@ -80,6 +110,8 @@ end
 
 function Museum:hintFor(piece, person)
   if person then return ("A: talk to %s"):format(person.look.name) end
+  local exhibit = piece and piece.kind == "displayCase" and self:exhibit(piece)
+  if exhibit then return ("A: look at the %s"):format(exhibit.short) end
   local console = piece and piece.kind == "displayTable" and self:consoleAt(self:facingTile())
   if not console then return nil end
   local state = self.app.state

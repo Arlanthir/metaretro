@@ -13,7 +13,6 @@ function save.defaults()
     wallet = economy.STARTER_WALLET,
     owned = {},
     ownedConsoles = {},
-    lots = {},
     offers = {},
     seenAchievements = {}, -- achievement id -> "softcore" or "hardcore" once paid
     achievementCoins = {}, -- RetroAchievements game id -> coins paid for its achievements

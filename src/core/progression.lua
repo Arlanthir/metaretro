@@ -16,11 +16,24 @@ function progression.timeline(systems)
     if info then
       table.insert(timeline, {
         id = system.id, name = system.name, short = info.short, year = info.year, generation = info.generation,
+        sold = info.sold,
       })
     end
   end
   table.sort(timeline, chronological)
   return timeline
+end
+
+-- The `count` consoles of the library that sold best, best first (the museum's displays).
+function progression.mostPopular(timeline, count)
+  local list = {}
+  for i, console in ipairs(timeline) do list[i] = console end
+  table.sort(list, function(a, b)
+    if (a.sold or 0) ~= (b.sold or 0) then return (a.sold or 0) > (b.sold or 0) end
+    return a.id < b.id
+  end)
+  for i = #list, count + 1, -1 do list[i] = nil end
+  return list
 end
 
 progression.GIFT_CHOICES = 3

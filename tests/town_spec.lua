@@ -1,15 +1,13 @@
-local save = require("core.save")
 local town = require("world.town")
 
 local map = town.parse(require("world.townmap"))
 
 describe("town map", function()
-  it("has a start, home, museum, dealer and store lots", function()
+  it("has a start, home, museum, dealer, mall and arcade club", function()
     assert.is_truthy(map.start)
     local kinds = {}
     for _, building in ipairs(map.fixed) do table.insert(kinds, building.kind) end
-    assert.same({ "home", "museum", "dealer" }, kinds)
-    assert.equal(34, #map.lots)
+    assert.same({ "home", "museum", "dealer", "mall", "arcade" }, kinds)
     assert.is_true(town.isWalkable(map, map.start.x, map.start.y))
   end)
 
@@ -21,12 +19,11 @@ describe("town map", function()
 
   local doors = {}
   for _, building in ipairs(map.fixed) do table.insert(doors, building.door) end
-  for _, lot in ipairs(map.lots) do table.insert(doors, lot.door) end
 
   it("gives every door a full building footprint", function()
     for _, door in ipairs(doors) do
       local left, top = town.footprint(door)
-      for y = top, top + town.BUILDING_HEIGHT - 1 do
+      for y = top, door.y do
         for x = left, left + town.BUILDING_WIDTH - 1 do
           if x ~= door.x or y ~= door.y then
             assert.equal("B", town.tile(map, x, y), ("tile %d,%d of door %d,%d"):format(x, y, door.x, door.y))
@@ -38,11 +35,7 @@ describe("town map", function()
 
   it("puts each door where its building's sprite draws the doorway", function()
     for _, building in ipairs(map.fixed) do
-      local inset = building.kind == "museum" and 2 or 1
-      assert.equal(building.door.x - inset, (town.footprint(building.door)), building.kind)
-    end
-    for _, lot in ipairs(map.lots) do
-      assert.equal(lot.door.x - 1, (town.footprint(lot.door)))
+      assert.equal(building.door.x - 1, (town.footprint(building.door)), building.kind)
     end
   end)
 
@@ -66,53 +59,22 @@ describe("town map", function()
   end)
 
   it("frees plot tiles that no building covers", function()
-    local home = { kind = "home", door = map.fixed[1].door }
-    local lot = { kind = "lot", door = map.lots[1].door }
-    local blocked = town.blockedTiles({ home, lot }, function() return 3 end)
-    local left, top = town.footprint(home.door)
+    local dealer
+    for _, building in ipairs(map.fixed) do
+      if building.kind == "dealer" then dealer = building end
+    end
+    local blocked = town.blockedTiles({ dealer }, function() return 3 end)
+    local left, top = town.footprint(dealer.door)
     assert.is_false(town.isWalkable(map, left + 2, top, blocked))
     assert.is_true(town.isWalkable(map, left + 3, top, blocked))
-    assert.is_true(town.isWalkable(map, lot.door.x, lot.door.y, blocked))
     assert.is_false(town.isWalkable(map, 1, 1, blocked))
   end)
 end)
 
-describe("town.assignLots", function()
-  local function store(id) return { id = id } end
-  local list = { store("nes"), store("snes"), store("genre:rpg") }
-
-  it("gives stores the first free lots in list order", function()
-    local state = save.defaults()
-    town.assignLots(state, { list[1], list[3] }, 34)
-    assert.same({ nes = 1, ["genre:rpg"] = 2 }, state.lots)
-  end)
-
-  it("never moves existing stores", function()
-    local state = save.defaults()
-    town.assignLots(state, { list[1], list[3] }, 34)
-    town.assignLots(state, list, 34)
-    assert.same({ nes = 1, ["genre:rpg"] = 2, snes = 3 }, state.lots)
-  end)
-
-  it("leaves stores without a lot once the town is full", function()
-    local state = save.defaults()
-    town.assignLots(state, list, 2)
-    assert.same({ nes = 1, snes = 2 }, state.lots)
-  end)
-end)
-
 describe("town.layout", function()
-  it("places stores on their lots and leaves the rest empty", function()
-    local nes = { id = "nes", kind = "console" }
-    local state = save.defaults()
-    state.lots.nes = 2
-    local buildings = town.layout(map, state, { nes })
-    assert.equal("home", buildings[1].kind)
-    assert.equal("museum", buildings[2].kind)
-    assert.equal("dealer", buildings[3].kind)
-    assert.equal("lot", buildings[4].kind)
-    assert.equal("store", buildings[5].kind)
-    assert.equal(nes, buildings[5].store)
-    assert.equal(#map.fixed + #map.lots, #buildings)
+  it("has the town's fixed buildings; stores are in the mall", function()
+    local kinds = {}
+    for _, building in ipairs(town.layout(map)) do table.insert(kinds, building.kind) end
+    assert.same({ "home", "museum", "dealer", "mall", "arcade" }, kinds)
   end)
 end)

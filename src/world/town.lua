@@ -1,33 +1,33 @@
 -- Town map logic. Legend for the rows in world/townmap.lua:
 --   .  grass        =  path        T  tree        ~  water        @  player start (path)
---   B  building     H  home door   D  console dealer door   M  game museum door
---   1-9, a-z  doors of store lots, in the order they get filled
+--   B  building     H  home door   D  console dealer door   M  game museum door   L  mall door
+--   A  arcade club door
 --   $  signpost (readable)   %  crate   &  barrel   #  billboard (4x3 block of #)
--- Every door sits on the bottom row of a 4x3 building, where the building's sprite draws its doorway
--- (one tile from the left edge for most, two for the museum).
+-- Every door sits on the bottom row of its building (a block of B, 4 wide and 3 tall, or taller for the
+-- museum), where the building's sprite draws its doorway: one tile from the left edge.
 local town = {}
 
-town.BUILDING_WIDTH, town.BUILDING_HEIGHT = 4, 3
+town.BUILDING_WIDTH = 4
 town.BILLBOARD_WIDTH, town.BILLBOARD_HEIGHT = 4, 3
 
-local LOT_LABELS = "123456789abcdefghijklmnopqrstuvwxyz"
 local WALKABLE = { ["."] = true, ["="] = true, ["@"] = true }
-local FIXED = { H = "home", D = "dealer", M = "museum" }
+local FIXED = { H = "home", D = "dealer", M = "museum", L = "mall", A = "arcade" }
 local PROPS = { ["$"] = "sign", ["%"] = "crate", ["&"] = "barrel" }
 
--- A door at (x, y), with `left`: the left edge of its building, the "B" tiles just before it.
-local function door(row, x, y)
-  local left = x
-  while row:sub(left - 1, left - 1) == "B" do left = left - 1 end
-  return { x = x, y = y, left = left }
+-- A door at (x, y), with its building's left edge and top: how far the "B" tiles reach left of it
+-- and above it.
+local function door(rows, x, y)
+  local left, top = x, y
+  while rows[y]:sub(left - 1, left - 1) == "B" do left = left - 1 end
+  while rows[top - 1] and rows[top - 1]:sub(x, x) == "B" do top = top - 1 end
+  return { x = x, y = y, left = left, top = top }
 end
 
 function town.parse(rows)
-  local map = { rows = rows, width = #rows[1], height = #rows, fixed = {}, lots = {}, props = {}, billboards = {} }
+  local map = { rows = rows, width = #rows[1], height = #rows, fixed = {}, props = {}, billboards = {} }
   for y, row in ipairs(rows) do
     for x = 1, #row do
       local tile = row:sub(x, x)
-      local lot = LOT_LABELS:find(tile, 1, true)
       if tile == "@" then
         map.start = { x = x, y = y }
       elseif PROPS[tile] then
@@ -35,9 +35,7 @@ function town.parse(rows)
       elseif tile == "#" and row:sub(x - 1, x - 1) ~= "#" and (rows[y - 1] or ""):sub(x, x) ~= "#" then
         table.insert(map.billboards, { x = x, y = y }) -- top-left corner
       elseif FIXED[tile] then
-        table.insert(map.fixed, { kind = FIXED[tile], door = door(row, x, y) })
-      elseif lot then
-        map.lots[lot] = { door = door(row, x, y) }
+        table.insert(map.fixed, { kind = FIXED[tile], door = door(rows, x, y) })
       end
     end
   end
@@ -49,9 +47,9 @@ function town.tile(map, x, y)
   return row and x >= 1 and x <= #row and row:sub(x, x) or "T"
 end
 
--- Plots: building lots and billboard spots, solid only where something actually stands.
+-- Plots: building and billboard spots, solid only where something actually stands.
 local function isPlotTile(tile)
-  return tile == "B" or tile == "#" or FIXED[tile] ~= nil or LOT_LABELS:find(tile, 1, true) ~= nil
+  return tile == "B" or tile == "#" or FIXED[tile] ~= nil
 end
 
 -- `blocked` (from town.blockedTiles, plus any billboards in use) frees the parts of plots nothing
@@ -62,17 +60,14 @@ function town.isWalkable(map, x, y, blocked)
   return blocked ~= nil and isPlotTile(tile) and not blocked[x .. "," .. y]
 end
 
--- Tiles covered by actual buildings; `widthOf(building)` gives each one's width in tiles
--- (empty lots cover nothing).
+-- Tiles covered by buildings; `widthOf(building)` gives each one's width in tiles.
 function town.blockedTiles(buildings, widthOf)
   local blocked = {}
   for _, building in ipairs(buildings) do
-    if building.kind ~= "lot" then
-      local left, top = town.footprint(building.door)
-      for x = left, left + widthOf(building) - 1 do
-        for y = top, top + town.BUILDING_HEIGHT - 1 do
-          blocked[x .. "," .. y] = true
-        end
+    local left, top = town.footprint(building.door)
+    for x = left, left + widthOf(building) - 1 do
+      for y = top, building.door.y do
+        blocked[x .. "," .. y] = true
       end
     end
   end
@@ -80,45 +75,16 @@ function town.blockedTiles(buildings, widthOf)
 end
 
 -- Top-left tile of the building whose door is at `door`.
+-- A building's top-left tile, from its door.
 function town.footprint(door)
-  return door.left or door.x - 1, door.y - town.BUILDING_HEIGHT + 1
+  return door.left, door.top
 end
 
--- Gives each store without a lot the first free one, in list order; existing stores never move.
-function town.assignLots(state, storeList, lotCount)
-  local taken = {}
-  for _, index in pairs(state.lots) do
-    taken[index] = true
-  end
-  for _, store in ipairs(storeList) do
-    if not state.lots[store.id] then
-      for index = 1, lotCount do
-        if not taken[index] then
-          state.lots[store.id] = index
-          taken[index] = true
-          break
-        end
-      end
-    end
-  end
-end
-
--- Every building on the map: home, dealer, stores on their lots, and empty lots.
-function town.layout(map, state, storeList)
-  local byLot = {}
-  for _, store in ipairs(storeList) do
-    local index = state.lots[store.id]
-    if index then
-      byLot[index] = store
-    end
-  end
+-- Every building on the map: home, museum, dealer, mall and arcade club (the stores are inside the mall).
+function town.layout(map)
   local buildings = {}
   for _, building in ipairs(map.fixed) do
     table.insert(buildings, { kind = building.kind, door = building.door })
-  end
-  for index, lot in ipairs(map.lots) do
-    local store = byLot[index]
-    table.insert(buildings, { kind = store and "store" or "lot", door = lot.door, store = store })
   end
   return buildings
 end

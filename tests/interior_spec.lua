@@ -194,3 +194,74 @@ describe("museum", function()
     end
   end)
 end)
+
+describe("store", function()
+  local store = interior.parse(require("world.storemap"))
+  local clerk = store.spots.clerk
+  local blocked = { [clerk.x .. "," .. clerk.y] = true }
+
+  it("has the clerk standing behind the counter", function()
+    assert.truthy(clerk)
+    local counter = interior.furnitureAt(store, clerk.x, clerk.y + 1)
+    assert.equal("shopCounter", counter and counter.kind)
+  end)
+
+  it("lets the player reach the counter in front of the clerk, the clerk and every piece", function()
+    local seen = reachable(store, blocked)
+    assert.is_true(seen[clerk.x .. "," .. (clerk.y + 2)] == true)
+    assert.is_true(nextToReachable({ x = clerk.x, y = clerk.y, width = 1, height = 1 }, seen))
+    for _, piece in ipairs(store.furniture) do assert.is_true(nextToReachable(piece, seen), piece.kind) end
+  end)
+end)
+
+describe("mall layout", function()
+  local mall = require("world.mall")
+
+  it("has a storefront per store, alternating walls, each entered from the corridor", function()
+    for _, count in ipairs({ 0, 1, 2, 5, 17, 40 }) do
+      local map = interior.parse(mall.layout(count))
+      assert.equal(count, #map.storefronts, count .. " stores")
+      local seen = reachable(map)
+      for _, door in ipairs(map.storefronts) do
+        local fromY = door.direction == "up" and door.y + 1 or door.y - 1
+        assert.is_true(seen[door.x .. "," .. fromY] == true, "storefront at " .. door.x)
+      end
+      for y = 1, map.height do
+        for x = 1, map.width do
+          if interior.tile(map, x, y) == "#" then assert.truthy(interior.wallPiece(map, x, y), x .. "," .. y) end
+        end
+      end
+    end
+  end)
+
+  it("puts the first half of the stores along the top wall", function()
+    local map = interior.parse(mall.layout(5))
+    local directions = {}
+    for _, door in ipairs(map.storefronts) do table.insert(directions, door.direction) end
+    assert.same({ "up", "up", "up", "down", "down" }, directions)
+  end)
+
+  it("grows with the stores", function()
+    local small, big = interior.parse(mall.layout(2)), interior.parse(mall.layout(30))
+    assert.is_true(big.width > small.width)
+  end)
+end)
+
+describe("bigger museum and arcade club", function()
+  it("lets the player reach every glass case and cabinet from in front", function()
+    for _, name in ipairs({ "museummap", "arcademap" }) do
+      local m = interior.parse(require("world." .. name))
+      local blocked = {}
+      if m.spots.professor then blocked[m.spots.professor.x .. "," .. m.spots.professor.y] = true end
+      local seen = reachable(m, blocked)
+      local count = 0
+      for _, piece in ipairs(m.furniture) do
+        if piece.kind == "displayCase" or piece.kind == "cabinet" then
+          count = count + 1
+          assert.is_true(seen[piece.x .. "," .. (piece.y + piece.height)] == true, name .. " " .. piece.kind .. " at " .. piece.x)
+        end
+      end
+      assert.is_true(count >= 4, name)
+    end
+  end)
+end)
