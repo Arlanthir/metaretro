@@ -2,7 +2,7 @@
 -- palette. Writes src/assets/metaretro/Consoles.png (one console per column) and
 -- src/world/consolelooks.lua (system id -> column); never edit those by hand. Also draws the museum's
 -- glass display case (DisplayCase.png) and the Arcade Club's cabinets, seen from the side
--- (Cabinets.png: 4 colors, each 32x48).
+-- (Cabinets.png: 4 colors, each 32x48; CabinetMask.png and CabinetTrims.png for covering them in art).
 --
 -- Usage, from the repository: love scripts/draw-consoles src
 -- A preview with names lands in this script's LÖVE save folder (preview.png).
@@ -16,6 +16,7 @@ local P = {
   h = "b8dce5", m = "548789", s = "2d697b", u = "79b8ce", B = "4a5270", r = "e0394c", R = "8f3e56",
   o = "d78b4a", d = "965340", t = "f1c471", y = "ffe18d", O = "ffbc75", n = "ef914f", G = "74a334",
   H = "56864c", l = "adbc3a", e = "8d977f", E = "5f7160", p = "a5608b", L = "d3a2c0", V = "543c52",
+  white = "ffffff", -- only for masks
 }
 
 local sheet, column
@@ -454,17 +455,23 @@ end
 
 -- An arcade cabinet seen from its side (32x48, 2x3 tiles), facing right: the marquee overhang, the
 -- recessed screen, the control panel with its joystick, and the coin door. The big side panel
--- (columns 6-19, rows 4-44, see art.cabinet) is where the game's cover art goes, like real side art.
+-- (columns 6-19, rows 4-44) is where the game's cover art shows when only the panel has it.
+-- `part` picks what to draw: "whole" (the plain cabinet), "mask" (its silhouette in white, for
+-- cutting the cover art to its shape) or "trim" (only the outline and details, drawn over that art).
 local CABINET_SHAPE = { -- rows, then the body's columns on them
   { 0, 2, 4, 25 }, { 3, 9, 4, 27 }, { 10, 23, 4, 21 }, { 24, 28, 4, 30 }, { 29, 47, 4, 25 },
 }
-local function cabinet(side, glow)
+local function cabinet(side, glow, part)
   local filled = {}
-  for _, part in ipairs(CABINET_SHAPE) do
-    for y = part[1], part[2] do
-      for x = part[3], part[4] do filled[y * 32 + x] = true; px(x, y, side) end
+  for _, shape in ipairs(CABINET_SHAPE) do
+    for y = shape[1], shape[2] do
+      for x = shape[3], shape[4] do
+        filled[y * 32 + x] = true
+        if part ~= "trim" then px(x, y, part == "mask" and "white" or side) end
+      end
     end
   end
+  if part == "mask" then return end
   for y = 0, 47 do                                             -- outline: body pixels next to the outside
     for x = 0, 31 do
       if filled[y * 32 + x] then
@@ -480,7 +487,7 @@ local function cabinet(side, glow)
   rect(22, 25, 29, 25, "b"); px(27, 22, "r"); px(28, 22, "r"); px(27, 23, "r"); px(28, 23, "r"); px(27, 24, "k")
   px(24, 25, "y"); px(25, 25, "s")                              -- joystick and buttons
   rect(23, 33, 24, 42, "D"); px(23, 36, "y"); px(24, 36, "y")  -- coin door
-  rect(6, 4, 19, 44, "D")                                       -- the side panel, under the art
+  if part == "whole" then rect(6, 4, 19, 44, "D") end           -- the side panel
 end
 local CABINETS = { { "r", "n" }, { "s", "u" }, { "H", "l" }, { "p", "L" } }
 
@@ -516,12 +523,18 @@ function love.load(args)
     sheet, column = love.image.newImageData(16, 32), 0
     displayCase()
     write(src .. "/assets/metaretro/DisplayCase.png", sheet:encode("png"):getString())
-    sheet, cellWidth = love.image.newImageData(32 * #CABINETS, 48), 32
-    for i, colors in ipairs(CABINETS) do
-      column = i - 1
-      cabinet(colors[1], colors[2])
+    cellWidth = 32
+    for _, output in ipairs({ { "whole", "Cabinets" }, { "trim", "CabinetTrims" } }) do
+      sheet = love.image.newImageData(32 * #CABINETS, 48)
+      for i, colors in ipairs(CABINETS) do
+        column = i - 1
+        cabinet(colors[1], colors[2], output[1])
+      end
+      write(src .. "/assets/metaretro/" .. output[2] .. ".png", sheet:encode("png"):getString())
     end
-    write(src .. "/assets/metaretro/Cabinets.png", sheet:encode("png"):getString())
+    sheet, column = love.image.newImageData(32, 48), 0
+    cabinet("k", "k", "mask")
+    write(src .. "/assets/metaretro/CabinetMask.png", sheet:encode("png"):getString())
     cellWidth = 16
     sheet = consoles
 

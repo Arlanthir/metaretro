@@ -95,6 +95,10 @@ local function clamp(value, low, high)
   return math.max(low, math.min(high, value))
 end
 
+-- How much of the screen's bottom the hint bar covers; the view stops above it, so nothing (like a
+-- room's door) hides behind it.
+local HINT_BAR = 48
+
 -- The view's top-left pixel on a `width` x `height` tile map: following the player, or centered
 -- when the map fits on screen.
 function Walker:camera(width, height)
@@ -103,7 +107,7 @@ function Walker:camera(width, height)
     if size <= screen then return -math.floor((screen - size) / 2) end
     return clamp(math.floor(player + art.TILE / 2 - screen / 2), 0, size - screen)
   end
-  return axis(px, width * art.TILE, ui.WIDTH), axis(py, height * art.TILE, ui.HEIGHT)
+  return axis(px, width * art.TILE, ui.WIDTH), axis(py, height * art.TILE, ui.HEIGHT - HINT_BAR)
 end
 
 function Walker:drawFade()

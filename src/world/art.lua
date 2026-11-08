@@ -359,25 +359,53 @@ function art.displayCase(systemId, px, py)
 end
 
 -- Arcade cabinet `index` (2x3 tiles; four colors, repeating), seen from its side: facing right, or
--- left (mirrored) when `facingLeft`. `cover` (an Image, optional) fills its side panel, like side art.
+-- left (mirrored) when `facingLeft`. With `cover` (an Image), the cover art fills the cabinet's whole
+-- shape, like real side art, with only its outline and details drawn over it.
 local CABINET_W, CABINET_H = 2 * SOURCE, 3 * SOURCE
-local CABINET_PANEL = { x = 6, y = 4, width = 14, height = 41 } -- in the sprite's pixels, facing right
+local covered = setmetatable({}, { __mode = "k" }) -- cover Image -> { [key] = Canvas }
+
+local function cabinetQuad(name, column)
+  local img = image(name)
+  local key = name .. column
+  quads[key] = quads[key] or love.graphics.newQuad(column * CABINET_W, 0, CABINET_W, CABINET_H, img:getDimensions())
+  return img, quads[key]
+end
+
+-- The cover art cut to the cabinet's shape, with its trim on top, drawn once per cover and cabinet.
+-- Only the shape and trim are mirrored for cabinets facing left: the art always reads the right way.
+local function coveredCabinet(column, cover, facingLeft)
+  covered[cover] = covered[cover] or {}
+  local key = column .. (facingLeft and "left" or "right")
+  if covered[cover][key] then return covered[cover][key] end
+  local canvas = love.graphics.newCanvas(CABINET_W * SCALE, CABINET_H * SCALE)
+  love.graphics.push("all")
+  love.graphics.setCanvas(canvas)
+  love.graphics.clear(0, 0, 0, 0)
+  love.graphics.setColor(1, 1, 1)
+  local w, h = canvas:getDimensions()
+  local scale = math.max(w / cover:getWidth(), h / cover:getHeight())
+  love.graphics.draw(cover, (w - cover:getWidth() * scale) / 2, (h - cover:getHeight() * scale) / 2, 0, scale, scale)
+  -- The white silhouette keeps the art inside the cabinet and clears it everywhere else.
+  local x, sx = facingLeft and w or 0, facingLeft and -SCALE or SCALE
+  love.graphics.setBlendMode("multiply", "premultiplied")
+  love.graphics.draw(image("metaretro/CabinetMask"), x, 0, 0, sx, SCALE)
+  love.graphics.setBlendMode("alpha")
+  local trims, quad = cabinetQuad("metaretro/CabinetTrims", column)
+  love.graphics.draw(trims, quad, x, 0, 0, sx, SCALE)
+  love.graphics.pop()
+  covered[cover][key] = canvas
+  return canvas
+end
 
 function art.cabinet(index, px, py, facingLeft, cover)
-  local img = image("metaretro/Cabinets")
   local column = (index - 1) % 4
-  local key = "cabinet" .. column
-  quads[key] = quads[key] or love.graphics.newQuad(column * CABINET_W, 0, CABINET_W, CABINET_H, img:getDimensions())
-  love.graphics.draw(img, quads[key], facingLeft and px + CABINET_W * SCALE or px, py, 0,
-    facingLeft and -SCALE or SCALE, SCALE)
-  if not cover then return end
-  local panel = CABINET_PANEL
-  local left = facingLeft and CABINET_W - panel.x - panel.width or panel.x
-  local x, y, w, h = px + left * SCALE, py + panel.y * SCALE, panel.width * SCALE, panel.height * SCALE
-  local scale = math.max(w / cover:getWidth(), h / cover:getHeight())
-  love.graphics.setScissor(x, y, w, h)
-  love.graphics.draw(cover, x + (w - cover:getWidth() * scale) / 2, y + (h - cover:getHeight() * scale) / 2, 0, scale, scale)
-  love.graphics.setScissor()
+  if cover then
+    love.graphics.draw(coveredCabinet(column, cover, facingLeft), px, py)
+  else
+    local img, quad = cabinetQuad("metaretro/Cabinets", column)
+    love.graphics.draw(img, quad, facingLeft and px + CABINET_W * SCALE or px, py, 0,
+      facingLeft and -SCALE or SCALE, SCALE)
+  end
 end
 
 -- The villager's portrait for dialogs, as an Image.

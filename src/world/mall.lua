@@ -1,8 +1,7 @@
 -- The mall's inside, laid out for however many stores are open (see world/interior.lua for the
--- legend): a corridor with a storefront door (S) per store along its top and bottom walls, and the
--- way out (E) at the bottom left. Wooden floor runs in front of the shops and a tiled aisle down the
--- middle, where each gap between two top storefronts holds an ad stand, a plant or a bench. The
--- empty rows above and below hold the stores' name plaques.
+-- legend): a tiled corridor with a storefront door (S) per store along its top and bottom walls, and
+-- the way out (E) at the bottom left. Down the middle, each gap between two top storefronts holds an
+-- ad stand, a plant or a bench. The empty rows above and below hold the stores' name plaques.
 local mall = {}
 
 mall.SPACING = 4 -- tiles from one storefront to the next along a wall
@@ -28,7 +27,7 @@ function mall.layout(count)
   for i = 1, topCount do top = place(top, door(i, true), "S") end
   for i = 1, count - topCount do bottom = place(bottom, door(i, false), "S") end
   bottom = place(bottom, 2, "E")
-  local wood, aisle = row(".", "#"), "#." .. (","):rep(width - 4) .. ".#"
+  local floor = row(",", "#")
   local outside = (" "):rep(width)
 
   -- Decorations, centered in the gap after top storefront g: ads in every other gap first.
@@ -47,7 +46,7 @@ function mall.layout(count)
     end
   end
   return {
-    rooms = { outside, top, wood, aisle, aisle, aisle, wood, bottom, outside },
+    rooms = { outside, top, floor, floor, floor, floor, floor, bottom, outside },
     furniture = { empty, empty, empty, upper, lower, middle, empty, empty, empty },
     ads = ads,
   }

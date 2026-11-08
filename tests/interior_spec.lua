@@ -288,3 +288,21 @@ describe("mall ads", function()
     assert.is_true(#mall.layout(9).ads >= 2)
   end)
 end)
+
+describe("museum entrance", function()
+  it("puts the professor between the entrance and his table", function()
+    local museum = interior.parse(require("world.museummap"))
+    local professor = museum.spots.professor
+    local displayTable
+    for _, piece in ipairs(museum.furniture) do
+      if piece.kind == "displayTable" then displayTable = piece end
+    end
+    assert.is_true(professor.y > displayTable.y)
+    assert.is_true(professor.y < museum.start.y)
+    -- Straight up from the door, the first thing the player meets is the professor.
+    for y = museum.start.y, professor.y + 1, -1 do
+      assert.is_true(interior.isWalkable(museum, museum.start.x, y), "tile " .. museum.start.x .. "," .. y)
+    end
+    assert.equal(museum.start.x, professor.x)
+  end)
+end)

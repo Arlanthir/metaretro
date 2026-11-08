@@ -105,11 +105,11 @@ end
 
 local AROUND = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 }, { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 } }
 
--- "wood" or "kitchen" under the tile, or nil outside. Walls take their room's floor, which shows
--- along their inner edge.
+-- "wood" or "kitchen" under the tile, or nil outside. Walls and doorways take their room's floor,
+-- which shows along a wall's inner edge and through a doorway.
 function interior.floor(map, x, y)
   local tile = interior.tile(map, x, y)
-  if tile ~= "#" then return FLOORS[tile] end
+  if tile ~= "#" and not GAP[tile] then return FLOORS[tile] end
   for _, d in ipairs(AROUND) do
     local neighbour = interior.tile(map, x + d[1], y + d[2])
     if ROOM[neighbour] then return FLOORS[neighbour] end
