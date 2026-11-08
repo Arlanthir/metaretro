@@ -1,7 +1,7 @@
 function love.conf(t)
   t.identity = "metaretro"
   t.version = "11.5"
-  t.window.title = "Metaretro"
+  t.window.title = "Retro Town Story"
   t.window.width = 640
   t.window.height = 480
   t.window.vsync = 1

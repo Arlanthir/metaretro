@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gameList>
+  <game>
+    <path>./Retro Town Story.sh</path>
+    <name>Retro Town Story</name>
+    <desc>Your game library becomes a little town. Play the games you own to earn coins, then spend them in the town's stores to unlock more of your collection. RetroAchievements pay too. Get your first console from Professor Cork at the museum, chat with the townsfolk for tips on what to play next, try this week's cabinets at the Arcade Club, and watch your collection grow.</desc>
+    <releasedate>20261108T000000</releasedate>
+    <developer>Miguel Branco</developer>
+    <publisher>Open Source</publisher>
+    <genre>Simulation</genre>
+    <players>1</players>
+    <image>./metaretro/screenshot.png</image>
+    <thumbnail>./metaretro/cover.png</thumbnail>
+    <marquee>./metaretro/logo.png</marquee>
+  </game>
+</gameList>

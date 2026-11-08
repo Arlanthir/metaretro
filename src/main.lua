@@ -206,7 +206,7 @@ function love.load(args)
     log("resuming after %s", tostring(resume.game))
     start(false, resume.location)
   else
-    scenes.switch(Title.new(app.hasSave, start))
+    scenes.switch(Title.new(app.hasSave, start, app.town))
   end
 end
 

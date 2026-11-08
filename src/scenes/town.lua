@@ -23,7 +23,7 @@ local Town = Walker.extend({})
 local VILLAGER_STEPS_PER_SECOND = 3
 local VILLAGER_PAUSE = { 1.5, 4 } -- seconds between villager steps
 local GROUND = { ["="] = "path", ["@"] = "path", ["~"] = "water" }
-local WELCOME = "Welcome to Metaretro! Play your games to earn coins, then spend them in the shops. "
+local WELCOME = "Welcome to Retro Town! Play your games to earn coins, then spend them in the shops. "
   .. "The townsfolk always have a tip or two."
 
 local function key(x, y)
@@ -73,7 +73,7 @@ local function resident(building)
 end
 
 -- The building's sign and its full name; houses have no sign.
-function Town:label(building)
+function Town.label(building)
   local person = resident(building)
   if person then return nil, ("%s's house"):format(person.name) end
   return unpack(LABELS[building.kind])
@@ -83,9 +83,62 @@ local function groundKind(map, x, y)
   return GROUND[town.tile(map, x, y)] or "grass"
 end
 
+-- Paints the town's ground, trees, props and `buildings` (see town.layout), nearer ones over farther
+-- ones. `options` (all optional): `canvas` to paint into (a new one otherwise), `closed(building)`
+-- for which have their door shut, and `signs = false` to leave the buildings' signs off.
+function Town.paint(map, buildings, options)
+  options = options or {}
+  local closed = options.closed or function() return false end
+  local tile = art.TILE
+  local objects = {}
+  for y = 1, map.height do
+    for x = 1, map.width do
+      if town.tile(map, x, y) == "T" then table.insert(objects, { row = y, x = x, tree = true }) end
+    end
+  end
+  for _, building in ipairs(buildings) do
+    local left, top = town.footprint(building.door)
+    table.insert(objects, { row = building.door.y, x = left, building = building, top = top })
+  end
+  for _, prop in ipairs(map.props) do
+    table.insert(objects, { row = prop.y, x = prop.x, prop = prop })
+  end
+  table.sort(objects, function(a, b)
+    if a.row ~= b.row then return a.row < b.row end
+    return a.x < b.x
+  end)
+
+  local canvas = options.canvas or love.graphics.newCanvas(map.width * tile, map.height * tile)
+  love.graphics.setCanvas(canvas)
+  love.graphics.clear()
+  love.graphics.setColor(1, 1, 1)
+  for y = 1, map.height do
+    for x = 1, map.width do
+      local kind = groundKind(map, x, y)
+      art.ground(kind, function(nx, ny) return groundKind(map, nx, ny) == kind end, x, y, (x - 1) * tile, (y - 1) * tile)
+    end
+  end
+  for _, object in ipairs(objects) do
+    if object.tree then
+      art.tree(object.x, object.row, (object.x - 1) * tile, (object.row - 1) * tile)
+    elseif object.prop then
+      art.prop(object.prop.kind, (object.x - 1) * tile, (object.row - 1) * tile)
+    else
+      local sign = options.signs ~= false and Town.label(object.building) or nil
+      art.building(object.building, sign, (object.x - 1) * tile, (object.top - 1) * tile, town.BUILDING_WIDTH * tile,
+        ui.fonts.sign)
+      if closed(object.building) then
+        local door = object.building.door
+        art.closedDoor((door.x - 1) * tile, (door.y - 1) * tile)
+      end
+    end
+  end
+  love.graphics.setCanvas()
+  return canvas
+end
+
 -- Re-renders the static town (ground, trees and buildings) into a canvas after anything that changes it.
 function Town:rebuild()
-  local tile = art.TILE
   local map = self.map
   self.buildings = town.layout(map)
   self.blocked = town.blockedTiles(self.buildings, art.buildingWidth)
@@ -94,20 +147,11 @@ function Town:rebuild()
     self.doors[key(building.door.x, building.door.y)] = building
   end
 
-  -- Trees and buildings draw in row order so nearer ones overlap farther ones.
-  local objects = {}
   self.trees = {}
   for y = 1, map.height do
     for x = 1, map.width do
-      if town.tile(map, x, y) == "T" then
-        self.trees[key(x, y)] = true
-        table.insert(objects, { row = y, x = x, tree = true })
-      end
+      if town.tile(map, x, y) == "T" then self.trees[key(x, y)] = true end
     end
-  end
-  for _, building in ipairs(self.buildings) do
-    local left, top = town.footprint(building.door)
-    table.insert(objects, { row = building.door.y, x = left, building = building, top = top })
   end
   -- Billboards advertise games from today's store picks; drawn live since their images load later.
   self.ads = stores.featured(self.app.state, self.app.catalog, progression.timeline(self.app.catalog.systems),
@@ -141,40 +185,10 @@ function Town:rebuild()
     end
   end
   self.props = {}
-  for _, prop in ipairs(map.props) do
-    self.props[key(prop.x, prop.y)] = prop
-    table.insert(objects, { row = prop.y, x = prop.x, prop = prop })
-  end
-  table.sort(objects, function(a, b)
-    if a.row ~= b.row then return a.row < b.row end
-    return a.x < b.x
-  end)
-
-  self.canvas = self.canvas or love.graphics.newCanvas(map.width * tile, map.height * tile)
-  love.graphics.setCanvas(self.canvas)
-  love.graphics.clear()
-  love.graphics.setColor(1, 1, 1)
-  for y = 1, map.height do
-    for x = 1, map.width do
-      local kind = groundKind(map, x, y)
-      art.ground(kind, function(nx, ny) return groundKind(map, nx, ny) == kind end, x, y, (x - 1) * tile, (y - 1) * tile)
-    end
-  end
-  for _, object in ipairs(objects) do
-    if object.tree then
-      art.tree(object.x, object.row, (object.x - 1) * tile, (object.row - 1) * tile)
-    elseif object.prop then
-      art.prop(object.prop.kind, (object.x - 1) * tile, (object.row - 1) * tile)
-    else
-      art.building(object.building, (self:label(object.building)), (object.x - 1) * tile, (object.top - 1) * tile,
-        town.BUILDING_WIDTH * tile, ui.fonts.sign)
-      if self:isClosed(object.building) then
-        local door = object.building.door
-        art.closedDoor((door.x - 1) * tile, (door.y - 1) * tile)
-      end
-    end
-  end
-  love.graphics.setCanvas()
+  for _, prop in ipairs(map.props) do self.props[key(prop.x, prop.y)] = prop end
+  self.canvas = Town.paint(map, self.buildings, {
+    canvas = self.canvas, closed = function(building) return self:isClosed(building) end,
+  })
 end
 
 function Town:facingBuilding()
@@ -417,8 +431,8 @@ function Town:drawHud()
   local building, villager = self:facingBuilding(), self:facingVillager()
   local prop = self.props[key(self:facingTile())]
   local ad = self:facingAd()
-  local hint = building and self:isClosed(building) and ("The %s is closed"):format(select(2, self:label(building)))
-    or building and ("Up: enter %s"):format(select(2, self:label(building)))
+  local hint = building and self:isClosed(building) and ("The %s is closed"):format(select(2, Town.label(building)))
+    or building and ("Up: enter %s"):format(select(2, Town.label(building)))
     or ad and ("A: %s at the %s"):format(ad.game.name, ad.store.title)
     or villager and ("A: talk to %s"):format(villager.name)
     or prop and prop.kind == "sign" and "A: read sign" or "Start: quit"

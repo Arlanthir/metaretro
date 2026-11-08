@@ -1,5 +1,6 @@
 #!/bin/bash
-# PortMaster launcher. Runs Metaretro, then any game it asked to launch, then Metaretro again.
+# PortMaster launcher for Retro Town Story. Runs the game, then any game it asked to launch, then the
+# game again. Its files live in ports/metaretro/ (the name it had before; saves are kept there).
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -22,6 +23,20 @@ SAVEDIR="$XDG_DATA_HOME/love/metaretro"
 mkdir -p "$SAVEDIR"
 cd "$GAMEDIR" || exit 1
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+# Shows the port in EmulationStation with its name and art (gameinfo.xml), through ES's web API on
+# this device. PortMaster does this when it installs a port; this covers copying the files over by
+# hand. Once per gameinfo.xml.
+es_post() {
+  curl -s -m 5 -o /dev/null -w "%{http_code}" -H "Content-Type: application/xml" --data-binary "$2" \
+    "http://127.0.0.1:1234/$1/ports" 2>/dev/null || echo "failed"
+}
+registered="$XDG_DATA_HOME/gameinfo.registered"
+if [ -f "$GAMEDIR/gameinfo.xml" ] && ! cmp -s "$GAMEDIR/gameinfo.xml" "$registered"; then
+  status=$(es_post addgames "@$GAMEDIR/gameinfo.xml")
+  echo "[metaretro.sh] registering with EmulationStation: $status"
+  case "$status" in 200|201) cp "$GAMEDIR/gameinfo.xml" "$registered" ;; esac
+fi
 
 # PortMaster's bundled LÖVE runtime; sets $LOVE_RUN, $LOVE_BINARY and $LOVE_GPTK.
 source "$controlfolder/runtimes/love_11.5/love.txt"

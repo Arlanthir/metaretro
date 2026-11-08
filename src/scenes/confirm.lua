@@ -16,7 +16,7 @@ end
 
 -- Asks whether to quit Metaretro (Start, wherever the player is).
 function Confirm.quit()
-  scenes.push(Confirm.new("Quit Metaretro?", function()
+  scenes.push(Confirm.new("Quit Retro Town Story?", function()
     log("quit confirmed by player")
     love.event.quit()
   end))

@@ -1,4 +1,4 @@
-# Metaretro: working notes
+# Retro Town Story (codebase: Metaretro): working notes
 
 LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbernic RG40XXV running Knulli (Batocera EmulationStation) at 640x480. The README covers what the game is, setup and credits. These notes cover how the code fits together and what was decided.
 
@@ -6,7 +6,8 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - Tests: `~/.luarocks/bin/busted` (specs in `tests/`, `.busted` puts `src/` on the path). Run them after every change.
 - Desktop run: `/Applications/love.app/Contents/MacOS/love src` (mock backend). Before handing a build over, run it once with the device's exact args, `love src --layout nintendo`.
 - Screenshot: `love src --screenshot 1` writes `~/Library/Application Support/LOVE/metaretro/screenshot.png`.
-- Port: `scripts/build-port.sh` builds `dist/ports/`. The user copies that to the device and pastes back `log.txt`.
+- Port: `scripts/build-port.sh` builds `dist/ports/` (`Retro Town Story.sh` and `metaretro/`) and `dist/metaretro.zip` (the same, for PortMaster's installer). The user copies `dist/ports/` to the device and pastes back `log.txt`.
+- Port art: `scripts/port-art.sh` redraws `port/screenshot.png` (gameplay in town; the billboards show box art the script draws for the mock games, since the port's images must not show real games' art), `port/cover.png` (box art, with no building signs) and `port/logo.png` (the name on transparency), from the game's own drawing (`scripts/port-art/driver.lua`, run on a copy of `src/` with its own save). Rerun it after visual changes to the town or the logo.
 - Launch titles: `scripts/generate-launch-titles.py [page.html] [roms dir]` regenerates `src/core/launchtitles.lua`. Never edit that file by hand.
 - Console sprites: `love scripts/draw-consoles src` redraws `src/assets/metaretro/Consoles.png` and `src/world/consolelooks.lua` from the drawings in the script. Never edit those two files by hand. A preview with names goes to the script's LÖVE save folder.
 
@@ -16,7 +17,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - **Preparing ahead:** once the library is read, `prepare` sets up the title's first option (Continue, or New Game without a save) without saving anything. It runs as a coroutine, a step per frame, so the title keeps responding.
   - **Choosing:** `start` goes straight to town if that choice is ready; otherwise it shows "Loading your library..." until it is.
   - **Entering town** (`enterTown`) saves and starts the RetroAchievements sync. Continue starts the player at home; coming back from a game puts them where they were.
-  - **After a game:** the launcher leaves `resume.txt` in the save folder: JSON with the game's id and where the player was (`Town:location`: their town tile and, inside a building, its door and their spot there). The next start removes it, skips the title and puts the player back there (`Town:restore`; a spot that no longer works falls back to the door). Games launch through `app:launch`, which records the location. This replaced a `--resume` argument from `Metaretro.sh`, which didn't work on the device for reasons we never pinned down. `$LOVE_RUN` does pass arguments: the log shows `started with: --layout nintendo`. The title, preparing ahead and coming back from a game all work on the device (2026-11-07).
+  - **After a game:** the launcher leaves `resume.txt` in the save folder: JSON with the game's id and where the player was (`Town:location`: their town tile and, inside a building, its door and their spot there). The next start removes it, skips the title and puts the player back there (`Town:restore`; a spot that no longer works falls back to the door). Games launch through `app:launch`, which records the location. This replaced a `--resume` argument from the launcher, which didn't work on the device for reasons we never pinned down. `$LOVE_RUN` does pass arguments: the log shows `started with: --layout nintendo`. The title, preparing ahead and coming back from a game all work on the device (2026-11-07).
 - `core/`: pure logic, all unit-tested.
   - `economy`: prices, earnings, purchases and starter packs.
   - `progression`: the console timeline and generations, the gift's choices (oldest), the museum's best sellers (`mostPopular`, by `sold` in `core/consoles.lua`).
@@ -82,6 +83,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **No genre setting yet:** no genres are hidden by choice. Small genres only lack a genre store (see the rules above; Music, in the user's library); their games still sell in console stores.
 
 ## Look and feel decisions
+- **Title screen:** the town (`Town.paint`) pans slowly across behind a darkened band with the logo ("Retro Town", 3x, over a "Story" ribbon; `Title.drawLogo`, also used for the port's art) and the tagline; the player and a few townsfolk stroll along the main street; the menu sits over the plaza.
 - **Art:** pixel art is 16px drawn at 2x (`art.TILE` = 32).
 - **Font:** Ark Pixel 10px at 20px; it's only crisp at multiples of 10. Every text size is 20px, including the town signs. The user rejected Pixelify (ambiguous 5), Jersey 10 (illegible) and Ark 12px (too big).
 - **Menus:**
@@ -114,6 +116,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **No JIT:** LÖVE turns LuaJIT's JIT off on arm64, so per-pixel Lua work is slow there. Use the GPU (canvases) instead.
 - **Launching:** `emulatorlauncher` needs ES's `%CONTROLLERSCONFIG%` args (see `backends/knulli.lua`).
 - **Play time:** games launched from Metaretro don't update gamelist `gametime`, so play is credited from `sessions.log` as well (the larger of the two).
+- **Name:** the game is Retro Town Story (the town is Retro Town). Its files, save identity (`metaretro`) and port folder keep the old name, so saves carry over. The launcher (`port/Retro Town Story.sh`) registers the port with EmulationStation itself, posting `gameinfo.xml` to ES's local web API (`POST http://127.0.0.1:1234/addgames/ports`, the same metadata PortMaster merges on install), once per version of the file. It never deletes anything: the user removes the old `Metaretro.sh` entry from the device themselves. Not yet checked on the device.
 - **Startup:** parsing a ~9,600-game library takes ~4.5s, now on a thread behind the title screen. The user chose not to add a library cache. Setting up the save afterwards runs on the main thread; it's about 10% of the parse time on the desktop with the JIT off.
 - **Secrets:** device logs contain the RetroAchievements token. Never echo it back.
 - **FPS:** steady 60. Holding Select for 2 seconds toggles the FPS counter.
