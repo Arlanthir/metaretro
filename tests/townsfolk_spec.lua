@@ -180,6 +180,27 @@ describe("townsfolk", function()
   end)
 end)
 
+describe("townsfolk.spriteFor", function()
+  it("gives a villager who looks like the player the other look of that kind", function()
+    assert.equal("Villager3", townsfolk.spriteFor("Villager3", "boy"))
+    assert.equal("Boy", townsfolk.spriteFor("Villager3", "boyDark"))
+    assert.equal("Girl", townsfolk.spriteFor("Princess", "girlDark"))
+    assert.equal("Princess", townsfolk.spriteFor("Princess", "girl"))
+    assert.equal("OldMan", townsfolk.spriteFor("OldMan", "boyDark"))
+  end)
+
+  it("has a sprite and portrait for every look", function()
+    for _, look in ipairs(townsfolk.PLAYER_LOOKS) do
+      for _, suffix in ipairs({ "", "Face" }) do
+        local path = "src/assets/ninja-adventure/villagers/" .. townsfolk.playerSprite(look) .. suffix .. ".png"
+        local file = io.open(path, "rb")
+        assert.truthy(file, path)
+        file:close()
+      end
+    end
+  end)
+end)
+
 describe("townsfolk before the first console", function()
   it("sends the player to Professor Cork in the museum, whoever they talk to", function()
     local context = { state = save.defaults(), catalog = { systems = {}, bySystem = {} }, timeline = {},

@@ -23,7 +23,7 @@ function save.defaults()
     lastPlayed = {}, -- game id -> epoch of the last play the game noticed
     consumedSessions = 0,
     settings = {},
-    player = "boy", -- the look chosen in the intro: "boy" or "girl"
+    player = "boy", -- the look chosen in the intro (see townsfolk.PLAYER_LOOKS)
     introDone = false,
     giftOffered = false, -- Professor Cork has offered a console from his table
     giftReceived = false,

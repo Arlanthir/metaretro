@@ -79,6 +79,17 @@ describe("town.layout", function()
   end)
 end)
 
+describe("the console dealer", function()
+  it("stands between the house on the left and the museum, a tile clear of the house", function()
+    local dealer
+    for _, building in ipairs(map.fixed) do
+      if building.kind == "dealer" then dealer = building end
+    end
+    assert.same({ 10, 7 }, { dealer.door.x, dealer.door.y })
+    assert.equal(".", town.tile(map, dealer.door.left - 1, dealer.door.y))
+  end)
+end)
+
 describe("houses", function()
   local function find(kind)
     for _, building in ipairs(town.layout(map)) do

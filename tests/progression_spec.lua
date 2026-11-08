@@ -56,7 +56,7 @@ describe("progression.purchasable", function()
 
   it("keeps older consoles for sale after moving ahead", function()
     local forSale = ids(progression.purchasable(stateOwning("nes", "snes"), timeline))
-    assert.same({ "mastersystem", "megadrive", "psx", "n64" }, forSale)
+    assert.same({ "mastersystem", "megadrive", "psx", "n64", "gba" }, forSale)
   end)
 
   it("skips generations missing from the library", function()
@@ -69,11 +69,23 @@ describe("progression.purchasable", function()
   end)
 end)
 
+describe("handhelds", function()
+  local consoles = require("core.consoles")
+
+  it("count a generation below the home consoles of their time", function()
+    assert.equal(consoles.get("psx").generation, consoles.get("gba").generation)
+    assert.equal(consoles.get("nes").generation, consoles.get("gb").generation)
+    assert.equal(consoles.get("ps2").generation, consoles.get("nds").generation)
+    assert.is_true(consoles.get("gba").handheld)
+    assert.is_nil(consoles.get("switch").handheld)
+  end)
+end)
+
 describe("progression.currentGeneration", function()
   it("is the newest generation owned", function()
     local timeline = progression.timeline(systems("nes", "snes", "gba"))
     assert.equal(0, progression.currentGeneration(save.defaults(), timeline))
-    assert.equal(6, progression.currentGeneration(stateOwning("nes", "gba"), timeline))
+    assert.equal(5, progression.currentGeneration(stateOwning("nes", "gba"), timeline))
   end)
 end)
 

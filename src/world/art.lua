@@ -1,5 +1,7 @@
 -- Town art from the Ninja Adventure asset pack (CC0, see assets/ninja-adventure/README.md).
 -- Sprites are 16x16 pixel art drawn at 2x, so one map tile is art.TILE screen pixels.
+local townsfolk = require("core.townsfolk")
+
 local art = {}
 
 art.TILE = 32
@@ -267,11 +269,10 @@ function art.character(sheet, x, y, facing, frame)
   sprite(sheet, CHARACTER_COLUMNS[facing], frame % frames, x, y - 4)
 end
 
--- The player's look, as chosen in the intro ("boy" or "girl").
-local PLAYER_SHEETS = { boy = "Boy", girl = "Girl" }
+-- The player's look, as chosen in the intro (see townsfolk.PLAYER_LOOKS).
 
 function art.player(x, y, facing, frame, look)
-  art.character(PLAYER_SHEETS[look] or "Boy", x, y, facing, frame)
+  art.character("villagers/" .. townsfolk.playerSprite(look), x, y, facing, frame)
 end
 
 function art.villager(villager, x, y, facing, frame)

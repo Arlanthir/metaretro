@@ -1,6 +1,7 @@
 -- A new game's intro: Professor Cork welcomes the player, who picks how they look, then he sends
 -- them off. It sits over Home, where the player wakes up once it's done.
 local scenes = require("core.scenes")
+local townsfolk = require("core.townsfolk")
 local ui = require("ui")
 local art = require("world.art")
 local Dialog = require("scenes.dialog")
@@ -18,7 +19,7 @@ local WELCOME = {
 }
 local SEND_OFF = "Wonderful! Your own story with games starts today. A whole town of games is waiting for you. "
   .. "Off you go!"
-local LOOKS = { "boy", "girl" }
+local LOOKS = townsfolk.PLAYER_LOOKS
 local PORTRAIT_SCALE = 4
 local CHARACTER_SCALE = 2 -- on top of the sprite's own 2x
 local WALK_FRAMES_PER_SECOND = 4
@@ -47,7 +48,7 @@ end
 function Intro:action(name)
   if not self.choosing then return end
   if name == "left" or name == "right" then
-    self.look = self.look % #LOOKS + 1
+    self.look = (self.look - 1 + (name == "right" and 1 or -1)) % #LOOKS + 1
   elseif name == "a" then
     self.choosing = false
     local state = self.app.state
@@ -73,7 +74,7 @@ function Intro:draw()
   ui.messagePanel("Which one is you?", ui.WIDTH / 2, 236)
   local frame = math.floor(self.time * WALK_FRAMES_PER_SECOND)
   for i, look in ipairs(LOOKS) do
-    local centerX = ui.WIDTH / 2 + (i - 1.5) * 160
+    local centerX = ui.WIDTH / 2 + (i - (#LOOKS + 1) / 2) * 130
     local boxSize = art.TILE * CHARACTER_SCALE + 24
     local x, y = math.floor(centerX - boxSize / 2), 296
     if i == self.look then

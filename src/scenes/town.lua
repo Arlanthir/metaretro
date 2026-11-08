@@ -35,9 +35,11 @@ function Town.new(app)
   local villagers, villagerAt = {}, {}
   local tiles = townsfolk.startTiles(function(x, y) return town.tile(map, x, y) end, map.width, map.height, map.start)
   for _, entry in ipairs(townsfolk.dailyRoster(os.date("%Y-%m-%d"), tiles)) do
-    -- Each villager stands on a tile, wanders around `home`, and waits `pause` seconds between steps.
+    -- Each villager stands on a tile, wanders around `home`, and waits `pause` seconds between steps,
+    -- never looking just like the player.
     local villager = setmetatable({ x = entry.x, y = entry.y, home = { x = entry.x, y = entry.y },
-      facing = "down", pause = love.math.random() * VILLAGER_PAUSE[2] }, { __index = entry.villager })
+      facing = "down", pause = love.math.random() * VILLAGER_PAUSE[2],
+      sprite = townsfolk.spriteFor(entry.villager.sprite, app.state.player) }, { __index = entry.villager })
     table.insert(villagers, villager)
     villagerAt[key(villager.x, villager.y)] = villager
   end

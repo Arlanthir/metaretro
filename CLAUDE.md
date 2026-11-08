@@ -57,6 +57,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Prices:**
   - A game costs `(generation - 1) * 20`, scaled 0.75–1.25 by rating and rounded to 5.
   - A console costs `generation * 100`.
+  - Handhelds count a generation below their historical one (`handheld` in `core/consoles.lua`), for prices and progression alike: their games can't compete in complexity with the home consoles of their time. The Switch counts as a home console.
 - **Earning coins:**
   - Play: 2 coins per minute, capped at 120 minutes per session.
   - RetroAchievements: 5 coins per point, x2 in hardcore. Unlocks from before tracking started pay x0.5, once.
@@ -100,7 +101,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Arcade Club:** a rectangular room with four big cabinets (2x3 tiles) against its left and right walls. They're seen from the side, and the game's cover art fills each cabinet's whole shape (`art.cabinet`: the art is cut to `CabinetMask.png`, `CabinetTrims.png` goes on top, and the result is kept per cover). Right-wall cabinets mirror their shape, never the art. The games are this week's (`arcade.cabinets`), the same for everyone that week. A on a cabinet shows it up close, filling the screen (`scenes/attract.lua`): the cabinet in its color, the game's marquee art (or its name), and a 4:3 screen. The screen shows the screenshot until the video loads, then loops the video in the same spot. There, A plays the game for 1 coin, launching it like the collection does; play pays coins as usual, through `sessions.log`. A clerk (the RobotGreen sprite) behind a counter at the back explains the coin and the weekly games, and sells any cabinet's game for 100 coins (`Shop.arcade`). That cabinet then shows the week's next game, until the next Monday.
 - **Preloading:** the town loads the mall's posters, the home cabinet's art and the arcade's art (side art, screenshots, marquees) along with its billboards (`Mall.adPaths`, `Arcade.artPaths`), so they show as soon as the player walks in.
 - **Buildings:** a building can widen its sprite by repeating columns (`columns` in `HOUSES`); the mall is 6 wide.
-- **Player look:** `state.player` is "boy" (`Boy.png`) or "girl" (`Girl.png`, the pack's SorcererBlack).
+- **Player look:** `state.player` is one of `townsfolk.PLAYER_LOOKS`, each a native sprite of the pack in `assets/ninja-adventure/villagers/`: "boy" (`Boy`), "boyDark" (`Villager3`), "girl" (`Girl`, the pack's SorcererBlack) and "girlDark" (`Princess`), the pack's only darker-skinned characters that fit (the user rejected recoloring Boy and Girl). The intro offers all four. Juno and Princess Amara wear Villager3 and Princess; when the player has chosen the same look, that villager wears the other look of its kind instead (Boy or Girl; `townsfolk.spriteFor`), so no one in town looks just like the player.
 
 ## Verifying changes visually
 - **Harness:** for anything visual, copy `src/` into a scratch folder and append a driver to its `main.lua`:

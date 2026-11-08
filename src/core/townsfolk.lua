@@ -248,6 +248,23 @@ townsfolk.RESIDENTS = {
   } },
 }
 
+-- How the player can look (`state.player`, chosen in the intro): each a sprite in
+-- assets/ninja-adventure/villagers, like the townsfolk's.
+townsfolk.PLAYER_LOOKS = { "boy", "boyDark", "girl", "girlDark" }
+local PLAYER_SPRITES = { boy = "Boy", boyDark = "Villager3", girl = "Girl", girlDark = "Princess" }
+-- Two looks of each kind; a villager who looks like the player wears the other one.
+local OTHER_LOOK = { Boy = "Villager3", Villager3 = "Boy", Girl = "Princess", Princess = "Girl" }
+
+function townsfolk.playerSprite(look)
+  return PLAYER_SPRITES[look] or PLAYER_SPRITES.boy
+end
+
+-- The sprite a villager wears in town: their own, unless the player looks the same.
+function townsfolk.spriteFor(sprite, look)
+  if sprite == townsfolk.playerSprite(look) then return OTHER_LOOK[sprite] end
+  return sprite
+end
+
 -- Granny Rose, at home next to the player's, buys games for her grandchildren.
 townsfolk.GRANDMA = { id = "rose", name = "Granny Rose", sprite = "OldWoman" }
 

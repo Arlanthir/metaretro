@@ -11,8 +11,9 @@ describe("economy.price", function()
   it("bases the price on the console generation", function()
     assert.equal(20, economy.price(game({ system = "atari2600" })))
     assert.equal(40, economy.price(game({ system = "nes" })))
-    assert.equal(100, economy.price(game({ system = "gba" })))
-    assert.equal(120, economy.price(game({ system = "psp" })))
+    assert.equal(100, economy.price(game({ system = "dreamcast" })))
+    assert.equal(80, economy.price(game({ system = "gba" }))) -- a handheld, a generation down
+    assert.equal(100, economy.price(game({ system = "psp" })))
   end)
 
   it("treats unknown systems as 4th generation", function()

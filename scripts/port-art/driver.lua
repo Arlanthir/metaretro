@@ -14,13 +14,14 @@ local Town = require("scenes.town")
 
 local OUT = assert(os.getenv("PORT_ART_OUT"), "PORT_ART_OUT is not set")
 
--- A player well into their collection, back in town from a game, at the plaza by a billboard.
+-- A player well into their collection, back in town from a game, on the main street: the Console
+-- Dealer, the museum and the mall in view, as on the title screen.
 local state = require("core.save").defaults()
 state.introDone, state.giftOffered, state.giftReceived, state.giftConsole = true, true, true, "nes"
 state.initialized, state.wallet = true, 1350
 for _, id in ipairs({ "nes", "snes", "gba", "megadrive" }) do state.ownedConsoles[id] = true end
 love.filesystem.write("save.json", json.encode(state))
-love.filesystem.write("resume.txt", json.encode({ game = "port-art", location = { x = 24, y = 12, facing = "right" } }))
+love.filesystem.write("resume.txt", json.encode({ game = "port-art", location = { x = 17, y = 9, facing = "down" } }))
 
 local function write(name, imageData)
   local file = assert(io.open(OUT .. "/" .. name, "wb"))
