@@ -63,7 +63,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - New Game: the intro (pick boy or girl), then waking up at home with no console. Professor Cork, in the museum next to Home, offers one of the 3 oldest consoles in the library (`progression.giftChoices`). Picking it from his table gives it free with its starter pack (`economy.giftConsole`).
   - The console dealer is closed, with a door over its doorway, until the gift (`Town:isClosed`).
   - Saves from before the intro skip it, and the gift counts as received (`save.migrate`).
-  - Starter packs: 3 games from curated launch titles, then the launch window, then the rest. Japanese-only games are skipped. Buying a console grants its own pack.
+  - Starter packs: 3 games from curated launch titles, then the launch window, then the rest. Japanese-only games come last: they're only used when there aren't enough others, as with the PC Engine. Buying a console grants its own pack.
 - **Stores:**
   - Genre stores need ≥30 games of that genre across owned consoles (`stores.MIN_GENRE_GAMES`).
   - Daily offer: 5 random games per store.
@@ -111,7 +111,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - **Genre bounties:** timed requests, possibly from a villager (e.g. "play an RPG this week"), that pay bonus coins for playing a matching owned game.
   - **Collector rewards:** bonus coins for owning every game of a series in the library. The series comes from the gamelist `family` field, which about 3,700 of the example-data entries have.
   - **RetroAchievements badges:** show progress in game details (e.g. "12 / 40 unlocked", mastery). This needs one more per-game RetroAchievements lookup, which could share the sync's request.
-  - **Japanese-only warning in stores:** mark games whose `lang` is only `jp`/`ja` (see `economy.isJapaneseOnly`). Starter packs already skip them.
+  - **Japanese-only warning in stores:** mark games whose `lang` is only `jp`/`ja` (see `economy.isJapaneseOnly`). Starter packs only use them as a last resort.
   - **Hiding categories:** a setting to hide genre categories (e.g. Tabletop, Misc) from genre stores, store picks and villager suggestions.
 - **Parked:**
   - library cache

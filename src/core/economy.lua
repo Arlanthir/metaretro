@@ -140,17 +140,18 @@ function economy.isJapaneseOnly(game)
   return true
 end
 
--- Picks STARTER_GAMES random games, skipping Japanese-only ones. Curated launch titles come first,
--- then games from the launch window, then the rest.
--- `systems` optionally restricts the pack to a set of system ids.
+-- Picks STARTER_GAMES random games. Curated launch titles come first, then games from the launch
+-- window, then the rest; Japanese-only games come last, so consoles whose library is mostly
+-- Japanese (the PC Engine) still get a pack. `systems` optionally restricts the pack to a set of system ids.
 function economy.grantStarterPack(state, games, random, systems)
   random = random or math.random
-  local eligible = {}
+  local eligible, japanese = {}, {}
   for _, game in ipairs(games) do
-    if (not systems or systems[game.system]) and not state.owned[game.id] and not economy.isJapaneseOnly(game) then
-      table.insert(eligible, game)
+    if (not systems or systems[game.system]) and not state.owned[game.id] then
+      table.insert(economy.isJapaneseOnly(game) and japanese or eligible, game)
     end
   end
+  -- The launch window counts from the first release that isn't Japanese-only.
   local launchYears = economy.launchYears(eligible)
   local curated, launch, rest = {}, {}, {}
   for _, game in ipairs(eligible) do
@@ -159,7 +160,7 @@ function economy.grantStarterPack(state, games, random, systems)
     table.insert(pool, game)
   end
   local granted = {}
-  for _, pool in ipairs({ curated, launch, rest }) do
+  for _, pool in ipairs({ curated, launch, rest, japanese }) do
     while #granted < economy.STARTER_GAMES and #pool > 0 do
       local game = table.remove(pool, random(#pool))
       state.owned[game.id] = true

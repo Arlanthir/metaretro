@@ -215,17 +215,17 @@ describe("economy.grantStarterPack", function()
       game({ system = "nes", path = "./us-launch", lang = "en", releasedate = "19851018T000000" }),
     }
     local granted = economy.grantStarterPack(state, games, first)
-    assert.same({ games[3], games[2] }, granted)
+    assert.same({ games[3], games[2], games[1] }, granted)
   end)
 
-  it("skips Japanese-only games", function()
+  it("only uses Japanese-only games once the others run out", function()
     local state = save.defaults()
     local games = {
       game({ path = "./jp", lang = "jp", releasedate = "19901121T000000" }),
       game({ path = "./en", lang = "en" }),
     }
     local granted = economy.grantStarterPack(state, games, first)
-    assert.same({ games[2] }, granted)
+    assert.same({ games[2], games[1] }, granted)
   end)
 
   it("picks randomly, ignoring play history", function()
@@ -270,5 +270,27 @@ describe("economy.giftConsole", function()
     assert.equal(wallet, state.wallet)
     assert.is_true(state.giftReceived)
     assert.equal("nes", state.giftConsole)
+  end)
+end)
+
+describe("starter packs for consoles with Japanese games", function()
+  local function games(system, count, lang)
+    local list = {}
+    for i = 1, count do table.insert(list, { id = system .. ":" .. i, system = system, name = "Game " .. i, lang = lang }) end
+    return list
+  end
+
+  it("uses Japanese-only games when there's nothing else", function()
+    local state = require("core.save").defaults()
+    local granted = economy.grantStarterPack(state, games("pcengine", 5, "ja"), function() return 1 end, { pcengine = true })
+    assert.equal(economy.STARTER_GAMES, #granted)
+  end)
+
+  it("still prefers games that aren't Japanese-only", function()
+    local state = require("core.save").defaults()
+    local list = games("pcengine", 5, "ja")
+    for _, game in ipairs(games("pcengine-en", 3, "en")) do game.system = "pcengine"; table.insert(list, game) end
+    local granted = economy.grantStarterPack(state, list, function() return 1 end, { pcengine = true })
+    for _, game in ipairs(granted) do assert.equal("en", game.lang) end
   end)
 end)
