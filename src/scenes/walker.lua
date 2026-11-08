@@ -55,8 +55,7 @@ end
 
 -- Advances the fade and the step under way. Returns the door step when it ends this frame (the
 -- player turns around, back to the room they're leaving), or otherwise the direction to step in
--- next, if any. After a door, waits for the d-pad to be released so the player doesn't walk
--- straight back in.
+-- next, if any: walking on, out of a building, while the d-pad is held.
 function Walker:updateWalking(dt)
   if self.fadeIn then
     self.fadeIn = self.fadeIn - math.min(dt, FADE_MAX_STEP) / FADE_IN_SECONDS
@@ -71,17 +70,11 @@ function Walker:updateWalking(dt)
     self.steps = self.steps + 1
     if move.door then
       self.facing = Walker.OPPOSITE[self.facing]
-      self.waitForRelease = true
       return move
     end
     self.x, self.y = self.x + move.dx, self.y + move.dy
   end
-  local direction = Walker.heldDirection()
-  if self.waitForRelease then
-    self.waitForRelease = direction ~= nil
-    return
-  end
-  return nil, direction
+  return nil, Walker.heldDirection()
 end
 
 function Walker:playerPixels()
@@ -97,19 +90,23 @@ local function clamp(value, low, high)
   return math.max(low, math.min(high, value))
 end
 
--- How much of the screen's bottom the hint bar covers; the view stops above it, so nothing (like a
--- room's door) hides behind it.
-local HINT_BAR = 48
+-- How much of the screen the wallet bar at the top and the hint bar at the bottom cover; the view
+-- stays between them, so nothing (like a room's door, or a store's name) hides behind them.
+local WALLET_BAR, HINT_BAR = 48, 48
 
 -- The view's top-left pixel on a `width` x `height` tile map: following the player, or centered
--- when the map fits on screen.
+-- when the map fits on screen. A map that fits between the bars is centered between them; a taller
+-- one scrolls under the wallet bar, above the hint bar.
 function Walker:camera(width, height)
   local px, py = self:playerPixels()
   local function axis(player, size, screen)
     if size <= screen then return -math.floor((screen - size) / 2) end
     return clamp(math.floor(player + art.TILE / 2 - screen / 2), 0, size - screen)
   end
-  return axis(px, width * art.TILE, ui.WIDTH), axis(py, height * art.TILE, ui.HEIGHT - HINT_BAR)
+  local mapHeight, between = height * art.TILE, ui.HEIGHT - WALLET_BAR - HINT_BAR
+  local y = mapHeight <= between and axis(py, mapHeight, between) - WALLET_BAR
+    or axis(py, mapHeight, ui.HEIGHT - HINT_BAR)
+  return axis(px, width * art.TILE, ui.WIDTH), y
 end
 
 function Walker:drawFade()

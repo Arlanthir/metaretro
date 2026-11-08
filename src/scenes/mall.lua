@@ -37,11 +37,15 @@ local function advertised(app, store)
   end
 end
 
+local function today(app)
+  return mall.order(app.stores, os.date("%Y-%m-%d"))
+end
+
 -- Today's posters on the wall (see mall.layout), each with its store and game: { tiles, store, game }.
 local function ads(app)
-  local list = {}
-  for _, ad in ipairs(layoutFor(#app.stores).ads) do
-    local store = app.stores[ad.store]
+  local list, stores = {}, today(app)
+  for _, ad in ipairs(layoutFor(#stores).ads) do
+    local store = stores[ad.store]
     table.insert(list, { tiles = ad.tiles, store = store, game = store and advertised(app, store) })
   end
   return list
@@ -57,13 +61,14 @@ function Mall.adPaths(app)
   return paths
 end
 
--- Each store's clerk, in the order of `app.stores`, with the counter they serve from.
+-- Each store's clerk, in today's order, with the counter they serve from.
 function Mall.new(app)
-  local map = layoutFor(#app.stores).map
+  local stores = today(app)
+  local map = layoutFor(#stores).map
   local self = Interior.new(Mall, app, map)
   self.ads = ads(app)
   for i, spot in ipairs(map.allSpots.clerk or {}) do
-    local store = app.stores[i]
+    local store = stores[i]
     local counter, facing = interior.counter(map, spot)
     table.insert(self.people, { x = spot.x, y = spot.y, facing = facing, store = store, counter = counter,
       look = { name = "Clerk", sprite = CLERKS[art.storeHash(store) % #CLERKS + 1] } })
@@ -111,7 +116,7 @@ function Mall:hintFor(_, person)
   if store then return ("A: shop at the %s"):format(store.title) end
 end
 
--- The posters, then each store's name on a plaque over its opening, like a sign over its entrance.
+-- The posters, then each store's name on a plaque on its back wall.
 function Mall:drawOnTop(camX, camY)
   for _, ad in ipairs(self.ads) do
     local path = ad.game and ui.boxArt(ad.game)
@@ -119,8 +124,8 @@ function Mall:drawOnTop(camX, camY)
     art.poster(centerX, mall.TOP_FRONT * art.TILE - 2 - camY, path and covers.get(path) or nil)
   end
   for _, clerk in ipairs(self.people) do
-    local front = clerk.counter.y > clerk.y and mall.TOP_FRONT or mall.BOTTOM_FRONT
-    art.sign(clerk.store.short, (clerk.x - 0.5) * art.TILE - camX, (front - 1) * art.TILE + 5 - camY, ui.fonts.sign)
+    local y = clerk.counter.y > clerk.y and 4 or (self.map.height - 1) * art.TILE + 5
+    art.sign(clerk.store.short, (clerk.x - 0.5) * art.TILE - camX, y - camY, ui.fonts.sign)
   end
 end
 

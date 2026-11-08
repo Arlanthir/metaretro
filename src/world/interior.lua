@@ -1,5 +1,5 @@
 -- Inside buildings (world/homemap.lua, world/housemap.lua...). Legend for the `rooms` rows:
---   #  wall          .  wooden floor     ,  kitchen floor     (space)  outside
+--   #  wall          .  wooden floor     ,  kitchen floor     :  shop floor     (space)  outside
 --   _  doorway between rooms             E  front door, in the bottom wall (walk down onto it to leave)
 -- A wall between two rooms side by side is one tile thick.
 -- The `furniture` rows place furniture (see FURNITURE); a piece fills its whole footprint with its letter.
@@ -39,8 +39,8 @@ interior.SPOTS = {
   R = "resident", -- where whoever lives in a house stands
 }
 
-local FLOORS = { ["."] = "wood", [","] = "kitchen", ["_"] = "wood", E = "wood" }
-local ROOM = { ["."] = true, [","] = true }
+local FLOORS = { ["."] = "wood", [","] = "kitchen", [":"] = "shop", ["_"] = "wood", E = "wood" }
+local ROOM = { ["."] = true, [","] = true, [":"] = true }
 local GAP = { ["_"] = true, E = true }
 
 local function key(x, y)
@@ -120,22 +120,22 @@ end
 -- world/art.lua). A quarter closes the room next to it: above or below ("bottom", "top"), else beside
 -- it ("right", "left"), else diagonally (a corner). Facing no room, it's the wall's outer edge, or an
 -- outer corner where the wall turns. Beside a doorway, the wall's end ("BeforeGap" when the gap is to
--- the right or below, "AfterGap" otherwise). Inside a wall thicker than a tile, "fill": the top of the
--- wall, plain; where two walls meet with outside in their corner, "notch": the same, with the
--- outside's edge in that corner (the tileset has no piece for it). Nil when the tile isn't wall next
--- to a room.
+-- the right or below, "AfterGap" otherwise). A wall two tiles thick is two walls side by side, each
+-- closing its own room; "fill", the wall's plain top, is left for anything thicker. Nil when the tile
+-- isn't wall next to a room.
 local INNER_CORNER = { [-1] = { [-1] = "bottomRight", [1] = "topRight" }, [1] = { [-1] = "bottomLeft", [1] = "topLeft" } }
 local OUTER_CORNER = { [-1] = { [-1] = "topLeft", [1] = "bottomLeft" }, [1] = { [-1] = "topRight", [1] = "bottomRight" } }
 
 local function quarter(room, gap, wall, sx, sy)
   local function vertical(side) return side < 0 and "bottom" or "top" end
   local function horizontal(side) return side < 0 and "right" or "left" end
+  -- The wall's end beside a doorway, unless the quarter's other side is more wall, turning a corner.
   if gap(sx, 0) then
-    local side = room(0, sy) and sy or room(0, -sy) and -sy
+    local side = room(0, sy) and sy or not wall(0, sy) and room(0, -sy) and -sy
     if side then return vertical(side) .. (sx > 0 and "BeforeGap" or "AfterGap") end
   end
   if gap(0, sy) then
-    local side = room(sx, 0) and sx or room(-sx, 0) and -sx
+    local side = room(sx, 0) and sx or not wall(sx, 0) and room(-sx, 0) and -sx
     if side then return horizontal(side) .. (sy > 0 and "BeforeGap" or "AfterGap") end
   end
   if room(0, sy) then return vertical(sy) end
@@ -145,7 +145,9 @@ local function quarter(room, gap, wall, sx, sy)
   if alongX and not alongY then return sy < 0 and "top" or "bottom" end
   if alongY and not alongX then return sx < 0 and "left" or "right" end
   if not alongX then return OUTER_CORNER[sx][sy] end
-  return wall(sx, sy) and "fill" or "notch"
+  if room(-sx, 0) or room(-sx, sy) then return horizontal(-sx) end
+  if room(0, -sy) or room(sx, -sy) then return vertical(-sy) end
+  return "fill"
 end
 
 function interior.wallPiece(map, x, y)

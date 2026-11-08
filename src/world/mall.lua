@@ -2,8 +2,13 @@
 -- legend): a tiled corridor with the stores open onto it, no doors, so they're all in view at once.
 -- The first half of the stores line the corridor's top side, the rest its bottom side, after the way
 -- out (E) at the bottom left. Each store is a small room with a block of shelves and its clerk (C)
--- behind the counter, facing the corridor through a wide opening. Stores are two tiles of wall apart,
--- and posters hang on those walls, on the corridor's side, between the top stores.
+-- behind the counter, facing the corridor through an opening, with front wall either side of it.
+-- Bottom stores are a row deeper (their shelves can't reach into the bottom wall), and that row,
+-- behind their opening, has the corridor's floor, so they look as deep as the top ones. Stores are
+-- two tiles of wall apart, and posters hang on those walls, on the corridor's side, between the top
+-- stores.
+local daily = require("core.daily")
+
 local mall = {}
 
 mall.SPACING = 6 -- a store's width (4 tiles), with the two tiles of wall on its left
@@ -52,8 +57,9 @@ function mall.layout(count)
     local step = front > back and 1 or -1
     local top, bottom = math.min(back, front), math.max(back, front)
     fill(rooms, math.max(1, x - 2), top, x + 4, bottom, "#")
-    fill(rooms, x, top + 1, x + 3, bottom - 1, ".")
-    put(rooms, x + 1, front, "___")
+    fill(rooms, x, top + 1, x + 3, bottom - 1, ":")
+    if step < 0 then fill(rooms, x, front + 1, x + 3, front + 1, ",") end
+    put(rooms, x + 1, front, "__")
     -- Shelves reach into the top wall, but stand on the floor against the bottom one.
     local shelves = step > 0 and back or back - 2
     put(furniture, x, shelves, "ff")
@@ -76,7 +82,7 @@ function mall.layout(count)
       for dx = -1, 1 do
         local row = rooms[y + dy]
         local tile = row and row[x + dx]
-        if tile == "." or tile == "," then return true end
+        if tile == ":" or tile == "," then return true end
       end
     end
     return false
@@ -92,6 +98,18 @@ function mall.layout(count)
     layout.rooms[y], layout.furniture[y] = table.concat(rooms[y]), table.concat(furniture[y])
   end
   return layout
+end
+
+-- `stores` in their places on `day` (store i in layout's place i): shuffled every day, so different
+-- stores get the posters.
+function mall.order(stores, day)
+  local order, random = {}, daily.random("mall " .. day)
+  for i, store in ipairs(stores) do order[i] = store end
+  for i = #order, 2, -1 do
+    local j = random(i)
+    order[i], order[j] = order[j], order[i]
+  end
+  return order
 end
 
 return mall

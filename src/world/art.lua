@@ -9,23 +9,24 @@ local DIR = "assets/ninja-adventure/"
 
 local images, quads = {}, {}
 
--- The desk (TilesetElement's 10, 0) with its papers cleared off: an outline across the top, then
--- the frame, and plain wood inside it.
+-- The desk (TilesetElement's 10, 0) with its papers cleared off: an outline across its top, plain
+-- wood inside its frame, and nothing under it between its feet.
 local function emptyDesk()
   local SIZE = 16
   local sheet = love.image.newImageData(DIR .. "TilesetElement.png")
   local desk = love.image.newImageData(SIZE, SIZE)
   desk:paste(sheet, 0, 0, 10 * SIZE, 0, SIZE, SIZE)
-  local outline, frame, wood = { desk:getPixel(1, 1) }, { desk:getPixel(2, 2) }, { desk:getPixel(3, 7) }
+  local outline, wood, clear = { desk:getPixel(1, 3) }, { desk:getPixel(3, 9) }, { 0, 0, 0, 0 }
   local function fill(x1, y1, x2, y2, color)
     for y = y1, y2 do
       for x = x1, x2 do desk:setPixel(x, y, unpack(color)) end
     end
   end
-  fill(0, 0, SIZE - 1, 0, { 0, 0, 0, 0 })
-  fill(1, 1, 14, 1, outline)
-  fill(2, 2, 13, 2, frame)
-  fill(3, 3, 12, 6, wood)
+  fill(0, 2, SIZE - 1, 2, clear) -- the papers' top edge
+  fill(1, 3, 14, 3, outline)
+  fill(3, 4, 12, 8, wood)
+  fill(3, 14, 12, 14, clear)
+  fill(3, 15, 12, 15, clear)
   return love.graphics.newImage(desk)
 end
 local GENERATED = { EmptyDesk = emptyDesk }
@@ -198,7 +199,7 @@ end
 
 -- A poster hanging on the mall's top wall, its bottom edge at `bottom` and centered on `centerX`:
 -- `image` (a game's box art, nil while it loads or when there's none) in a wooden frame.
-local POSTER_W, POSTER_H = 56, 84 -- the most the art can take up: on two tiles of wall
+local POSTER_W, POSTER_H = 48, 84 -- the most the art can take up: on two tiles of wall, with some showing
 
 function art.poster(centerX, bottom, image)
   local w, h = 44, 60
@@ -285,7 +286,10 @@ local WALLS = {
   bottomLeft = { 0, 4 }, bottom = { 3, 4 }, bottomBeforeGap = { 1, 4 }, bottomAfterGap = { 2, 4 }, bottomRight = { 4, 4 },
 }
 -- Floors repeat a `size` x `size` block of tiles from TilesetInteriorFloor, starting at `column, row`.
-local FLOORS = { wood = { column = 11, row = 0, size = 3 }, kitchen = { column = 1, row = 1, size = 1 } }
+local FLOORS = {
+  wood = { column = 11, row = 0, size = 3 }, kitchen = { column = 1, row = 1, size = 1 },
+  shop = { column = 14, row = 3, size = 1 },
+}
 -- Sheet, column, row, and size in tiles (1x1 when left out). `on` lists things standing on the
 -- piece, as sheet, column, row and pixel offset. A one-tile sprite drawn wider has `widen`: the
 -- source pixel columns (first, last + 1) repeated between its halves. `columns` draws only some of
@@ -325,23 +329,15 @@ function art.floor(kind, x, y, px, py)
 end
 
 local WALL_TOP = { 230 / 255, 172 / 255, 133 / 255 } -- the plain top of a wall, inside thick ones
-local WALL_EDGE = 3 -- source pixels of outside along a wall's outer edge
 
 -- A wall tile from its four quarters' pieces (see interior.wallPiece).
 function art.wall(quarters, px, py)
   local half = SOURCE / 2
   for i, name in ipairs(quarters) do
     local dx, dy = (i - 1) % 2 * half, i > 2 and half or 0
-    if name == "fill" or name == "notch" then
+    if name == "fill" then
       love.graphics.setColor(WALL_TOP)
       love.graphics.rectangle("fill", px + dx * SCALE, py + dy * SCALE, half * SCALE, half * SCALE)
-      if name == "notch" then
-        -- The outside's edge, in the tile's own corner.
-        local edge = WALL_EDGE * SCALE
-        love.graphics.setColor(art.OUTSIDE_COLOR)
-        love.graphics.rectangle("fill", px + (dx > 0 and art.TILE - edge or 0), py + (dy > 0 and art.TILE - edge or 0),
-          edge, edge)
-      end
       love.graphics.setColor(1, 1, 1)
     else
       local piece = WALLS[name]

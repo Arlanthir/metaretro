@@ -337,6 +337,27 @@ describe("bigger museum and arcade club", function()
   end)
 end)
 
+describe("mall.order", function()
+  local mall = require("world.mall")
+
+  it("places the same stores differently from day to day, the same all day", function()
+    local stores = {}
+    for i = 1, 8 do stores[i] = { id = "store" .. i } end
+    local monday = mall.order(stores, "2026-11-09")
+    assert.equal(#stores, #monday)
+    assert.same(monday, mall.order(stores, "2026-11-09"))
+    local seen = {}
+    for _, store in ipairs(monday) do seen[store.id] = true end
+    for _, store in ipairs(stores) do assert.is_true(seen[store.id]) end
+    local moved = false
+    for day = 10, 15 do
+      local other = mall.order(stores, ("2026-11-%02d"):format(day))
+      for i = 1, #stores do moved = moved or other[i] ~= monday[i] end
+    end
+    assert.is_true(moved)
+  end)
+end)
+
 describe("mall ads", function()
   local mall = require("world.mall")
 
