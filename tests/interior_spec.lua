@@ -258,10 +258,32 @@ describe("bigger museum and arcade club", function()
       for _, piece in ipairs(m.furniture) do
         if piece.kind == "displayCase" or piece.kind == "cabinet" then
           count = count + 1
-          assert.is_true(seen[piece.x .. "," .. (piece.y + piece.height)] == true, name .. " " .. piece.kind .. " at " .. piece.x)
+          -- Glass cases are faced from below; cabinets stand against the side walls, faced from beside.
+          local fromX = piece.kind == "cabinet" and (piece.x < m.width / 2 and piece.x + 1 or piece.x - 1) or piece.x
+          local fromY = piece.kind == "cabinet" and piece.y or piece.y + piece.height
+          assert.is_true(seen[fromX .. "," .. fromY] == true, name .. " " .. piece.kind .. " at " .. piece.x)
         end
       end
       assert.is_true(count >= 4, name)
     end
+  end)
+end)
+
+describe("mall ads", function()
+  local mall = require("world.mall")
+
+  it("puts up to three ad stands, each beside a top-wall store", function()
+    for _, count in ipairs({ 1, 2, 4, 9, 30 }) do
+      local layout = mall.layout(count)
+      local map = interior.parse(layout)
+      local stands = 0
+      for _, piece in ipairs(map.furniture) do
+        if piece.kind == "adStand" then stands = stands + 1 end
+      end
+      assert.equal(#layout.ads, stands, count .. " stores")
+      assert.is_true(stands <= mall.MAX_ADS)
+      for _, index in ipairs(layout.ads) do assert.is_true(index <= math.ceil(count / 2)) end
+    end
+    assert.is_true(#mall.layout(9).ads >= 2)
   end)
 end)

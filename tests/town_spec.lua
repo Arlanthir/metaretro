@@ -3,11 +3,11 @@ local town = require("world.town")
 local map = town.parse(require("world.townmap"))
 
 describe("town map", function()
-  it("has a start, home, museum, dealer, mall and arcade club", function()
+  it("has a start, the town's buildings and five villagers' houses", function()
     assert.is_truthy(map.start)
     local kinds = {}
     for _, building in ipairs(map.fixed) do table.insert(kinds, building.kind) end
-    assert.same({ "home", "museum", "dealer", "mall", "arcade" }, kinds)
+    assert.same({ "home", "dealer", "museum", "mall", "arcade", "house", "house", "house", "house", "house" }, kinds)
     assert.is_true(town.isWalkable(map, map.start.x, map.start.y))
   end)
 
@@ -75,6 +75,17 @@ describe("town.layout", function()
   it("has the town's fixed buildings; stores are in the mall", function()
     local kinds = {}
     for _, building in ipairs(town.layout(map)) do table.insert(kinds, building.kind) end
-    assert.same({ "home", "museum", "dealer", "mall", "arcade" }, kinds)
+    assert.same({ "home", "dealer", "museum", "mall", "arcade", "house", "house", "house", "house", "house" }, kinds)
+  end)
+end)
+
+describe("villagers' houses", function()
+  it("numbers the houses, one per villager in town each day", function()
+    local indexes = {}
+    for _, building in ipairs(town.layout(map)) do
+      if building.kind == "house" then table.insert(indexes, building.index) end
+    end
+    assert.same({ 1, 2, 3, 4, 5 }, indexes)
+    assert.equal(#require("core.townsfolk").KINDS, #indexes)
   end)
 end)

@@ -60,6 +60,13 @@ local HOUSES = {
   mall = { 12, 0, 4, 3 },
   arcade = { 23, 0, 3, 3 },
 }
+-- Villagers' houses take these looks in turn.
+local HOMES = { { 4, 0, 4, 3 }, { 19, 19, 3, 3 }, { 8, 0, 4, 3 }, { 26, 0, 3, 3 } }
+
+local function look(building)
+  if building.kind == "house" then return HOMES[(building.index - 1) % #HOMES + 1] end
+  return HOUSES[building.kind]
+end
 
 -- Cloth banners (1x2 tiles) hung by store doors, one design per store (the pack's snake and skull
 -- banners are left out as unfriendly for a shop).
@@ -125,7 +132,7 @@ end
 
 -- How many tiles wide the building's sprite is (3 or 4).
 function art.buildingWidth(building)
-  return HOUSES[building.kind][3]
+  return look(building)[3]
 end
 
 -- A store's cloth banner (1x2 tiles), hung by its door in the mall.
@@ -149,10 +156,34 @@ function art.sign(text, centerX, y, font)
 end
 
 -- `x, y` is the building's top-left pixel and `width` its width in pixels.
+-- `label` is the sign over the door (none for villagers' houses).
 function art.building(building, label, x, y, width, font)
-  local look = HOUSES[building.kind]
-  sprite("TilesetHouse", look[1], look[2], x, y, look[3], look[4])
-  art.sign(label, x + look[3] * art.TILE / 2, y + 6, font)
+  local house = look(building)
+  sprite("TilesetHouse", house[1], house[2], x, y, house[3], house[4])
+  if label then art.sign(label, x + house[3] * art.TILE / 2, y + 6, font) end
+end
+
+-- An ad stand in the mall (1x2 tiles at px, py): a framed board on a post, showing `image` (a game's
+-- box art; nil while it loads or when there's none).
+function art.adStand(px, py, image)
+  love.graphics.setColor(0.36, 0.22, 0.13)
+  love.graphics.rectangle("fill", px + 14, py + 40, 4, 22)
+  love.graphics.rectangle("fill", px + 8, py + 60, 16, 4, 1)
+  love.graphics.setColor(0.27, 0.16, 0.10)
+  love.graphics.rectangle("fill", px + 1, py + 1, 30, 42, 3)
+  love.graphics.setColor(0.98, 0.91, 0.74)
+  love.graphics.rectangle("fill", px + 3, py + 3, 26, 38, 2)
+  local x, y, w, h = px + 5, py + 5, 22, 34
+  if image then
+    local scale = math.min(w / image:getWidth(), h / image:getHeight())
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(image, math.floor(x + (w - image:getWidth() * scale) / 2),
+      math.floor(y + (h - image:getHeight() * scale) / 2), 0, scale, scale)
+  else
+    love.graphics.setColor(0.13, 0.10, 0.08)
+    love.graphics.rectangle("fill", x, y, w, h)
+  end
+  love.graphics.setColor(1, 1, 1)
 end
 
 -- A billboard on two posts standing on a 4x3-tile base at (px, py), advertising `title`.
@@ -319,9 +350,24 @@ function art.displayCase(systemId, px, py)
   sprite("metaretro/DisplayCase", 0, 0, px, py, 1, 2)
 end
 
--- Arcade cabinet `index` (1x2 tiles; four colors, repeating).
-function art.cabinet(index, px, py)
-  sprite("metaretro/Cabinets", (index - 1) % 4, 0, px, py, 1, 2)
+-- Arcade cabinet `index` (1x2 tiles; four colors, repeating), seen from its side: facing right, or
+-- left (mirrored) when `facingLeft`. `cover` (an Image, optional) fills its side panel, like side art.
+local CABINET_PANEL = { x = 3, y = 3, width = 7, height = 27 } -- in the sprite's pixels, facing right
+
+function art.cabinet(index, px, py, facingLeft, cover)
+  local img = image("metaretro/Cabinets")
+  local column = (index - 1) % 4
+  local key = "cabinet" .. column
+  quads[key] = quads[key] or love.graphics.newQuad(column * SOURCE, 0, SOURCE, 2 * SOURCE, img:getDimensions())
+  love.graphics.draw(img, quads[key], facingLeft and px + art.TILE or px, py, 0, facingLeft and -SCALE or SCALE, SCALE)
+  if not cover then return end
+  local panel = CABINET_PANEL
+  local left = facingLeft and SOURCE - panel.x - panel.width or panel.x
+  local x, y, w, h = px + left * SCALE, py + panel.y * SCALE, panel.width * SCALE, panel.height * SCALE
+  local scale = math.max(w / cover:getWidth(), h / cover:getHeight())
+  love.graphics.setScissor(x, y, w, h)
+  love.graphics.draw(cover, x + (w - cover:getWidth() * scale) / 2, y + (h - cover:getHeight() * scale) / 2, 0, scale, scale)
+  love.graphics.setScissor()
 end
 
 -- The villager's portrait for dialogs, as an Image.

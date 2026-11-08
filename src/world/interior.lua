@@ -29,6 +29,7 @@ interior.FURNITURE = {
   z = { kind = "shopCounter", width = 2, height = 1 },
   c = { kind = "displayCase", width = 1, height = 2 },
   a = { kind = "cabinet", width = 1, height = 2 },
+  d = { kind = "adStand", width = 1, height = 2 },
 }
 
 interior.SPOTS = {

@@ -64,7 +64,12 @@ local LABELS = {
   mall = { "Mall", "Mall" }, arcade = { "Arcade", "Arcade Club" },
 }
 
+-- The building's sign and its full name; villagers' houses have no sign.
 function Town:label(building)
+  if building.kind == "house" then
+    local owner = building.owner
+    return nil, owner and ("%s's house"):format(owner.name) or "An empty house"
+  end
   return unpack(LABELS[building.kind])
 end
 
@@ -77,6 +82,10 @@ function Town:rebuild()
   local tile = art.TILE
   local map = self.map
   self.buildings = town.layout(map)
+  -- Today's villagers live in the houses, in roster order.
+  for _, building in ipairs(self.buildings) do
+    if building.kind == "house" then building.owner = self.villagers[building.index] end
+  end
   self.blocked = town.blockedTiles(self.buildings, art.buildingWidth)
   self.doors = {}
   for _, building in ipairs(self.buildings) do
@@ -252,7 +261,7 @@ end
 
 -- The console dealer opens once Professor Cork has given the player their first console.
 function Town:isClosed(building)
-  return building.kind == "dealer" and not self.app.state.giftReceived
+  return building.kind == "house" or building.kind == "dealer" and not self.app.state.giftReceived
 end
 
 -- A new game starts at home, next to the bed; walking out leaves the player at Home's door.
@@ -271,7 +280,14 @@ function Town:step(direction)
   local targetX, targetY = self:facingTile()
   local building = self:facingBuilding()
   if building and direction == "up" then
-    if not self:isClosed(building) then self:startStep("up", building) end -- it opens once the step ends
+    if building.kind == "house" then
+      -- Villagers are out and about while the player is in town.
+      local owner = building.owner
+      scenes.push(Dialog.new("", nil, owner and ("Nobody's home. %s must be out in town."):format(owner.name)
+        or "Nobody lives here yet."))
+    elseif not self:isClosed(building) then
+      self:startStep("up", building) -- it opens once the step ends
+    end
   elseif town.isWalkable(self.map, targetX, targetY, self.blocked) and not self.villagerAt[key(targetX, targetY)] then
     self:startStep(direction)
   end
@@ -364,7 +380,8 @@ function Town:drawHud()
   local building, villager = self:facingBuilding(), self:facingVillager()
   local prop = self.props[key(self:facingTile())]
   local ad = self.ads[self.billboardAt[key(self:facingTile())] or 0]
-  local hint = building and self:isClosed(building) and ("The %s is closed"):format(select(2, self:label(building)))
+  local hint = building and building.kind == "house" and select(2, self:label(building))
+    or building and self:isClosed(building) and ("The %s is closed"):format(select(2, self:label(building)))
     or building and ("Up: enter %s"):format(select(2, self:label(building)))
     or ad and ("%s at the %s"):format(ad.game.name, ad.store.title)
     or villager and ("A: talk to %s"):format(villager.name)

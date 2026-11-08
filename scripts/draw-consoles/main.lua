@@ -1,7 +1,8 @@
 -- Draws Metaretro's console sprites: 16x16 pixel art after the real hardware, in the Ninja Adventure
 -- palette. Writes src/assets/metaretro/Consoles.png (one console per column) and
 -- src/world/consolelooks.lua (system id -> column); never edit those by hand. Also draws the museum's
--- glass display case (DisplayCase.png) and the Arcade Club's cabinets (Cabinets.png, 4 colors).
+-- glass display case (DisplayCase.png) and the Arcade Club's cabinets, seen from the side
+-- (Cabinets.png, 4 colors).
 --
 -- Usage, from the repository: love scripts/draw-consoles src
 -- A preview with names lands in this script's LÖVE save folder (preview.png).
@@ -450,14 +451,34 @@ local function displayCase()
   rect(6, 23, 9, 24, "y")
 end
 
--- An arcade cabinet (16x32): lit marquee, screen, joystick and buttons, and a coin door.
+-- An arcade cabinet seen from its side (16x32), facing right: the marquee overhang, the recessed
+-- screen, the control panel with its joystick, and the coin door. The big side panel (columns 3-9,
+-- rows 3-29, see art.cabinet) is where the game's cover art goes, like real side art.
+local CABINET_SHAPE = { -- rows, then the body's columns on them
+  { 0, 1, 2, 12 }, { 2, 5, 2, 13 }, { 6, 13, 2, 10 }, { 14, 16, 2, 14 }, { 17, 31, 2, 12 },
+}
 local function cabinet(side, glow)
-  box(1, 0, 14, 31, side)
-  rect(2, 1, 13, 4, "y"); rect(3, 2, 12, 3, glow)                       -- marquee
-  box(2, 6, 13, 14, "m"); rect(3, 7, 12, 8, "u"); px(5, 11, "W"); px(9, 10, glow); px(11, 12, "W")  -- screen
-  rect(2, 16, 13, 18, "b"); px(4, 16, "r"); px(4, 17, "k"); px(8, 17, "y"); px(10, 17, "s"); px(12, 17, "G")  -- controls
-  box(5, 22, 10, 27, "D"); px(7, 24, "y"); px(8, 24, "y"); px(7, 26, "r")  -- coin door
-  rect(1, 31, 14, 31, "k")
+  local filled = {}
+  for _, part in ipairs(CABINET_SHAPE) do
+    for y = part[1], part[2] do
+      for x = part[3], part[4] do filled[y * 16 + x] = true; px(x, y, side) end
+    end
+  end
+  for y = 0, 31 do                                            -- outline: body pixels next to the outside
+    for x = 0, 15 do
+      if filled[y * 16 + x] then
+        for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+          local nx, ny = x + d[1], y + d[2]
+          if nx < 0 or nx > 15 or ny < 0 or ny > 31 or not filled[ny * 16 + nx] then px(x, y, "k") end
+        end
+      end
+    end
+  end
+  rect(12, 2, 12, 5, "y"); rect(11, 3, 11, 4, glow)          -- the lit marquee, seen edge-on
+  rect(10, 6, 10, 13, "m"); px(10, 7, "u")                    -- the screen's glow at the front
+  rect(11, 14, 13, 14, "b"); px(13, 13, "r"); px(12, 13, "k") -- control panel and joystick
+  rect(11, 20, 11, 27, "D"); px(11, 23, "y")                  -- coin door
+  rect(3, 3, 9, 29, "D")                                      -- the side panel, under the art
 end
 local CABINETS = { { "r", "n" }, { "s", "u" }, { "H", "l" }, { "p", "L" } }
 
