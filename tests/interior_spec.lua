@@ -259,7 +259,8 @@ describe("bigger museum and arcade club", function()
         if piece.kind == "displayCase" or piece.kind == "cabinet" then
           count = count + 1
           -- Glass cases are faced from below; cabinets stand against the side walls, faced from beside.
-          local fromX = piece.kind == "cabinet" and (piece.x < m.width / 2 and piece.x + 1 or piece.x - 1) or piece.x
+          local fromX = piece.kind == "cabinet" and (piece.x < m.width / 2 and piece.x + piece.width or piece.x - 1)
+            or piece.x
           local fromY = piece.kind == "cabinet" and piece.y or piece.y + piece.height
           assert.is_true(seen[fromX .. "," .. fromY] == true, name .. " " .. piece.kind .. " at " .. piece.x)
         end

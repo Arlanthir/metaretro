@@ -28,7 +28,7 @@ interior.FURNITURE = {
   i = { kind = "pillar", width = 1, height = 3 },
   z = { kind = "shopCounter", width = 2, height = 1 },
   c = { kind = "displayCase", width = 1, height = 2 },
-  a = { kind = "cabinet", width = 1, height = 2 },
+  a = { kind = "cabinet", width = 2, height = 3 },
   d = { kind = "adStand", width = 1, height = 2 },
 }
 

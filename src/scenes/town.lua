@@ -120,6 +120,9 @@ function Town:rebuild()
     table.insert(images, ui.boxArt(homeGame))
     table.insert(images, ui.fullImage(homeGame))
   end
+  -- And what the mall's posters and the arcade's cabinets show, so they're there on the way in.
+  for _, path in ipairs(Mall.adPaths(self.app)) do table.insert(images, path) end
+  for _, path in ipairs(Arcade.artPaths(self.app)) do table.insert(images, path) end
   covers.prefetch(images)
   self.app:persist() -- featuring a store can roll its picks for the day
   -- Billboards without an ad aren't there at all: not drawn, and their tiles are walkable grass.

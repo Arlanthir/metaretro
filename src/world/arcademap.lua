@@ -1,8 +1,10 @@
--- The Arcade Club: four cabinets along the left and right walls with this week's arcade games (see
+-- The Arcade Club: four big cabinets along the left and right walls with this week's arcade games (see
 -- core/arcade.lua and scenes/arcade.lua). See world/interior.lua for the legend.
 return {
   rooms = {
     "##############",
+    "#............#",
+    "#............#",
     "#............#",
     "#............#",
     "#............#",
@@ -15,11 +17,13 @@ return {
   furniture = {
     "....p....p....",
     "....p....p....",
-    ".a..........a.",
-    ".a..........a.",
+    ".aa........aa.",
+    ".aa........aa.",
+    ".aa........aa.",
     "..............",
-    ".a..........a.",
-    ".a..........a.",
+    ".aa........aa.",
+    ".aa........aa.",
+    ".aa........aa.",
     "..............",
     "..............",
   },

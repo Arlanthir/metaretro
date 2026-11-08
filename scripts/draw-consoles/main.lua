@@ -2,7 +2,7 @@
 -- palette. Writes src/assets/metaretro/Consoles.png (one console per column) and
 -- src/world/consolelooks.lua (system id -> column); never edit those by hand. Also draws the museum's
 -- glass display case (DisplayCase.png) and the Arcade Club's cabinets, seen from the side
--- (Cabinets.png, 4 colors).
+-- (Cabinets.png: 4 colors, each 32x48).
 --
 -- Usage, from the repository: love scripts/draw-consoles src
 -- A preview with names lands in this script's LÖVE save folder (preview.png).
@@ -19,11 +19,12 @@ local P = {
 }
 
 local sheet, column
+local cellWidth = 16 -- the width of one sprite in the sheet being drawn
 
 local function px(x, y, c, alpha)
-  if x >= 0 and y >= 0 and x < 16 and y < sheet:getHeight() then
+  if x >= 0 and y >= 0 and x < cellWidth and y < sheet:getHeight() then
     local hex = P[c]
-    sheet:setPixel(column * 16 + x, y, tonumber(hex:sub(1, 2), 16) / 255, tonumber(hex:sub(3, 4), 16) / 255,
+    sheet:setPixel(column * cellWidth + x, y, tonumber(hex:sub(1, 2), 16) / 255, tonumber(hex:sub(3, 4), 16) / 255,
       tonumber(hex:sub(5, 6), 16) / 255, alpha or 1)
   end
 end
@@ -33,7 +34,7 @@ local function cross(x, y, c) px(x, y, c); px(x - 1, y, c); px(x + 1, y, c); px(
 -- Rounds a box's corners off (leaves them see-through).
 local function round(x1, y1, x2, y2)
   for _, p in ipairs({ { x1, y1 }, { x2, y1 }, { x1, y2 }, { x2, y2 } }) do
-    sheet:setPixel(column * 16 + p[1], p[2], 0, 0, 0, 0)
+    sheet:setPixel(column * cellWidth + p[1], p[2], 0, 0, 0, 0)
   end
 end
 
@@ -451,34 +452,35 @@ local function displayCase()
   rect(6, 23, 9, 24, "y")
 end
 
--- An arcade cabinet seen from its side (16x32), facing right: the marquee overhang, the recessed
--- screen, the control panel with its joystick, and the coin door. The big side panel (columns 3-9,
--- rows 3-29, see art.cabinet) is where the game's cover art goes, like real side art.
+-- An arcade cabinet seen from its side (32x48, 2x3 tiles), facing right: the marquee overhang, the
+-- recessed screen, the control panel with its joystick, and the coin door. The big side panel
+-- (columns 6-19, rows 4-44, see art.cabinet) is where the game's cover art goes, like real side art.
 local CABINET_SHAPE = { -- rows, then the body's columns on them
-  { 0, 1, 2, 12 }, { 2, 5, 2, 13 }, { 6, 13, 2, 10 }, { 14, 16, 2, 14 }, { 17, 31, 2, 12 },
+  { 0, 2, 4, 25 }, { 3, 9, 4, 27 }, { 10, 23, 4, 21 }, { 24, 28, 4, 30 }, { 29, 47, 4, 25 },
 }
 local function cabinet(side, glow)
   local filled = {}
   for _, part in ipairs(CABINET_SHAPE) do
     for y = part[1], part[2] do
-      for x = part[3], part[4] do filled[y * 16 + x] = true; px(x, y, side) end
+      for x = part[3], part[4] do filled[y * 32 + x] = true; px(x, y, side) end
     end
   end
-  for y = 0, 31 do                                            -- outline: body pixels next to the outside
-    for x = 0, 15 do
-      if filled[y * 16 + x] then
+  for y = 0, 47 do                                             -- outline: body pixels next to the outside
+    for x = 0, 31 do
+      if filled[y * 32 + x] then
         for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
           local nx, ny = x + d[1], y + d[2]
-          if nx < 0 or nx > 15 or ny < 0 or ny > 31 or not filled[ny * 16 + nx] then px(x, y, "k") end
+          if nx < 0 or nx > 31 or ny < 0 or ny > 47 or not filled[ny * 32 + nx] then px(x, y, "k") end
         end
       end
     end
   end
-  rect(12, 2, 12, 5, "y"); rect(11, 3, 11, 4, glow)          -- the lit marquee, seen edge-on
-  rect(10, 6, 10, 13, "m"); px(10, 7, "u")                    -- the screen's glow at the front
-  rect(11, 14, 13, 14, "b"); px(13, 13, "r"); px(12, 13, "k") -- control panel and joystick
-  rect(11, 20, 11, 27, "D"); px(11, 23, "y")                  -- coin door
-  rect(3, 3, 9, 29, "D")                                      -- the side panel, under the art
+  rect(25, 4, 26, 8, "y"); rect(24, 5, 24, 7, glow)            -- the lit marquee, seen edge-on
+  rect(20, 11, 20, 22, "m"); px(20, 13, "u"); px(20, 14, "u")  -- the screen's glow at the front
+  rect(22, 25, 29, 25, "b"); px(27, 22, "r"); px(28, 22, "r"); px(27, 23, "r"); px(28, 23, "r"); px(27, 24, "k")
+  px(24, 25, "y"); px(25, 25, "s")                              -- joystick and buttons
+  rect(23, 33, 24, 42, "D"); px(23, 36, "y"); px(24, 36, "y")  -- coin door
+  rect(6, 4, 19, 44, "D")                                       -- the side panel, under the art
 end
 local CABINETS = { { "r", "n" }, { "s", "u" }, { "H", "l" }, { "p", "L" } }
 
@@ -514,12 +516,13 @@ function love.load(args)
     sheet, column = love.image.newImageData(16, 32), 0
     displayCase()
     write(src .. "/assets/metaretro/DisplayCase.png", sheet:encode("png"):getString())
-    sheet = love.image.newImageData(16 * #CABINETS, 32)
+    sheet, cellWidth = love.image.newImageData(32 * #CABINETS, 48), 32
     for i, colors in ipairs(CABINETS) do
       column = i - 1
       cabinet(colors[1], colors[2])
     end
     write(src .. "/assets/metaretro/Cabinets.png", sheet:encode("png"):getString())
+    cellWidth = 16
     sheet = consoles
 
     local lines = { "-- Generated by scripts/draw-consoles; never edit by hand.",

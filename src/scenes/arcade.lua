@@ -24,12 +24,27 @@ for _, piece in ipairs(map.furniture) do
   if piece.kind == "cabinet" then table.insert(cabinets, piece) end
 end
 
+-- This week's games, one per cabinet.
+local function games(app)
+  return arcade.cabinets(catalog.allGames(app.backend), arcade.week(os.time()))
+end
+
+-- Everything the Arcade Club shows of its games (side art, screenshots, marquees), for the town to
+-- load ahead so it's ready when the player walks in.
+function Arcade.artPaths(app)
+  local paths = {}
+  for _, game in ipairs(games(app)) do
+    table.insert(paths, ui.boxArt(game))
+    table.insert(paths, ui.fullImage(game))
+    table.insert(paths, game.marquee)
+  end
+  return paths
+end
+
 function Arcade.new(app)
   local self = Interior.new(Arcade, app, map)
-  self.games = arcade.cabinets(catalog.allGames(app.backend), arcade.week(os.time()))
-  local paths = {}
-  for _, game in ipairs(self.games) do table.insert(paths, ui.boxArt(game)) end
-  covers.prefetch(paths)
+  self.games = games(app)
+  covers.prefetch(Arcade.artPaths(app))
   return self
 end
 
@@ -70,7 +85,7 @@ function Arcade:interact(piece)
     scenes.push(Dialog.new("", nil, "This cabinet is out of order."))
     return
   end
-  scenes.push(Attract.new(game, arcade.PRICE, function() self:play(game) end))
+  scenes.push(Attract.new(game, arcade.PRICE, function() self:play(game) end, cabinetIndex(piece)))
 end
 
 function Arcade:hintFor(piece)

@@ -33,26 +33,35 @@ local function advertised(app, store)
   end
 end
 
-function Mall.new(app)
-  local list = app.stores
-  local layout = layoutFor(#list)
-  local self = Interior.new(Mall, app, layout.map)
-  self.stores = list
-  -- Each ad stand, in reading order, with its store and game.
-  self.ads, self.adAt = {}, {}
-  local stands = {}
+-- Each ad stand of today's mall, with its store and game: { [piece] = { store, game } }.
+local function ads(app)
+  local layout = layoutFor(#app.stores)
+  local byStand, index = {}, 0
   for _, piece in ipairs(layout.map.furniture) do
-    if piece.kind == "adStand" then table.insert(stands, piece) end
+    if piece.kind == "adStand" then
+      index = index + 1
+      local store = app.stores[layout.ads[index]]
+      byStand[piece] = { store = store, game = store and advertised(app, store) }
+    end
   end
+  return byStand
+end
+
+-- The ads' box art, for the town to load ahead so the posters show as soon as the player walks in.
+-- Picking ads can roll a store's picks for the day, so the caller saves afterwards.
+function Mall.adPaths(app)
   local paths = {}
-  for i, piece in ipairs(stands) do
-    local store = list[layout.ads[i]]
-    local ad = { store = store, game = store and advertised(app, store) }
-    self.adAt[piece] = ad
+  for _, ad in pairs(ads(app)) do
     if ad.game then table.insert(paths, ui.boxArt(ad.game)) end
   end
-  app:persist() -- advertising can roll a store's picks for the day
-  covers.prefetch(paths)
+  return paths
+end
+
+function Mall.new(app)
+  local self = Interior.new(Mall, app, layoutFor(#app.stores).map)
+  self.stores = app.stores
+  self.adAt = ads(app)
+  app:persist()
   return self
 end
 

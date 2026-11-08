@@ -52,12 +52,13 @@ local DECORATION_CHANCE = 0.12
 local TREES = { { 0, 0 }, { 0, 0 }, { 2, 0 } }
 
 -- The town's buildings: column, row, width and height (in tiles) of their sprite in TilesetHouse.
--- Their doors sit where world/townmap.lua says (where each sprite draws its doorway).
+-- Their doors sit where world/townmap.lua says (where each sprite draws its doorway). `columns`
+-- widens a sprite by repeating some of its columns (the mall repeats its middle wall).
 local HOUSES = {
   home = { 0, 0, 4, 3 },
   dealer = { 16, 0, 3, 3 },
   museum = { 25, 14, 4, 5 },
-  mall = { 12, 0, 4, 3 },
+  mall = { 12, 0, 4, 3, columns = { 0, 1, 2, 2, 2, 3 } },
   arcade = { 23, 0, 3, 3 },
 }
 -- Villagers' houses take these looks in turn.
@@ -132,7 +133,8 @@ end
 
 -- How many tiles wide the building's sprite is (3 or 4).
 function art.buildingWidth(building)
-  return look(building)[3]
+  local house = look(building)
+  return house.columns and #house.columns or house[3]
 end
 
 -- A store's cloth banner (1x2 tiles), hung by its door in the mall.
@@ -159,8 +161,14 @@ end
 -- `label` is the sign over the door (none for villagers' houses).
 function art.building(building, label, x, y, width, font)
   local house = look(building)
-  sprite("TilesetHouse", house[1], house[2], x, y, house[3], house[4])
-  if label then art.sign(label, x + house[3] * art.TILE / 2, y + 6, font) end
+  if house.columns then
+    for i, column in ipairs(house.columns) do
+      sprite("TilesetHouse", house[1] + column, house[2], x + (i - 1) * art.TILE, y, 1, house[4])
+    end
+  else
+    sprite("TilesetHouse", house[1], house[2], x, y, house[3], house[4])
+  end
+  if label then art.sign(label, x + art.buildingWidth(building) * art.TILE / 2, y + 6, font) end
 end
 
 -- An ad stand in the mall (1x2 tiles at px, py): a framed board on a post, showing `image` (a game's
@@ -350,19 +358,21 @@ function art.displayCase(systemId, px, py)
   sprite("metaretro/DisplayCase", 0, 0, px, py, 1, 2)
 end
 
--- Arcade cabinet `index` (1x2 tiles; four colors, repeating), seen from its side: facing right, or
+-- Arcade cabinet `index` (2x3 tiles; four colors, repeating), seen from its side: facing right, or
 -- left (mirrored) when `facingLeft`. `cover` (an Image, optional) fills its side panel, like side art.
-local CABINET_PANEL = { x = 3, y = 3, width = 7, height = 27 } -- in the sprite's pixels, facing right
+local CABINET_W, CABINET_H = 2 * SOURCE, 3 * SOURCE
+local CABINET_PANEL = { x = 6, y = 4, width = 14, height = 41 } -- in the sprite's pixels, facing right
 
 function art.cabinet(index, px, py, facingLeft, cover)
   local img = image("metaretro/Cabinets")
   local column = (index - 1) % 4
   local key = "cabinet" .. column
-  quads[key] = quads[key] or love.graphics.newQuad(column * SOURCE, 0, SOURCE, 2 * SOURCE, img:getDimensions())
-  love.graphics.draw(img, quads[key], facingLeft and px + art.TILE or px, py, 0, facingLeft and -SCALE or SCALE, SCALE)
+  quads[key] = quads[key] or love.graphics.newQuad(column * CABINET_W, 0, CABINET_W, CABINET_H, img:getDimensions())
+  love.graphics.draw(img, quads[key], facingLeft and px + CABINET_W * SCALE or px, py, 0,
+    facingLeft and -SCALE or SCALE, SCALE)
   if not cover then return end
   local panel = CABINET_PANEL
-  local left = facingLeft and SOURCE - panel.x - panel.width or panel.x
+  local left = facingLeft and CABINET_W - panel.x - panel.width or panel.x
   local x, y, w, h = px + left * SCALE, py + panel.y * SCALE, panel.width * SCALE, panel.height * SCALE
   local scale = math.max(w / cover:getWidth(), h / cover:getHeight())
   love.graphics.setScissor(x, y, w, h)
