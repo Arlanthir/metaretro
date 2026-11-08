@@ -129,7 +129,7 @@ function Shop:buy(item, onBought)
       scenes.push(Confirm.notice(ui.starterPackMessage(item, result)))
     elseif firstCabinet then
       self.notice = ("Bought %s!"):format(item.name)
-      scenes.push(Confirm.notice(("%s is yours! Your very own arcade cabinet is waiting in your living room.")
+      scenes.push(Confirm.notice(("%s is yours! Your very own arcade cabinet is waiting in your office at home.")
         :format(item.name)))
     elseif self.section.arcade then
       self.notice = ("Bought %s! Play it on your cabinet at home."):format(item.name)

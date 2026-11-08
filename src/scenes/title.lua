@@ -127,7 +127,7 @@ function Title:draw()
   self:drawTown()
   self:drawStrollers()
   Title.drawLogo(ui.WIDTH, 48)
-  outlined("Play your games, grow your town", 48 + Title.LOGO_HEIGHT + 4, 1, ui.colors.text)
+  outlined("Play your games, grow your collection", 48 + Title.LOGO_HEIGHT + 4, 1, ui.colors.text)
 
   local rows = #self.options
   local height = rows * ui.LIST_ROW + 32

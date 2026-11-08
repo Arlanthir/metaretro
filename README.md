@@ -1,29 +1,34 @@
 # Retro Town Story
 
-Retro Town Story is a (meta)game intended to run in retro handhelds like the Anbernic RG 40XXV, to help the user progressively unlock their collection of games and help them choose what to play from their collection. At least Emulationstation must be supported, with additional backends to follow.
+Retro Town Story is a (meta)game for retro handhelds like the Anbernic RG 40XXV, to help players progressively unlock their game collection and choose what to play from it. It runs on EmulationStation (Knulli, Batocera), with other backends to follow.
 
-The original idea came from PakUI's BitPal that has the same aim.
+The original idea came from PakUI's BitPal, which has the same aim. The twist here is a top-down RPG (like Pokémon) where the player walks around a town whose shops sell retro games.
 
-The innovation is to have a top-down RPG (like Pokemon) where the main character explores shops that sell retro games.
+The games come from the player's own collection and its scraped metadata, so stores show real covers and details. Coins to buy more games are earned by playing the games already owned (play time) and by unlocking RetroAchievements.
 
-The available games are populated by the user's game collection and their scraped metadata. When the user is browsing a store catalog, he can see the game covers and relevant information.
+## In the game
 
-Money to buy more games is unlocked by playing the games you already have (time) and unlocking retroachievements in games that support them.
+- **Home:** the console under the TV opens your collection, by console, and plays your games. The TV shows videos of the games on sale in town today. Your own arcade cabinet appears in the office once you buy an arcade game.
+- **Museum:** Professor Cork gives you your first console. Glass cases show the best-selling consoles in your library.
+- **Console Dealer:** buy more consoles, each with a starter pack of three games. Handhelds count a generation below the home consoles of their time.
+- **Mall:** a store per console you own, plus stores per genre once you have enough games of one, all open onto one corridor. New picks every day; posters and billboards show what's on sale.
+- **Arcade Club:** four cabinets with new arcade games every week, a coin a play. The clerk sells them for your cabinet at home.
+- **Townsfolk:** five villagers wander town each day, each with a different kind of tip on what to play next. Residents in their houses explain how things work, and Granny Rose buys games you're done with for half their price.
+- Coming back from a game puts you right where you left off.
 
-The player can check his collection, organized by console, and play his games.
 ## Development
 
-Built with [LÖVE](https://love2d.org) 11.x and distributed as a PortMaster port.
+Built with [LÖVE](https://love2d.org) 11.5 and distributed as a PortMaster port.
 
 - Run on desktop: `love src` (uses the mock backend; force one with `love src --backend mock`).
-- Controls on keyboard: arrows, `Z`/`Enter` = A, `X`/`Esc` = B, `Q`/`W` = L/R, `Tab` = toggle FPS.
+- Controls on keyboard: arrows, `Z`/`Enter` = A, `X`/`Esc` = B (hold to run), `A`/`S` = X/Y, `Q`/`W` = L/R, `Space` = Start, `Tab` = Select (hold for the FPS counter).
 - Tests: `luarocks install busted`, then `busted` from the repo root.
 - Screenshot: `love src --screenshot 2` saves `screenshot.png` to the LÖVE save folder after 2 seconds and quits.
 - Port: `scripts/build-port.sh` builds `dist/ports/` (copy it to `/userdata/roms/ports/`) and `dist/retrotownstory.zip` (for PortMaster's installer). On its first run, the port adds its name, screenshot, box art and logo to EmulationStation. `scripts/port-art.sh` redraws that art in `port/`.
 
 ### Art
 
-Town and menu art comes from the [Ninja Adventure asset pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-boy and AAA (CC0). The font is [Ark Pixel](https://github.com/TakWolf/ark-pixel-font) 10px (SIL Open Font License, see `src/assets/fonts/`), which also covers Japanese titles. Only the images in use are in `src/assets/ninja-adventure/`; the full pack can be unzipped into `example-data/ninja-adventure/` (ignored by git) to pick more. The TV, consoles and sofa are the game's own, drawn in the pack's palette (`src/assets/retrotownstory/`).
+Town and menu art comes from the [Ninja Adventure asset pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-boy and AAA (CC0). The font is [Ark Pixel](https://github.com/TakWolf/ark-pixel-font) 10px (SIL Open Font License, see `src/assets/fonts/`), which also covers Japanese titles. Only the images in use are in `src/assets/ninja-adventure/`; the full pack can be unzipped into `example-data/ninja-adventure/` (ignored by git) to pick more. The TV, consoles, cabinets and sofa are the game's own, drawn in the pack's palette (`src/assets/retrotownstory/`).
 
 ### RetroAchievements
 
@@ -40,28 +45,11 @@ username=YourName
 
 After you play an owned game, the next launch checks its achievements online (games that can't be checked stay queued). New unlocks pay 5 coins per point (twice in hardcore); unlocks from before tracking started pay half, once.
 
-# Retro Town Story
-
-Retro Town Story is a (meta)game intended to run in retro handhelds like the Anbernic RG 40XXV, to help the user progressively unlock their collection of games and help them choose what to play from their collection. At least Emulationstation must be supported, with additional backends to follow.
-
-The original idea came from PakUI's BitPal that has the same aim.
-
-The innovation is to have a top-down RPG (like Pokemon) where the main character explores shops that sell retro games.
-
-The available games are populated by the user's game collection and their scraped metadata. When the user is browsing a store catalog, he can see the game covers and relevant information.
-
-Money to buy more games is unlocked by playing the games you already have (time) and unlocking retroachievements in games that support them.
-
-The player can check his collection, organized by console, and play his games.
-
-## Wishlist 
+## Wishlist
 
 - Integrate with [Games of the Month](https://retrohandhelds.gg/games-of-the-month/), its GotX and RetroBits (Saturday Nights), to have strong recommendations for popular games that the player may have in their collection.
-- Recommend games from the favorites EmulationStation collection the user may already have.
-- Check and display the rating for the games.
-- Sell games for half their buying price.
+- Recommend games from the favorites EmulationStation collection the player may already have.
 - Integrate with Time To Beat.
 - Release date flashbacks (this game came out on this day X years ago!)
 - Have some trivia about games.
 - Have different types of store, like a more expensive "system sellers" store or a "deep cuts" / underrated game store for cheaper.
-- Have stores for different game genres (like shooters, fighting games, etc)

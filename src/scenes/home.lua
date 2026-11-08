@@ -1,6 +1,6 @@
 -- Inside Home: the console in the living room opens the collection, and the TV shows videos of the
 -- games on sale in town. The console only shows up once the player has one (Professor Cork's gift).
--- The arcade cabinet by the right wall shows up with the first game bought at the Arcade Club; it
+-- The arcade cabinet in the office shows up with the first game bought at the Arcade Club; it
 -- plays the player's arcade games for free, and wears the art of the last one played or bought.
 local arcade = require("core.arcade")
 local catalog = require("core.catalog")
