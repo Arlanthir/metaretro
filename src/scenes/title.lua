@@ -3,6 +3,7 @@
 -- meanwhile, so choosing usually goes straight to town (see `start` in main.lua).
 local log = require("core.log")
 local scenes = require("core.scenes")
+local version = require("core.version")
 local ui = require("ui")
 local art = require("world.art")
 local town = require("world.town")
@@ -57,11 +58,11 @@ function Title:action(name)
   end
 end
 
--- `text` at `scale` with a dark outline, centered across `width` on `y`'s line.
-local function outlined(text, y, scale, color, width)
+-- `text` at `scale` with a dark outline on `y`'s line: from `x`, or centered across `width`.
+local function outlined(text, y, scale, color, width, x)
   local f = ui.fonts.title
   love.graphics.setFont(f)
-  local x = math.floor(((width or ui.WIDTH) - f:getWidth(text) * scale) / 2)
+  x = x or math.floor(((width or ui.WIDTH) - f:getWidth(text) * scale) / 2)
   love.graphics.setColor(0.13, 0.09, 0.07)
   for dx = -1, 1 do
     for dy = -1, 2 do
@@ -128,6 +129,9 @@ function Title:draw()
   self:drawStrollers()
   Title.drawLogo(ui.WIDTH, 48)
   outlined("Play your games, grow your collection", 48 + Title.LOGO_HEIGHT + 4, 1, ui.colors.text)
+
+  local label = ("v%s"):format(version)
+  outlined(label, ui.HEIGHT - 32, 1, ui.colors.muted, nil, ui.WIDTH - 12 - ui.fonts.title:getWidth(label))
 
   local rows = #self.options
   local height = rows * ui.LIST_ROW + 32

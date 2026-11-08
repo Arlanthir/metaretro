@@ -17,6 +17,7 @@ local scenes = require("core.scenes")
 local selectbutton = require("core.selectbutton")
 local stores = require("core.stores")
 local ui = require("ui")
+local version = require("core.version")
 local town = require("world.town")
 local Loading = require("scenes.loading")
 local Intro = require("scenes.intro")
@@ -198,7 +199,7 @@ function love.load(args)
 
   app.backend = backend.select(argValue(args, "--backend"))
   library.start(app.backend.name)
-  log("started with: %s", table.concat(args, " "))
+  log("Retro Town Story %s started with: %s", version, table.concat(args, " "))
   app.hasSave = love.filesystem.getInfo(save.FILE) ~= nil
   -- Back from a game it launched: straight back to where the player was.
   local resume = launcher.consumeResume()
