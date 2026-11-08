@@ -1,6 +1,6 @@
 # Retro Town Story
 
-Retro Town Story (codebase: Metaretro) is a (meta)game intended to run in retro handhelds like the Anbernic RG 40XXV, to help the user progressively unlock their collection of games and help them choose what to play from their collection. At least Emulationstation must be supported, with additional backends to follow.
+Retro Town Story is a (meta)game intended to run in retro handhelds like the Anbernic RG 40XXV, to help the user progressively unlock their collection of games and help them choose what to play from their collection. At least Emulationstation must be supported, with additional backends to follow.
 
 The original idea came from PakUI's BitPal that has the same aim.
 
@@ -19,22 +19,22 @@ Built with [LÖVE](https://love2d.org) 11.x and distributed as a PortMaster port
 - Controls on keyboard: arrows, `Z`/`Enter` = A, `X`/`Esc` = B, `Q`/`W` = L/R, `Tab` = toggle FPS.
 - Tests: `luarocks install busted`, then `busted` from the repo root.
 - Screenshot: `love src --screenshot 2` saves `screenshot.png` to the LÖVE save folder after 2 seconds and quits.
-- Port: `scripts/build-port.sh` builds `dist/ports/` (copy it to `/userdata/roms/ports/`) and `dist/metaretro.zip` (for PortMaster's installer). On its first run, the port adds its name, screenshot, box art and logo to EmulationStation. `scripts/port-art.sh` redraws that art in `port/`.
+- Port: `scripts/build-port.sh` builds `dist/ports/` (copy it to `/userdata/roms/ports/`) and `dist/retrotownstory.zip` (for PortMaster's installer). On its first run, the port adds its name, screenshot, box art and logo to EmulationStation. `scripts/port-art.sh` redraws that art in `port/`.
 
 ### Art
 
-Town and menu art comes from the [Ninja Adventure asset pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-boy and AAA (CC0). The font is [Ark Pixel](https://github.com/TakWolf/ark-pixel-font) 10px (SIL Open Font License, see `src/assets/fonts/`), which also covers Japanese titles. Only the images in use are in `src/assets/ninja-adventure/`; the full pack can be unzipped into `example-data/ninja-adventure/` (ignored by git) to pick more. The TV, consoles and sofa are Metaretro's own, drawn in the pack's palette (`src/assets/metaretro/`).
+Town and menu art comes from the [Ninja Adventure asset pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-boy and AAA (CC0). The font is [Ark Pixel](https://github.com/TakWolf/ark-pixel-font) 10px (SIL Open Font License, see `src/assets/fonts/`), which also covers Japanese titles. Only the images in use are in `src/assets/ninja-adventure/`; the full pack can be unzipped into `example-data/ninja-adventure/` (ignored by git) to pick more. The TV, consoles and sofa are the game's own, drawn in the pack's palette (`src/assets/retrotownstory/`).
 
 ### RetroAchievements
 
-To earn coins from achievements, create `retroachievements.txt` next to `metaretro.love` with your web API key from <https://retroachievements.org/settings>:
+To earn coins from achievements, create `retroachievements.txt` next to `retrotownstory.love` with your web API key from <https://retroachievements.org/settings>:
 
 ```
 apikey=YOUR_WEB_API_KEY
 username=YourName
 ```
 
-- On the device: `/userdata/roms/ports/metaretro/retroachievements.txt` (`roms/ports/metaretro/` on the SD card). `scripts/build-port.sh` doesn't copy it, so copy it yourself; updating the port's files leaves it in place.
+- On the device: `/userdata/roms/ports/retrotownstory/retroachievements.txt` (`roms/ports/retrotownstory/` on the SD card). `scripts/build-port.sh` doesn't copy it, so copy it yourself; updating the port's files leaves it in place.
 - On desktop: `retroachievements.txt` at the repo root, since `love src` looks in the folder above `src/`. It's in `.gitignore`.
 - `username` is optional on Knulli, where it's read from the RetroAchievements login in `batocera.conf`. On desktop (mock backend) it's required.
 
@@ -42,7 +42,7 @@ After you play an owned game, the next launch checks its achievements online (ga
 
 # Retro Town Story
 
-Retro Town Story (codebase: Metaretro) is a (meta)game intended to run in retro handhelds like the Anbernic RG 40XXV, to help the user progressively unlock their collection of games and help them choose what to play from their collection. At least Emulationstation must be supported, with additional backends to follow.
+Retro Town Story is a (meta)game intended to run in retro handhelds like the Anbernic RG 40XXV, to help the user progressively unlock their collection of games and help them choose what to play from their collection. At least Emulationstation must be supported, with additional backends to follow.
 
 The original idea came from PakUI's BitPal that has the same aim.
 

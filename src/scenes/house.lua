@@ -1,5 +1,5 @@
--- Inside a house in town: a resident who gives hints about how Metaretro works, one after another,
--- or Granny Rose, who buys the player's games for her grandchildren (scenes/shop.lua).
+-- Inside a house in town: a resident who gives hints about how Retro Town Story works, one after
+-- another, or Granny Rose, who buys the player's games for her grandchildren (scenes/shop.lua).
 local art = require("world.art")
 local interior = require("world.interior")
 local scenes = require("core.scenes")

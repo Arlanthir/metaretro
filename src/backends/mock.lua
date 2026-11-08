@@ -26,7 +26,7 @@ local function makeGames(system, index)
       system = system.id,
       path = path,
       name = ("%s %s"):format(title, ({ "", "II", "III", "DX", "Advance", "Arcade" })[index]):gsub("%s+$", ""),
-      desc = "A mock game used while developing Metaretro on the desktop.",
+      desc = "A mock game used while developing Retro Town Story on the desktop.",
       genre = GENRES[(i + index) % #GENRES + 1],
       releasedate = ("19%02d0101T000000"):format(85 + (i + index * 2) % 15),
       developer = "Mock Studios",

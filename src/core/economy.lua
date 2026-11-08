@@ -9,7 +9,7 @@ economy.COINS_PER_MINUTE = 2
 economy.SESSION_CAP_MINUTES = 120
 economy.COINS_PER_RA_POINT = 5
 economy.HARDCORE_MULTIPLIER = 2
--- Achievements unlocked before Metaretro started tracking them pay this fraction, once.
+-- Achievements unlocked before the game started tracking them pay this fraction, once.
 economy.PAST_ACHIEVEMENT_RATE = 0.5
 
 -- Base game price per console generation: 2nd gen costs 20, each later one 20 more.

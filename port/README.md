@@ -11,7 +11,7 @@ town's stores to unlock more of your collection.
 ## Setup
 
 Ready to run on EmulationStation (Knulli, Batocera): it reads your scraped library. For coins from
-RetroAchievements, create `retroachievements.txt` in `ports/metaretro/`:
+RetroAchievements, create `retroachievements.txt` in `ports/retrotownstory/`:
 
 ```
 apikey=YOUR_WEB_API_KEY

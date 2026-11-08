@@ -8,7 +8,7 @@ local log = require("core.log")
 
 local retroachievements = {}
 
--- Lives next to metaretro.love so players can edit it on the SD card.
+-- Lives next to retrotownstory.love so players can edit it on the SD card.
 retroachievements.CONFIG = "retroachievements.txt"
 retroachievements.PROGRESS_URL = "https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php?g=%d&u=%s&y=%s"
 -- A console's games that have achievements, with their ROM hashes.
@@ -58,7 +58,7 @@ function retroachievements.queue(state, played)
   end
 end
 
--- Tracking counts from Metaretro's first game session (an epoch), or from now without sessions.
+-- Tracking counts from the first game session launched from the game (an epoch), or from now without sessions.
 -- Times are "YYYY-MM-DD HH:MM:SS" in UTC, like RetroAchievements' dates, so they compare as strings.
 function retroachievements.trackingSince(current, firstSession, now)
   local since = current ~= "" and current or os.date("!%Y-%m-%d %H:%M:%S", now)
@@ -69,7 +69,7 @@ end
 -- Fetches every pending game in the background; games that fail (e.g. offline) stay pending.
 -- First, owned consoles with games that have a ROM hash but no id get their game lists (see
 -- core/achievements), which can turn pending hashes into games to check.
--- `firstSession` is the start epoch of Metaretro's first game session, if any.
+-- `firstSession` is the start epoch of the first game session launched from the game, if any.
 function retroachievements.sync(app, firstSession)
   local state = app.state
   local config = readConfig()

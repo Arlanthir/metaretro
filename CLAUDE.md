@@ -1,15 +1,15 @@
-# Retro Town Story (codebase: Metaretro): working notes
+# Retro Town Story: working notes
 
 LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbernic RG40XXV running Knulli (Batocera EmulationStation) at 640x480. The README covers what the game is, setup and credits. These notes cover how the code fits together and what was decided.
 
 ## Commands
 - Tests: `~/.luarocks/bin/busted` (specs in `tests/`, `.busted` puts `src/` on the path). Run them after every change.
 - Desktop run: `/Applications/love.app/Contents/MacOS/love src` (mock backend). Before handing a build over, run it once with the device's exact args, `love src --layout nintendo`.
-- Screenshot: `love src --screenshot 1` writes `~/Library/Application Support/LOVE/metaretro/screenshot.png`.
-- Port: `scripts/build-port.sh` builds `dist/ports/` (`Retro Town Story.sh` and `metaretro/`) and `dist/metaretro.zip` (the same, for PortMaster's installer). The user copies `dist/ports/` to the device and pastes back `log.txt`.
+- Screenshot: `love src --screenshot 1` writes `~/Library/Application Support/LOVE/retrotownstory/screenshot.png`.
+- Port: `scripts/build-port.sh` builds `dist/ports/` (`Retro Town Story.sh` and `retrotownstory/`) and `dist/retrotownstory.zip` (the same, for PortMaster's installer). The user copies `dist/ports/` to the device and pastes back `log.txt`.
 - Port art: `scripts/port-art.sh` redraws `port/screenshot.png` (gameplay in town; the billboards show box art the script draws for the mock games, since the port's images must not show real games' art), `port/cover.png` (box art, with no building signs) and `port/logo.png` (the name on transparency), from the game's own drawing (`scripts/port-art/driver.lua`, run on a copy of `src/` with its own save). Rerun it after visual changes to the town or the logo.
 - Launch titles: `scripts/generate-launch-titles.py [page.html] [roms dir]` regenerates `src/core/launchtitles.lua`. Never edit that file by hand.
-- Console sprites: `love scripts/draw-consoles src` redraws `src/assets/metaretro/Consoles.png` and `src/world/consolelooks.lua` from the drawings in the script. Never edit those two files by hand. A preview with names goes to the script's LÖVE save folder.
+- Console sprites: `love scripts/draw-consoles src` redraws `src/assets/retrotownstory/Consoles.png` and `src/world/consolelooks.lua` from the drawings in the script. Never edit those two files by hand. A preview with names goes to the script's LÖVE save folder.
 
 ## Code map (src/)
 - `main.lua`: the `app` table (state, backend, catalog, stores, town), startup, and the LÖVE callbacks.
@@ -46,7 +46,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `mall`: the mall's inside, laid out for the open stores, all in view at once: no doors, and no separate screen per store. A tiled corridor (the wood parquet's 3x3 pattern breaks up in narrow rows) has the first half of the stores along its top side and the rest along its bottom side, after the way out. Each store is a small room, 4 tiles wide, on a 1x1 tiled shop floor (`:`, since the parquet's pattern breaks up in rooms this small), open to the corridor through a 2-tile opening with front wall either side (so both of its ends look the same): its name on a plaque on its back wall, one block of shelves against it, and its clerk (`C`) beside them, behind the counter, which the player reaches from the opening. Bottom stores are the top ones mirrored, a row deeper (shelves stand on the floor, since they can't reach into a bottom wall); that row, behind their opening, has the corridor's floor, so they look as deep as the top ones. Stores are two tiles of wall apart (a right wall next to a left wall); the posters hang on those walls, on the corridor's side, a little narrower than them, between the top stores, each showing the box art of a game on sale in the store to its left. Which store is where changes every day (`mall.order`), so the posters change too. With up to 5 stores, the mall fits on one screen; it gets longer as stores open.
   - `storemap`: the console dealer's inside: shelves, and the clerk (`C`) behind the counter.
   - `interior`, `homemap`, `housemap` and `museummap`: buildings' insides, as a rooms layer and a furniture layer. The furniture layer also marks spots (`P` the professor, `S` where the player starts at home, `R` a house's resident, `C` a clerk; `map.allSpots` lists repeated ones). Wall tiles are drawn a quarter at a time, each quarter from the piece that closes the room next to it (`interior.wallPiece`), so walls between rooms and their junctions need no special cases. Whole corner pieces stay whole. A wall two tiles thick is two walls side by side, each closing its own room.
-  - `art`: all town and Home drawing from the Ninja Adventure sheets, plus our own TV, console and sofa in `assets/metaretro/` (the pack has none).
+  - `art`: all town and Home drawing from the Ninja Adventure sheets, plus our own TV, console and sofa in `assets/retrotownstory/` (the pack has none).
 - `scenes/`:
   - `walker`: the base for scenes the player walks around (town and interiors): steps, door fades, camera, toasts, the quit prompt. The camera centres maps that fit between the wallet bar and the hint bar between them, so nothing hides behind either; taller maps scroll above the hint bar. Walking out of a building, the player keeps going while the d-pad is held.
   - `interior`: the base for buildings' insides (walking, furniture, people, the door out). `home`, `museum`, `mall`, `store` and `house` extend it through hooks (`interact`, `hintFor`, `live`, `absent`, `drawOnTop`).
@@ -72,13 +72,13 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Stores:**
   - Genre stores need ≥30 games of that genre across owned consoles (`stores.MIN_GENRE_GAMES`).
   - Daily offer: 5 random games per store.
-- **Houses:** every house can be entered. Each of the four residents (`townsfolk.RESIDENTS`, by house in reading order) gives hints about how Metaretro works, one after another. They never wander in town.
+- **Houses:** every house can be entered. Each of the four residents (`townsfolk.RESIDENTS`, by house in reading order) gives hints about how Retro Town Story works, one after another. They never wander in town.
 - **Granny Rose:** lives left of Home and buys any owned game for half its price, rounded down (`economy.sellPrice`, `Shop.grandma`). A sold game goes back to the stores. She left the wandering cast; Sultan Amir took her place.
 - **Villagers:** 20 in the cast, 4 for each of 5 kinds; one villager per kind each day. Each starts on a random grass tile (not above a tree), at least 8 tiles from the others and 3 from the player's start (`townsfolk.MIN_SPACING`, `START_CLEARANCE`); wander radius 2, grass only.
 
 ## What's left out of the library
-- **Non-console systems:** Metaretro's library only uses the consoles in `core/consoles.lua`. Computers and engines (dos, amiga, devilutionx, cannonball, xash3d…) appear nowhere. Arcade systems (fbneo, mame, arcade, naomi, cps…, see `arcade.SYSTEMS`) appear only in the Arcade Club's cabinets, never in stores, Home, starter packs or counts.
-- **Ports:** Knulli's `ports` folder is ignored; Metaretro itself lives there.
+- **Non-console systems:** The game's library only uses the consoles in `core/consoles.lua`. Computers and engines (dos, amiga, devilutionx, cannonball, xash3d…) appear nowhere. Arcade systems (fbneo, mame, arcade, naomi, cps…, see `arcade.SYSTEMS`) appear only in the Arcade Club's cabinets, never in stores, Home, starter packs or counts.
+- **Ports:** Knulli's `ports` folder is ignored; the game itself lives there.
 - **Gamelist entries:** entries marked `<hidden>`, and entries whose ROM file is missing (gamelists keep stale ones), are skipped by `backends/knulli.lua`.
 - **No genre setting yet:** no genres are hidden by choice. Small genres only lack a genre store (see the rules above; Music, in the user's library); their games still sell in console stores.
 
@@ -107,7 +107,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - Change `local app =` to a global so the driver can reach it.
   - Script the scene changes from a wrapped `love.update`.
   - Capture with `love.graphics.captureScreenshot`.
-  - Files land in `~/Library/Application Support/LOVE/metaretro/`, because `conf.lua` sets the identity.
+  - Files land in `~/Library/Application Support/LOVE/retrotownstory/`, because `conf.lua` sets the identity.
 - **Screenshot timing:** a capture happens at the end of the frame, so change state in a later frame than the one that captures.
 - **No error windows:** wrap the driver's `update` and `draw` in `pcall` and check paths before running. A LÖVE error opens a window on the user's screen.
 - **Example media:** `example-data/` has real scraped gamelists, plus box art and composite images under `gamegear/images` and `gb/images`.
@@ -115,8 +115,8 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 ## Device facts (Knulli, RG40XXV)
 - **No JIT:** LÖVE turns LuaJIT's JIT off on arm64, so per-pixel Lua work is slow there. Use the GPU (canvases) instead.
 - **Launching:** `emulatorlauncher` needs ES's `%CONTROLLERSCONFIG%` args (see `backends/knulli.lua`).
-- **Play time:** games launched from Metaretro don't update gamelist `gametime`, so play is credited from `sessions.log` as well (the larger of the two).
-- **Name:** the game is Retro Town Story (the town is Retro Town). Its files, save identity (`metaretro`) and port folder keep the old name, so saves carry over. The launcher (`port/Retro Town Story.sh`) registers the port with EmulationStation itself, posting `gameinfo.xml` to ES's local web API (`POST http://127.0.0.1:1234/addgames/ports`, the same metadata PortMaster merges on install), once per version of the file. It never deletes anything: the user removes the old `Metaretro.sh` entry from the device themselves. Not yet checked on the device.
+- **Play time:** games launched from Retro Town Story don't update gamelist `gametime`, so play is credited from `sessions.log` as well (the larger of the two).
+- **Name:** the game is Retro Town Story (the town is Retro Town); it was Metaretro before, and the repository folder still is. Its save identity, port folder, `.love` and zip are `retrotownstory`, its own art is in `assets/retrotownstory/`, and its environment variables start with `RETROTOWNSTORY_`. The launcher (`port/Retro Town Story.sh`) registers the port with EmulationStation itself, posting `gameinfo.xml` to ES's local web API (`POST http://127.0.0.1:1234/addgames/ports`, the same metadata PortMaster merges on install), once per version of the file. It never deletes anything: the user removes the old `Metaretro.sh` entry from the device themselves. Not yet checked on the device.
 - **Startup:** parsing a ~9,600-game library takes ~4.5s, now on a thread behind the title screen. The user chose not to add a library cache. Setting up the save afterwards runs on the main thread; it's about 10% of the parse time on the desktop with the JIT off.
 - **Secrets:** device logs contain the RetroAchievements token. Never echo it back.
 - **FPS:** steady 60. Holding Select for 2 seconds toggles the FPS counter.

@@ -65,7 +65,7 @@ function Home:pickConsole()
   end
 end
 
--- Picked on the way in: playing a game restarts Metaretro, so it can't change while inside.
+-- Picked on the way in: playing a game restarts Retro Town Story, so it can't change while inside.
 function Home:enter()
   Interior.enter(self)
   self.console = self:pickConsole()

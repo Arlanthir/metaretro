@@ -127,7 +127,7 @@ local function prepareNow(newGame)
   while app.preparing do prepareStep() end
 end
 
--- Launches `game`; Metaretro starts again where the player is now once it's over. An arcade game
+-- Launches `game`; Retro Town Story starts again where the player is now once it's over. An arcade game
 -- puts its art on the player's cabinet at home.
 function app:launch(game)
   if arcade.isArcade(game) then
@@ -200,7 +200,7 @@ function love.load(args)
   library.start(app.backend.name)
   log("started with: %s", table.concat(args, " "))
   app.hasSave = love.filesystem.getInfo(save.FILE) ~= nil
-  -- Back from a game Metaretro launched: straight back to where the player was.
+  -- Back from a game it launched: straight back to where the player was.
   local resume = launcher.consumeResume()
   if resume and app.hasSave then
     log("resuming after %s", tostring(resume.game))

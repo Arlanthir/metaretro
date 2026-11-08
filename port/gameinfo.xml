@@ -9,8 +9,8 @@
     <publisher>Open Source</publisher>
     <genre>Simulation</genre>
     <players>1</players>
-    <image>./metaretro/screenshot.png</image>
-    <thumbnail>./metaretro/cover.png</thumbnail>
-    <marquee>./metaretro/logo.png</marquee>
+    <image>./retrotownstory/screenshot.png</image>
+    <thumbnail>./retrotownstory/cover.png</thumbnail>
+    <marquee>./retrotownstory/logo.png</marquee>
   </game>
 </gameList>

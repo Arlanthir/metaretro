@@ -1,6 +1,6 @@
 #!/bin/bash
 # PortMaster launcher for Retro Town Story. Runs the game, then any game it asked to launch, then the
-# game again. Its files live in ports/metaretro/ (the name it had before; saves are kept there).
+# game again. Its files live in ports/retrotownstory/.
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -16,10 +16,10 @@ source "$controlfolder/control.txt"
 [ -f "$controlfolder/mod_${CFW_NAME}.txt" ] && source "$controlfolder/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR="/$directory/ports/metaretro"
+GAMEDIR="/$directory/ports/retrotownstory"
 export XDG_DATA_HOME="$GAMEDIR/conf"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-SAVEDIR="$XDG_DATA_HOME/love/metaretro"
+SAVEDIR="$XDG_DATA_HOME/love/retrotownstory"
 mkdir -p "$SAVEDIR"
 cd "$GAMEDIR" || exit 1
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -34,7 +34,7 @@ es_post() {
 registered="$XDG_DATA_HOME/gameinfo.registered"
 if [ -f "$GAMEDIR/gameinfo.xml" ] && ! cmp -s "$GAMEDIR/gameinfo.xml" "$registered"; then
   status=$(es_post addgames "@$GAMEDIR/gameinfo.xml")
-  echo "[metaretro.sh] registering with EmulationStation: $status"
+  echo "[retrotownstory.sh] registering with EmulationStation: $status"
   case "$status" in 200|201) cp "$GAMEDIR/gameinfo.xml" "$registered" ;; esac
 fi
 
@@ -42,12 +42,12 @@ fi
 source "$controlfolder/runtimes/love_11.5/love.txt"
 
 while true; do
-  # gptokeyb only while Metaretro runs, so its quit combo can't fire during a game.
+  # gptokeyb only while Retro Town Story runs, so its quit combo can't fire during a game.
   $GPTOKEYB "$LOVE_GPTK" &
   gptokeyb_pid=$!
   pm_platform_helper "$LOVE_BINARY"
-  $LOVE_RUN "$GAMEDIR/metaretro.love" --layout nintendo
-  echo "[metaretro.sh] metaretro exited with status $?"
+  $LOVE_RUN "$GAMEDIR/retrotownstory.love" --layout nintendo
+  echo "[retrotownstory.sh] retrotownstory exited with status $?"
   kill "$gptokeyb_pid" 2>/dev/null
   [ -f "$SAVEDIR/launch.txt" ] || break
 
@@ -57,7 +57,7 @@ while true; do
 
   start=$(date +%s)
   sh -c "$game_cmd"
-  echo "[metaretro.sh] game exited with status $?"
+  echo "[retrotownstory.sh] game exited with status $?"
   printf '%s\t%s\t%s\n' "$game_id" "$start" "$(date +%s)" >> "$SAVEDIR/sessions.log"
 done
 

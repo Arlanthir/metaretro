@@ -215,7 +215,7 @@ townsfolk.CAST = {
 }
 
 -- The people at home in town's houses (house i is in reading order on the town map), each with
--- hints about how Metaretro works, given in turn.
+-- hints about how Retro Town Story works, given in turn.
 townsfolk.RESIDENTS = {
   { id = "ona", name = "Elder Ona", sprite = "Shaman", hints = {
     ("Every minute you spend playing pays %d coins, up to %d minutes a session. The coins are waiting when you get back.")
@@ -335,12 +335,12 @@ function townsfolk.ownedGames(built)
 end
 
 -- When the game was last played as a YYYYMMDDhhmmss number (0 if never): the later of the
--- backend's lastplayed and Metaretro's own record of play.
+-- backend's lastplayed and the game's own record of play.
 function townsfolk.lastPlayed(state, game)
   local fromBackend = game.lastplayed and tonumber(game.lastplayed:gsub("T", ""):sub(1, 14)) or 0
   local ours = state.lastPlayed[game.id]
-  local fromMetaretro = ours and tonumber(os.date("%Y%m%d%H%M%S", ours)) or 0
-  return math.max(fromBackend, fromMetaretro)
+  local fromOurs = ours and tonumber(os.date("%Y%m%d%H%M%S", ours)) or 0
+  return math.max(fromBackend, fromOurs)
 end
 
 -- Of `games`, the one played most recently (by either record), or nil when none has been played.

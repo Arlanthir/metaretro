@@ -5,8 +5,8 @@ local log = require("core.log")
 local knulli = {
   name = "knulli",
   tracksGametime = true,
-  romsDir = os.getenv("METARETRO_ROMS") or "/userdata/roms",
-  confPath = os.getenv("METARETRO_BATOCERA_CONF") or "/userdata/system/batocera.conf",
+  romsDir = os.getenv("RETROTOWNSTORY_ROMS") or "/userdata/roms",
+  confPath = os.getenv("RETROTOWNSTORY_BATOCERA_CONF") or "/userdata/system/batocera.conf",
 }
 
 local IGNORED = { ports = true }

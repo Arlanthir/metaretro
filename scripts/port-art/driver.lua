@@ -2,7 +2,7 @@
 -- scripts/port-art: appended to a copy of src/main.lua by scripts/port-art.sh, which sets PORT_ART_OUT
 -- (where the images go). Runs on the mock backend, with its own save so the desktop one is left alone.
 -- The billboards show box art drawn here, for the mock games: no real game's art in the port's images.
-love.filesystem.setIdentity("metaretro-port-art")
+love.filesystem.setIdentity("retrotownstory-port-art")
 local json = require("lib.json")
 local scenes = require("core.scenes")
 local ui = require("ui")

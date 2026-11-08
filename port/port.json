@@ -1,9 +1,9 @@
 {
   "version": 4,
-  "name": "metaretro.zip",
+  "name": "retrotownstory.zip",
   "items": [
     "Retro Town Story.sh",
-    "metaretro"
+    "retrotownstory"
   ],
   "items_opt": [],
   "attr": {
@@ -13,7 +13,7 @@
     ],
     "desc": "Your game library becomes a little town: play the games you own to earn coins, and spend them in its stores to unlock more of your collection.",
     "desc_md": null,
-    "inst": "Ready to run: it reads your EmulationStation library. For coins from RetroAchievements, put retroachievements.txt with your web API key in ports/metaretro/.",
+    "inst": "Ready to run: it reads your EmulationStation library. For coins from RetroAchievements, put retroachievements.txt with your web API key in ports/retrotownstory/.",
     "inst_md": null,
     "genres": [
       "simulation"

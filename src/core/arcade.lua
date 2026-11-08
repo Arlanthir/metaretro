@@ -1,4 +1,4 @@
--- The Arcade Club's cabinets: arcade games from the library (systems Metaretro otherwise leaves out
+-- The Arcade Club's cabinets: arcade games from the library (systems the game otherwise leaves out
 -- of stores and the collection), a new set every week. A play costs a coin and earns coins like
 -- any other game. The clerk sells the cabinets' games, to play for free on the player's own cabinet
 -- at home; a cabinet whose game was bought gets another one for the rest of the week.

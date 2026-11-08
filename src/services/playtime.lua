@@ -4,7 +4,7 @@ local playtime = {}
 
 playtime.LOG = "sessions.log"
 
--- Metaretro.sh appends one "<game id>\t<start epoch>\t<end epoch>" line per session.
+-- The launcher appends one "<game id>\t<start epoch>\t<end epoch>" line per session.
 function playtime.parseLog(text)
   local sessions = {}
   for line in (text or ""):gmatch("[^\n]+") do
@@ -17,8 +17,8 @@ function playtime.parseLog(text)
 end
 
 -- Returns the coins earned and the games played since the last credit.
--- Play shows up in Metaretro's session log and, on backends that track it, in the game's gametime
--- (which also covers play outside Metaretro); each game pays for whichever shows more.
+-- Play shows up in the game's session log and, on backends that track it, in the game's gametime
+-- (which also covers play outside the game); each game pays for whichever shows more.
 -- A game seen for the first time sets its gametime baseline instead of paying out its whole history.
 function playtime.credit(state, backend, games, sessions)
   local fromSessions = {}

@@ -129,7 +129,7 @@ describe("townsfolk", function()
     end
   end)
 
-  it("knows when a game was last played from the backend or Metaretro", function()
+  it("knows when a game was last played from the backend or our own record", function()
     assert.equal(0, townsfolk.lastPlayed(state, game("a")))
     assert.equal(20241003122910, townsfolk.lastPlayed(state, game("a", { lastplayed = "20241003T122910" })))
     state.lastPlayed.a = os.time({ year = 2026, month = 1, day = 2, hour = 3, min = 4, sec = 5 })

@@ -20,7 +20,7 @@ function save.defaults()
     pendingAchievementGames = {}, -- RetroAchievements game ids to check at the next sync
     pendingAchievementHashes = {}, -- ROM hashes of played games whose id is still being looked up
     creditedGametime = {},
-    lastPlayed = {}, -- game id -> epoch of the last play Metaretro noticed
+    lastPlayed = {}, -- game id -> epoch of the last play the game noticed
     consumedSessions = 0,
     settings = {},
     player = "boy", -- the look chosen in the intro: "boy" or "girl"

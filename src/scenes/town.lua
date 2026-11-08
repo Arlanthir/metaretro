@@ -280,7 +280,7 @@ function Town:enterBuilding(building, at)
 end
 
 -- Where the player is: in town, and in which building, where, if they're inside one. Saved when a
--- game launches, so Metaretro starts again there afterwards (see `restore`).
+-- game launches, so the game starts again there afterwards (see `restore`).
 function Town:location()
   local here = { x = self.x, y = self.y, facing = self.facing }
   local scene = self.inside and self.interior

@@ -14,7 +14,7 @@ function Confirm.notice(message)
   return Confirm.new(message, nil)
 end
 
--- Asks whether to quit Metaretro (Start, wherever the player is).
+-- Asks whether to quit the game (Start, wherever the player is).
 function Confirm.quit()
   scenes.push(Confirm.new("Quit Retro Town Story?", function()
     log("quit confirmed by player")

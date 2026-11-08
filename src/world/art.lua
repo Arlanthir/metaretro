@@ -31,11 +31,11 @@ local function emptyDesk()
 end
 local GENERATED = { EmptyDesk = emptyDesk }
 
--- Sheets from the pack, "metaretro/..." for Metaretro's own art in assets/metaretro, or one of the
+-- Sheets from the pack, "retrotownstory/..." for the game's own art in assets/retrotownstory, or one of the
 -- GENERATED ones.
 local function image(name)
   if not images[name] then
-    local path = name:match("^metaretro/") and "assets/" .. name or DIR .. name
+    local path = name:match("^retrotownstory/") and "assets/" .. name or DIR .. name
     images[name] = GENERATED[name] and GENERATED[name]() or love.graphics.newImage(path .. ".png")
   end
   return images[name]
@@ -303,10 +303,10 @@ local FURNITURE = {
   cupboard = { "TilesetElement", 1, 7, 1, 2 },
   table = { "TilesetElement", 14, 0, 2, 1, widen = { 6, 10 } },
   stool = { "TilesetElement", 5, 7 },
-  tv = { "metaretro/Tv", 0, 0, 2, 2 },
-  console = { "metaretro/Consoles", 0, 0 },
-  sofa = { "metaretro/Sofa", 0, 0, 3, 1 },
-  loveseat = { "metaretro/Sofa", 0, 0, columns = { 0, 2 } },
+  tv = { "retrotownstory/Tv", 0, 0, 2, 2 },
+  console = { "retrotownstory/Consoles", 0, 0 },
+  sofa = { "retrotownstory/Sofa", 0, 0, 3, 1 },
+  loveseat = { "retrotownstory/Sofa", 0, 0, columns = { 0, 2 } },
   bookshelf = { "TilesetElement", 8, 7, 2, 2 },
   plant = { "TilesetElement", 0, 7, 1, 2 },
   bed = { "TilesetBed", 7, 3, 2, 3 },
@@ -392,13 +392,13 @@ local CONSOLE_LOOKS = require("world.consolelooks")
 art.TABLE_TOP = 12 -- how far up something standing on a table is drawn
 
 function art.console(systemId, px, py)
-  sprite("metaretro/Consoles", CONSOLE_LOOKS[systemId] or 0, 0, px, py)
+  sprite("retrotownstory/Consoles", CONSOLE_LOOKS[systemId] or 0, 0, px, py)
 end
 
 -- The museum's glass case (1x2 tiles) at (px, py), with `systemId`'s console inside (or empty).
 function art.displayCase(systemId, px, py)
   if systemId then art.console(systemId, px, py) end
-  sprite("metaretro/DisplayCase", 0, 0, px, py, 1, 2)
+  sprite("retrotownstory/DisplayCase", 0, 0, px, py, 1, 2)
 end
 
 -- Arcade cabinet `index` (2x3 tiles; four colors, repeating), seen from its side: facing right, or
@@ -431,9 +431,9 @@ local function coveredCabinet(column, cover, facingLeft)
   -- The white silhouette keeps the art inside the cabinet and clears it everywhere else.
   local x, sx = facingLeft and w or 0, facingLeft and -SCALE or SCALE
   love.graphics.setBlendMode("multiply", "premultiplied")
-  love.graphics.draw(image("metaretro/CabinetMask"), x, 0, 0, sx, SCALE)
+  love.graphics.draw(image("retrotownstory/CabinetMask"), x, 0, 0, sx, SCALE)
   love.graphics.setBlendMode("alpha")
-  local trims, quad = cabinetQuad("metaretro/CabinetTrims", column)
+  local trims, quad = cabinetQuad("retrotownstory/CabinetTrims", column)
   love.graphics.draw(trims, quad, x, 0, 0, sx, SCALE)
   love.graphics.pop()
   covered[cover][key] = canvas
@@ -445,7 +445,7 @@ function art.cabinet(index, px, py, facingLeft, cover)
   if cover then
     love.graphics.draw(coveredCabinet(column, cover, facingLeft), px, py)
   else
-    local img, quad = cabinetQuad("metaretro/Cabinets", column)
+    local img, quad = cabinetQuad("retrotownstory/Cabinets", column)
     love.graphics.draw(img, quad, facingLeft and px + CABINET_W * SCALE or px, py, 0,
       facingLeft and -SCALE or SCALE, SCALE)
   end
