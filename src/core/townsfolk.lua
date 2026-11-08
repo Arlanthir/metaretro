@@ -1,5 +1,7 @@
 -- Villagers in town and what they recommend when you talk to them.
+local arcade = require("core.arcade")
 local daily = require("core.daily")
+local economy = require("core.economy")
 local genres = require("core.genres")
 local stores = require("core.stores")
 
@@ -130,15 +132,15 @@ townsfolk.CAST = {
       "All quests completed! The realm salutes you, hero.",
       "There is no glory left to claim. Find new games, and new quests!",
     } },
-  { id = "rose", name = "Granny Rose", sprite = "OldWoman", kind = "forgotten",
+  { id = "amir", name = "Sultan Amir", sprite = "Sultan", kind = "forgotten",
     suggest = {
-      "Oh dear, it's been ages since you played %s. Old friends like to be visited!",
-      "Whatever happened to %s? You used to play it, didn't you?",
-      "I was just thinking about %s. You should give it another go, dear.",
+      "My royal scrolls say you haven't touched %s in ages. Even sultans revisit their treasures!",
+      "Whatever became of %s? A fine jewel, gathering dust in your vault.",
+      "The palace remembers %s fondly. Why not play it again?",
     },
     none = {
-      "Play a few games, dear, and I'll remind you of the ones you miss.",
-      "You haven't played anything yet? Go on, have some fun!",
+      "Your treasury is still empty of memories. Go and play something!",
+      "Play a few games, and I'll tell you which treasures you've forgotten.",
     } },
   { id = "mia", name = "Mia", sprite = "Woman", kind = "forgotten",
     suggest = {
@@ -210,6 +212,51 @@ townsfolk.CAST = {
       "No deliveries today. The shops have the same old stock.",
       "Quiet day on my route. Nothing new in the shops.",
     } },
+}
+
+-- The people at home in town's houses (house i is in reading order on the town map), each with
+-- hints about how Metaretro works, given in turn.
+townsfolk.RESIDENTS = {
+  { id = "ona", name = "Elder Ona", sprite = "Shaman", hints = {
+    ("Every minute you spend playing pays %d coins, up to %d minutes a session. The coins are waiting when you get back.")
+      :format(economy.COINS_PER_MINUTE, economy.SESSION_CAP_MINUTES),
+    ("RetroAchievements pay %d coins for every point, and twice that in hardcore mode.")
+      :format(economy.COINS_PER_RA_POINT),
+    "Achievements you unlocked before coming to town still pay, at half the rate, once.",
+    "Games that are scraped with achievement data show a trophy in the lists.",
+  } },
+  { id = "nico", name = "Nico", sprite = "EggBoy", hints = {
+    "Every console you own opens a store of its own in the mall.",
+    ("Each store puts out %d new picks every day. If nothing catches your eye, come back tomorrow!")
+      :format(stores.OFFER_SIZE),
+    ("Once your consoles have %d games of one genre between them, a store just for that genre opens in the mall.")
+      :format(stores.MIN_GENRE_GAMES),
+    ("Every console at the dealer comes with %d games to start you off."):format(economy.STARTER_GAMES),
+  } },
+  { id = "mo", name = "Mo", sprite = "Caveman", hints = {
+    ("The Arcade Club gets new games in its cabinets every Monday. A game costs just %d coin.")
+      :format(arcade.PRICE),
+    "The TV in your living room shows the games on sale in town today.",
+    "Granny Rose, next door to you, buys the games you're done with, for half what they cost.",
+    "The billboards around town show games on sale today. Walk up to one to see which store has it.",
+  } },
+  { id = "rashid", name = "Vizier Rashid", sprite = "Sultan2", hints = {
+    "Five townsfolk are out and about each day, and each one has a different kind of tip.",
+    "The glass cases in the museum hold the best-selling consoles of your library.",
+    "Newer consoles cost more at the dealer, but they open new stores, with newer games.",
+    "The console under your TV is the last one you played on. Press A on it to see all your games.",
+  } },
+}
+
+-- Granny Rose, at home next to the player's, buys games for her grandchildren.
+townsfolk.GRANDMA = { id = "rose", name = "Granny Rose", sprite = "OldWoman" }
+
+-- What every villager says while the player has no console yet.
+townsfolk.NO_CONSOLE = {
+  "No console yet? Professor Cork is waiting for you in the museum. He has a gift for you!",
+  "You should go and see Professor Cork in the museum. I hear he's giving away a console!",
+  "Professor Cork was asking about you. You'll find him in the museum, next to the dealer.",
+  "Without a console, there's nothing to play! Go and see Professor Cork at the museum.",
 }
 
 townsfolk.KINDS = { "neverPlayed", "genre", "achievements", "forgotten", "storeTip" }
@@ -366,6 +413,9 @@ end
 -- `context` has state, catalog, timeline, today and random.
 function townsfolk.talk(villager, context)
   local state, random = context.state, context.random
+  if next(state.ownedConsoles) == nil then
+    return { text = pick(townsfolk.NO_CONSOLE, random) }
+  end
   local owned = townsfolk.ownedGames(context.catalog)
   local kind = villager.kind
   local game, text

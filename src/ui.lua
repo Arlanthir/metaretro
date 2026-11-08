@@ -8,6 +8,7 @@ ui.MARGIN = 24 -- content inset from the screen edge, inside the content panel's
 ui.HEADER_HEIGHT = 52 -- where content starts below the header bar
 ui.FOOTER_HEIGHT = 44
 ui.LINE = 24 -- spacing between lines of text
+ui.LIST_ROW = ui.LINE + 2 -- a list's row height
 
 ui.colors = {
   background = { 0.12, 0.14, 0.10 },
@@ -210,8 +211,15 @@ function ui.footer(hint)
 end
 
 -- A hint in a panel just big enough for it, centred on `centerX` (used over the town).
+-- A hint too wide for the screen has its last label cut short.
 function ui.hintPanel(hint, centerX, y)
   local entries = parseHint(hint)
+  local overflow = hintWidth(entries) + 40 - (ui.WIDTH - 16)
+  local last = entries[#entries]
+  if overflow > 0 and last then
+    local f = ui.fonts.small
+    last.label = ui.truncate(f, last.label, math.max(0, f:getWidth(last.label) - overflow))
+  end
   local width = hintWidth(entries) + 40
   ui.panel(math.floor(centerX - width / 2), y, width, 40)
   drawHint(entries, math.floor(centerX - width / 2) + 20, y + 20)
@@ -300,7 +308,7 @@ end
 -- and whether to mark the row with a trophy.
 -- Returns the scroll offset that keeps the cursor visible.
 function ui.list(items, cursor, scroll, x, y, width, height, label)
-  local rowHeight = ui.LINE + 2
+  local rowHeight = ui.LIST_ROW
   local visible = math.floor(height / rowHeight)
   scroll = math.max(math.min(scroll, cursor - 1), cursor - visible, 0)
   local f = ui.fonts.body

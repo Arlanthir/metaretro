@@ -71,3 +71,19 @@ describe("launcher.request", function()
     assert.equal("snes:./a\nrun 1\n", launcher.request(backend, { id = "snes:./a" }, { {} }))
   end)
 end)
+
+describe("launcher.parseResume", function()
+  local launcher = require("services.launcher")
+  local json = require("lib.json")
+
+  it("reads the game and where the player was", function()
+    local location = { x = 4, y = 9, facing = "down", building = "10,16", inside = { x = 3, y = 5, facing = "left" } }
+    assert.same({ game = "mame:./a", location = location },
+      launcher.parseResume(json.encode({ game = "mame:./a", location = location })))
+  end)
+
+  it("reads the old plain game id, without a location", function()
+    assert.same({ game = "snes:./a.sfc" }, launcher.parseResume("snes:./a.sfc"))
+    assert.same({ game = "snes:./a" }, launcher.parseResume(json.encode({ game = "snes:./a", location = "x" })))
+  end)
+end)

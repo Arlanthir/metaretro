@@ -10,6 +10,7 @@ local Walker = {}
 Walker.__index = Walker
 
 local STEPS_PER_SECOND = 6
+local RUN_SPEED = 1.8 -- how much faster the player goes while B is held
 -- Walking into a door is slower, while the screen fades out; coming back fades in.
 local DOOR_STEP_SPEED = 0.5
 local FADE_IN_SECONDS = 0.25
@@ -63,7 +64,8 @@ function Walker:updateWalking(dt)
   end
   local move = self.move
   if move then
-    move.t = move.t + dt * STEPS_PER_SECOND * (move.door and DOOR_STEP_SPEED or 1)
+    local speed = move.door and DOOR_STEP_SPEED or input.isDown("b") and RUN_SPEED or 1
+    move.t = move.t + dt * STEPS_PER_SECOND * speed
     if move.t < 1 then return end
     self.move = nil
     self.steps = self.steps + 1

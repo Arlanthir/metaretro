@@ -1,3 +1,7 @@
+-- The player's games, a tab per system: the consoles' games (from the console at home), or the
+-- arcade games (from the cabinet at home, see Collection.arcade). A opens a game's details, where it
+-- can be played.
+local arcade = require("core.arcade")
 local catalog = require("core.catalog")
 local scenes = require("core.scenes")
 local ui = require("ui")
@@ -6,25 +10,53 @@ local GameDetail = require("scenes.gamedetail")
 local Collection = {}
 Collection.__index = Collection
 
-function Collection.new(app)
-  return setmetatable({ app = app, tab = 1, cursor = 1, scroll = 0 }, Collection)
+-- `shelf(app)` returns { title, tabWord, tabs = { { name, games, total } }, owned, total } (see the
+-- two below); tabs only list systems with owned games.
+function Collection.new(app, shelf)
+  return setmetatable({ app = app, shelf = shelf or Collection.consoles, tab = 1, cursor = 1, scroll = 0 }, Collection)
+end
+
+function Collection.consoles(app)
+  local built = app.catalog
+  local tabs = {}
+  for _, system in ipairs(catalog.ownedSystems(built)) do
+    local games = built.bySystem[system.id]
+    table.insert(tabs, { name = system.name, games = games.owned, total = #games.owned + #games.locked })
+  end
+  local owned, total = catalog.progress(built)
+  return { title = "Home", tabWord = "Console", tabs = tabs, owned = owned, total = total }
+end
+
+-- The arcade games the player bought at the Arcade Club, by system.
+function Collection.arcade(app)
+  local tabs, owned, total = {}, 0, 0
+  for _, system in ipairs(app.backend.listSystems()) do
+    if arcade.SYSTEMS[system.id] then
+      local games = app.backend.listGames(system.id)
+      local mine = arcade.owned(games, app.state.owned)
+      if #mine > 0 then table.insert(tabs, { name = system.name, games = mine, total = #games }) end
+      owned, total = owned + #mine, total + #games
+    end
+  end
+  return { title = "Arcade cabinet", tabWord = "System", tabs = tabs, owned = owned, total = total }
 end
 
 function Collection:enter()
-  self.systems = catalog.ownedSystems(self.app.catalog)
-  self.tab = math.max(1, math.min(self.tab, #self.systems))
+  self.shelved = self.shelf(self.app)
+  self.tab = math.max(1, math.min(self.tab, #self.shelved.tabs))
 end
 
 Collection.resume = Collection.enter
 
 function Collection:games()
-  local system = self.systems[self.tab]
-  return system and self.app.catalog.bySystem[system.id].owned or {}
+  local tab = self.shelved.tabs[self.tab]
+  return tab and tab.games or {}
 end
 
 function Collection:changeTab(delta)
-  if #self.systems == 0 then return end
-  self.tab = (self.tab - 1 + delta) % #self.systems + 1
+  local count = #self.shelved.tabs
+  if count == 0 then return end
+  self.tab = (self.tab - 1 + delta) % count + 1
   self.cursor, self.scroll = 1, 0
 end
 
@@ -46,9 +78,11 @@ function Collection:action(name)
 end
 
 function Collection:draw()
-  ui.header("Home", self.app.state.wallet)
-  local system = self.systems[self.tab]
-  if not system then
+  local shelved = self.shelved
+  local tabs = shelved.tabs
+  ui.header(shelved.title, self.app.state.wallet)
+  local tab = tabs[self.tab]
+  if not tab then
     love.graphics.setFont(ui.fonts.body)
     ui.setColor("muted")
     love.graphics.printf("Your collection is empty. Visit a store in town!", 0, 220, ui.WIDTH, "center")
@@ -58,26 +92,24 @@ function Collection:draw()
 
   love.graphics.setFont(ui.fonts.body)
   ui.setColor("highlight")
-  love.graphics.printf(("<  %s  >"):format(system.name), 0, ui.HEADER_HEIGHT + 6, ui.WIDTH, "center")
+  love.graphics.printf(("<  %s  >"):format(tab.name), 0, ui.HEADER_HEIGHT + 6, ui.WIDTH, "center")
   ui.setColor("muted")
   love.graphics.setFont(ui.fonts.small)
-  local games = self:games()
-  local systemGames = self.app.catalog.bySystem[system.id]
-  local owned, total = catalog.progress(self.app.catalog)
-  love.graphics.printf(("Console %d/%d  ·  %d/%d owned  ·  %d/%d in all"):format(
-    self.tab, #self.systems, #games, #games + #systemGames.locked, owned, total), 0, ui.HEADER_HEIGHT + 32, ui.WIDTH, "center")
+  local games = tab.games
+  love.graphics.printf(("%s %d/%d  ·  %d/%d owned  ·  %d/%d in all"):format(shelved.tabWord,
+    self.tab, #tabs, #games, tab.total, shelved.owned, shelved.total), 0, ui.HEADER_HEIGHT + 32, ui.WIDTH, "center")
 
   local listTop = ui.HEADER_HEIGHT + 68
   local listWidth = 360
   self.scroll = ui.list(games, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, ui.HEIGHT - listTop - 60,
     function(game) return game.name, nil, game.cheevosId ~= nil end)
 
-  -- The first games of the neighbouring consoles are what L/R shows next.
+  -- The first games of the neighbouring tabs are what L/R shows next.
   local neighbours = {}
   for _, delta in ipairs({ -1, 1 }) do
-    local other = self.systems[(self.tab - 1 + delta) % #self.systems + 1]
-    if other ~= system then
-      for i = 1, 3 do table.insert(neighbours, self.app.catalog.bySystem[other.id].owned[i]) end
+    local other = tabs[(self.tab - 1 + delta) % #tabs + 1]
+    if other ~= tab then
+      for i = 1, 3 do table.insert(neighbours, other.games[i]) end
     end
   end
   ui.prefetchAround(games, self.cursor, neighbours)
@@ -88,7 +120,7 @@ function Collection:draw()
     ui.coverWithCaption(selected, coverX, listTop, ui.WIDTH - coverX - ui.MARGIN, 220)
   end
 
-  ui.footer("L/R: console   A: details   B: leave")
+  ui.footer(("L/R: %s   A: details   B: leave"):format(shelved.tabWord:lower()))
 end
 
 return Collection

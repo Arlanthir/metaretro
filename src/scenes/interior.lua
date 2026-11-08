@@ -7,8 +7,6 @@
 --   absent(piece)            not there right now (not drawn, and free to walk on)
 --   drawLive(piece, px, py)  draws a live piece (by default, as its furniture sprite)
 --   drawOnTop(camX, camY)    anything else to draw over the furniture
---   enterStorefront(door)    walking into a storefront (an S door, see world/interior.lua)
---   storefrontHint(door)     the hint while facing one
 -- People are { x, y, facing, look = { name, sprite } }; they stand still and face whoever talks to them.
 -- `place` names the building, for the hint at the door.
 local scenes = require("core.scenes")
@@ -33,7 +31,6 @@ local function render(map, live)
       local floor, wall = interior.floor(map, x, y), interior.wallPiece(map, x, y)
       if floor then art.floor(floor, x, y, px, py) end
       if wall then art.wall(wall, px, py) end
-      if interior.tile(map, x, y) == "S" then art.closedDoor(px, py) end
     end
   end
   for _, piece in ipairs(map.furniture) do
@@ -43,11 +40,22 @@ local function render(map, live)
   return canvas
 end
 
--- A new `class` scene in `map`, with the player at `spot` (the front door by default), fading in.
+-- A new `class` scene in `map`, with the player at `spot` (just inside the front door by default),
+-- fading in.
 function Interior.new(class, app, map, spot, facing)
   spot = spot or map.start
   return setmetatable({ app = app, map = map, x = spot.x, y = spot.y, facing = facing or "up", steps = 0,
     fadeIn = 1, people = {} }, class)
+end
+
+-- Puts the player at `at` ({ x, y, facing }), if they could stand there; otherwise they stay at the door.
+function Interior:placeAt(at)
+  local x, y = tonumber(at.x), tonumber(at.y)
+  if x and y and interior.isWalkable(self.map, x, y, function(piece) return self:absent(piece) end)
+    and not self:personAt(x, y) then
+    self.x, self.y = x, y
+    self.facing = Walker.DIRECTIONS[at.facing] and at.facing or self.facing
+  end
 end
 
 function Interior:interact() end
@@ -55,20 +63,6 @@ function Interior:hintFor() end
 function Interior:live() return false end
 function Interior:absent() return false end
 function Interior:drawOnTop() end
-function Interior:enterStorefront() end
-function Interior:storefrontHint() end
-
-function Interior:storefrontAt(x, y)
-  for _, door in ipairs(self.map.storefronts) do
-    if door.x == x and door.y == y then return door end
-  end
-end
-
--- The storefront the player faces and could walk into, if any.
-function Interior:facingStorefront()
-  local door = self:storefrontAt(self:facingTile())
-  return door and door.direction == self.facing and door or nil
-end
 
 function Interior:drawLive(piece, px, py)
   art.furniture(piece.kind, px, py)
@@ -101,11 +95,8 @@ end
 function Interior:step(direction)
   self.facing = direction
   local x, y = self:facingTile()
-  local storefront = self:facingStorefront()
   if self:facingExit() then
-    self:startStep("down", self.map.exit) -- back to town once the step ends
-  elseif storefront then
-    self:startStep(direction, storefront)
+    self:startStep("down", self.map.exit) -- back out once the step ends
   elseif interior.isWalkable(self.map, x, y, function(piece) return self:absent(piece) end)
     and not self:personAt(x, y) then
     self:startStep(direction)
@@ -115,21 +106,10 @@ end
 function Interior:update(dt)
   self:updateToast(dt)
   local doorStep, direction = self:updateWalking(dt)
-  if doorStep and doorStep.door == self.map.exit then
+  if doorStep then
     scenes.pop()
-  elseif doorStep then
-    self.inside = true
-    self:enterStorefront(doorStep.door)
   elseif direction then
     self:step(direction)
-  end
-end
-
--- Back from a storefront: fade in.
-function Interior:resume()
-  if self.inside then
-    self.inside = false
-    self:fadeInNow()
   end
 end
 
@@ -170,8 +150,7 @@ function Interior:draw()
   self:drawFade()
 
   self:drawStatus()
-  local storefront = self:facingStorefront()
-  local hint = storefront and self:storefrontHint(storefront) or self:hintFor(self:facingThings())
+  local hint = self:hintFor(self:facingThings())
     or self:facingExit() and ("Down: leave %s"):format(self.place)
     or "Start: quit"
   ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)

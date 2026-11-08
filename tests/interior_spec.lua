@@ -27,6 +27,11 @@ local function reachable(m, blocked)
   return seen
 end
 
+-- A wall tile's pieces, quarter by quarter (see interior.wallPiece).
+local function quarters(m, x, y)
+  return table.concat(interior.wallPiece(m, x, y), " ")
+end
+
 local function nextToReachable(piece, seen)
   for y = piece.y - 1, piece.y + piece.height do
     for x = piece.x - 1, piece.x + piece.width do
@@ -53,7 +58,7 @@ describe("home", function()
   end)
 
   it("has the open space and bedroom furniture", function()
-    for _, kind in ipairs({ "tv", "console", "sofa", "counter", "bed", "desk", "chair" }) do
+    for _, kind in ipairs({ "tv", "console", "loveseat", "counter", "bed", "desk", "chair", "cabinet" }) do
       assert.truthy(find(kind), kind)
     end
     local tv = find("tv")
@@ -105,12 +110,14 @@ describe("home", function()
     local rooms = { "#####", "#...#", "_...#", "#...#", "##E##" }
     local small = interior.parse({ rooms = rooms, furniture = { ".....", ".....", ".....", ".....", "....." } })
     local expected = {
-      { 1, 1, "topLeft" }, { 3, 1, "top" }, { 5, 1, "topRight" },
-      { 1, 2, "leftBeforeGap" }, { 1, 4, "leftAfterGap" }, { 5, 3, "right" },
-      { 1, 5, "bottomLeft" }, { 2, 5, "bottomBeforeGap" }, { 4, 5, "bottomAfterGap" }, { 5, 5, "bottomRight" },
+      { 1, 1, "topLeft topLeft topLeft topLeft" }, { 3, 1, "top top top top" },
+      { 5, 1, "topRight topRight topRight topRight" },
+      { 1, 2, "left left leftBeforeGap leftBeforeGap" }, { 1, 4, "leftAfterGap leftAfterGap left left" },
+      { 5, 3, "right right right right" }, { 1, 5, "bottomLeft bottomLeft bottomLeft bottomLeft" },
+      { 2, 5, "bottom bottomBeforeGap bottom bottomBeforeGap" }, { 4, 5, "bottomAfterGap bottom bottomAfterGap bottom" },
     }
     for _, case in ipairs(expected) do
-      assert.equal(case[3], interior.wallPiece(small, case[1], case[2]))
+      assert.equal(case[3], quarters(small, case[1], case[2]), case[1] .. "," .. case[2])
     end
     assert.is_nil(interior.wallPiece(small, 3, 3))
   end)
@@ -119,11 +126,12 @@ describe("home", function()
     local rooms = { "#####", "#.#.#", "#.#.#", "#._.#", "#.#.#", "#E###" }
     local small = interior.parse({ rooms = rooms, furniture = { ".....", ".....", ".....", ".....", ".....", "....." } })
     local expected = {
-      { 3, 1, "topJoin" }, { 3, 2, "between" }, { 3, 3, "betweenBeforeGap" }, { 3, 5, "betweenAfterGap" },
-      { 3, 6, "bottomJoin" }, { 1, 2, "left" }, { 5, 2, "right" },
+      { 3, 1, "top top topRight topLeft" }, { 3, 2, "right left right left" },
+      { 3, 3, "right left rightBeforeGap leftBeforeGap" }, { 3, 5, "rightAfterGap leftAfterGap right left" },
+      { 3, 6, "bottomRight bottomLeft bottom bottom" },
     }
     for _, case in ipairs(expected) do
-      assert.equal(case[3], interior.wallPiece(small, case[1], case[2]))
+      assert.equal(case[3], quarters(small, case[1], case[2]), case[1] .. "," .. case[2])
     end
   end)
 
@@ -133,6 +141,49 @@ describe("home", function()
     local tv = find("tv")
     assert.equal("wood", interior.floor(map, tv.x, tv.y))
     assert.is_nil(interior.floor(map, 0, 0))
+  end)
+end)
+
+describe("walls between rooms above and below each other", function()
+  it("joins the wall between them to the walls at its ends", function()
+    local rooms = { "######", "#.#..#", "#.####", "#.#..#", "##E###" }
+    local small = interior.parse({ rooms = rooms, furniture = { "......", "......", "......", "......", "......" } })
+    assert.equal("bottom bottom top top", quarters(small, 4, 3))
+    assert.equal("right bottomLeft right topLeft", quarters(small, 3, 3))
+    assert.equal("bottomRight right topRight right", quarters(small, 6, 3))
+  end)
+end)
+
+describe("home's living room", function()
+  it("keeps the console under the TV, between it and the loveseat", function()
+    local tv, console, seat = find("tv"), find("console"), find("loveseat")
+    assert.is_true(console.x >= tv.x and console.x < tv.x + tv.width)
+    assert.equal(tv.x, seat.x)
+    assert.is_true(tv.y < console.y and console.y < seat.y)
+  end)
+
+  it("has an office below the bedroom, with a wide desk and chair in its top-left corner and the cabinet by its right wall", function()
+    local bed, desk, cabinet = find("bed"), find("wideDesk"), find("cabinet")
+    assert.equal(2, desk.width)
+    assert.is_true(desk.y > bed.y + bed.height)
+    assert.equal("#", interior.tile(map, desk.x - 1, desk.y))
+    assert.equal("#", interior.tile(map, desk.x, desk.y - 1))
+    assert.equal("chair", interior.furnitureAt(map, desk.x, desk.y + 1).kind)
+    assert.is_true(cabinet.x > desk.x and cabinet.y == desk.y)
+    assert.equal("#", interior.tile(map, cabinet.x + cabinet.width, cabinet.y))
+    assert.equal("#", interior.tile(map, cabinet.x + cabinet.width, cabinet.y + cabinet.height - 1))
+  end)
+
+  it("keeps the bedroom shorter than the living room", function()
+    local bed = find("bed")
+    local function rows(x)
+      local count = 0
+      for y = 1, map.height do
+        if interior.tile(map, x, y) == "." then count = count + 1 end
+      end
+      return count
+    end
+    assert.is_true(rows(bed.x) < rows(find("console").x))
   end)
 end)
 
@@ -201,9 +252,10 @@ describe("store", function()
   local blocked = { [clerk.x .. "," .. clerk.y] = true }
 
   it("has the clerk standing behind the counter", function()
-    assert.truthy(clerk)
-    local counter = interior.furnitureAt(store, clerk.x, clerk.y + 1)
-    assert.equal("shopCounter", counter and counter.kind)
+    local counter, facing = interior.counter(store)
+    assert.same({ x = clerk.x, y = clerk.y + 1 }, counter)
+    assert.equal("down", facing)
+    assert.equal("shopCounter", interior.furnitureAt(store, counter.x, counter.y).kind)
   end)
 
   it("lets the player reach the counter in front of the clerk, the clerk and every piece", function()
@@ -217,14 +269,28 @@ end)
 describe("mall layout", function()
   local mall = require("world.mall")
 
-  it("has a storefront per store, alternating walls, each entered from the corridor", function()
+  -- Every store's clerk, with the counter they serve from and the tile in front of it.
+  local function clerks(map)
+    local list = {}
+    for _, spot in ipairs(map.allSpots.clerk or {}) do
+      local counter, facing = interior.counter(map, spot)
+      local front = { x = counter.x, y = counter.y + (facing == "down" and 1 or -1) }
+      table.insert(list, { spot = spot, counter = counter, facing = facing, front = front })
+    end
+    return list
+  end
+
+  it("has a clerk per store, behind a counter the player can reach from the corridor", function()
     for _, count in ipairs({ 0, 1, 2, 5, 17, 40 }) do
       local map = interior.parse(mall.layout(count))
-      assert.equal(count, #map.storefronts, count .. " stores")
-      local seen = reachable(map)
-      for _, door in ipairs(map.storefronts) do
-        local fromY = door.direction == "up" and door.y + 1 or door.y - 1
-        assert.is_true(seen[door.x .. "," .. fromY] == true, "storefront at " .. door.x)
+      local list = clerks(map)
+      assert.equal(count, #list, count .. " stores")
+      local blocked = {}
+      for _, clerk in ipairs(list) do blocked[clerk.spot.x .. "," .. clerk.spot.y] = true end
+      local seen = reachable(map, blocked)
+      for _, clerk in ipairs(list) do
+        assert.equal("shopCounter", interior.furnitureAt(map, clerk.counter.x, clerk.counter.y).kind)
+        assert.is_true(seen[clerk.front.x .. "," .. clerk.front.y] == true, count .. " stores, clerk at " .. clerk.spot.x)
       end
       for y = 1, map.height do
         for x = 1, map.width do
@@ -234,15 +300,16 @@ describe("mall layout", function()
     end
   end)
 
-  it("puts the first half of the stores along the top wall", function()
+  it("puts the first half of the stores along the top side, open towards the corridor", function()
     local map = interior.parse(mall.layout(5))
-    local directions = {}
-    for _, door in ipairs(map.storefronts) do table.insert(directions, door.direction) end
-    assert.same({ "up", "up", "up", "down", "down" }, directions)
+    local facings = {}
+    for _, clerk in ipairs(clerks(map)) do table.insert(facings, clerk.facing) end
+    assert.same({ "down", "down", "down", "up", "up" }, facings)
   end)
 
-  it("grows with the stores", function()
-    local small, big = interior.parse(mall.layout(2)), interior.parse(mall.layout(30))
+  it("fits on screen with a few stores, and grows with them", function()
+    local small, big = interior.parse(mall.layout(5)), interior.parse(mall.layout(30))
+    assert.is_true(small.width * 32 <= 640 and small.height * 32 <= 432)
     assert.is_true(big.width > small.width)
   end)
 end)
@@ -273,19 +340,33 @@ end)
 describe("mall ads", function()
   local mall = require("world.mall")
 
-  it("puts up to three ad stands, each beside a top-wall store", function()
+  it("hangs a poster on the corridor's top wall after each top store, between the stores' openings", function()
     for _, count in ipairs({ 1, 2, 4, 9, 30 }) do
       local layout = mall.layout(count)
       local map = interior.parse(layout)
-      local stands = 0
-      for _, piece in ipairs(map.furniture) do
-        if piece.kind == "adStand" then stands = stands + 1 end
+      assert.is_true(#layout.ads >= 1)
+      for i, ad in ipairs(layout.ads) do
+        assert.equal(i, ad.store)
+        assert.is_true(ad.store <= math.ceil(count / 2))
+        for x = ad.tiles[1], ad.tiles[2] do
+          assert.equal("#", interior.tile(map, x, mall.TOP_FRONT), count .. " stores, tile " .. x)
+          assert.equal(",", interior.tile(map, x, mall.TOP_FRONT + 1))
+        end
       end
-      assert.equal(#layout.ads, stands, count .. " stores")
-      assert.is_true(stands <= mall.MAX_ADS)
-      for _, index in ipairs(layout.ads) do assert.is_true(index <= math.ceil(count / 2)) end
     end
-    assert.is_true(#mall.layout(9).ads >= 2)
+  end)
+end)
+
+describe("arcade club clerk", function()
+  it("stands behind the counter, which the player can reach", function()
+    local club = interior.parse(require("world.arcademap"))
+    local clerk = club.spots.clerk
+    local counter, facing = interior.counter(club)
+    assert.same({ x = clerk.x, y = clerk.y + 1 }, counter)
+    assert.equal("down", facing)
+    assert.equal("shopCounter", interior.furnitureAt(club, counter.x, counter.y).kind)
+    local seen = reachable(club, { [clerk.x .. "," .. clerk.y] = true })
+    assert.is_true(seen[counter.x .. "," .. (counter.y + 1)] == true)
   end)
 end)
 
@@ -304,5 +385,28 @@ describe("museum entrance", function()
       assert.is_true(interior.isWalkable(museum, museum.start.x, y), "tile " .. museum.start.x .. "," .. y)
     end
     assert.equal(museum.start.x, professor.x)
+  end)
+end)
+
+describe("house", function()
+  local layout = require("world.housemap")
+  local house = interior.parse(layout)
+
+  it("has a resident who can be reached from the front door", function()
+    for y, row in ipairs(layout.rooms) do
+      assert.equal(#row, #layout.furniture[y], "row " .. y)
+    end
+    local resident = house.spots.resident
+    assert.truthy(resident)
+    assert.is_true(interior.isWalkable(house, resident.x, resident.y))
+    local seen = reachable(house, { [resident.x .. "," .. resident.y] = true })
+    local around = 0
+    for _, d in ipairs({ { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 } }) do
+      if seen[(resident.x + d[1]) .. "," .. (resident.y + d[2])] then around = around + 1 end
+    end
+    assert.is_true(around > 0)
+    for _, piece in ipairs(house.furniture) do
+      assert.is_true(nextToReachable(piece, seen), piece.kind)
+    end
   end)
 end)

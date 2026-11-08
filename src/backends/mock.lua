@@ -6,6 +6,7 @@ local SYSTEMS = {
   { id = "gba", name = "Game Boy Advance" },
   { id = "megadrive", name = "Mega Drive" },
   { id = "psx", name = "PlayStation" },
+  { id = "fbneo", name = "FinalBurn Neo" }, -- arcade games, for the Arcade Club
 }
 
 local TITLES = {
@@ -24,7 +25,7 @@ local function makeGames(system, index)
       id = catalog.gameId(system.id, path),
       system = system.id,
       path = path,
-      name = ("%s %s"):format(title, ({ "", "II", "III", "DX", "Advance" })[index]):gsub("%s+$", ""),
+      name = ("%s %s"):format(title, ({ "", "II", "III", "DX", "Advance", "Arcade" })[index]):gsub("%s+$", ""),
       desc = "A mock game used while developing Metaretro on the desktop.",
       genre = GENRES[(i + index) % #GENRES + 1],
       releasedate = ("19%02d0101T000000"):format(85 + (i + index * 2) % 15),

@@ -9,10 +9,34 @@ local DIR = "assets/ninja-adventure/"
 
 local images, quads = {}, {}
 
--- Sheets from the pack, or "metaretro/..." for Metaretro's own art in assets/metaretro.
+-- The desk (TilesetElement's 10, 0) with its papers cleared off: an outline across the top, then
+-- the frame, and plain wood inside it.
+local function emptyDesk()
+  local SIZE = 16
+  local sheet = love.image.newImageData(DIR .. "TilesetElement.png")
+  local desk = love.image.newImageData(SIZE, SIZE)
+  desk:paste(sheet, 0, 0, 10 * SIZE, 0, SIZE, SIZE)
+  local outline, frame, wood = { desk:getPixel(1, 1) }, { desk:getPixel(2, 2) }, { desk:getPixel(3, 7) }
+  local function fill(x1, y1, x2, y2, color)
+    for y = y1, y2 do
+      for x = x1, x2 do desk:setPixel(x, y, unpack(color)) end
+    end
+  end
+  fill(0, 0, SIZE - 1, 0, { 0, 0, 0, 0 })
+  fill(1, 1, 14, 1, outline)
+  fill(2, 2, 13, 2, frame)
+  fill(3, 3, 12, 6, wood)
+  return love.graphics.newImage(desk)
+end
+local GENERATED = { EmptyDesk = emptyDesk }
+
+-- Sheets from the pack, "metaretro/..." for Metaretro's own art in assets/metaretro, or one of the
+-- GENERATED ones.
 local function image(name)
-  local path = name:match("^metaretro/") and "assets/" .. name or DIR .. name
-  images[name] = images[name] or love.graphics.newImage(path .. ".png")
+  if not images[name] then
+    local path = name:match("^metaretro/") and "assets/" .. name or DIR .. name
+    images[name] = GENERATED[name] and GENERATED[name]() or love.graphics.newImage(path .. ".png")
+  end
   return images[name]
 end
 
@@ -60,8 +84,9 @@ local HOUSES = {
   museum = { 25, 14, 4, 5 },
   mall = { 12, 0, 4, 3, columns = { 0, 1, 2, 2, 2, 3 } },
   arcade = { 23, 0, 3, 3 },
+  grandma = { 29, 0, 4, 4 },
 }
--- Villagers' houses take these looks in turn.
+-- Residents' houses take these looks in turn.
 local HOMES = { { 4, 0, 4, 3 }, { 19, 19, 3, 3 }, { 8, 0, 4, 3 }, { 26, 0, 3, 3 } }
 
 local function look(building)
@@ -171,22 +196,24 @@ function art.building(building, label, x, y, width, font)
   if label then art.sign(label, x + art.buildingWidth(building) * art.TILE / 2, y + 6, font) end
 end
 
--- An ad stand in the mall (1x2 tiles at px, py): a framed board on a post, showing `image` (a game's
--- box art; nil while it loads or when there's none).
-function art.adStand(px, py, image)
-  love.graphics.setColor(0.36, 0.22, 0.13)
-  love.graphics.rectangle("fill", px + 14, py + 40, 4, 22)
-  love.graphics.rectangle("fill", px + 8, py + 60, 16, 4, 1)
-  love.graphics.setColor(0.27, 0.16, 0.10)
-  love.graphics.rectangle("fill", px + 1, py + 1, 30, 42, 3)
-  love.graphics.setColor(0.98, 0.91, 0.74)
-  love.graphics.rectangle("fill", px + 3, py + 3, 26, 38, 2)
-  local x, y, w, h = px + 5, py + 5, 22, 34
+-- A poster hanging on the mall's top wall, its bottom edge at `bottom` and centered on `centerX`:
+-- `image` (a game's box art, nil while it loads or when there's none) in a wooden frame.
+local POSTER_W, POSTER_H = 56, 84 -- the most the art can take up: on two tiles of wall
+
+function art.poster(centerX, bottom, image)
+  local w, h = 44, 60
   if image then
-    local scale = math.min(w / image:getWidth(), h / image:getHeight())
+    local scale = math.min(POSTER_W / image:getWidth(), POSTER_H / image:getHeight())
+    w, h = math.floor(image:getWidth() * scale), math.floor(image:getHeight() * scale)
+  end
+  local x, y = math.floor(centerX - w / 2), bottom - 4 - h
+  love.graphics.setColor(0, 0, 0, 0.25)
+  love.graphics.rectangle("fill", x - 2, y + 2, w + 8, h + 6, 3)
+  love.graphics.setColor(0.27, 0.16, 0.10)
+  love.graphics.rectangle("fill", x - 4, y - 4, w + 8, h + 8, 3)
+  if image then
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(image, math.floor(x + (w - image:getWidth() * scale) / 2),
-      math.floor(y + (h - image:getHeight() * scale) / 2), 0, scale, scale)
+    love.graphics.draw(image, x, y, 0, w / image:getWidth(), h / image:getHeight())
   else
     love.graphics.setColor(0.13, 0.10, 0.08)
     love.graphics.rectangle("fill", x, y, w, h)
@@ -250,25 +277,21 @@ function art.villager(villager, x, y, facing, frame)
   art.character("villagers/" .. villager.sprite, x, y, facing, frame or 0)
 end
 
--- Inside Home (see world/home.lua). Pieces of wall by home.wallPiece's names, from TilesetWallSimple.
+-- Inside buildings (see world/interior.lua). Pieces of wall by interior.wallPiece's names, from TilesetWallSimple.
 local WALLS = {
   topLeft = { 0, 0 }, top = { 3, 0 }, topBeforeGap = { 1, 0 }, topAfterGap = { 2, 0 }, topRight = { 4, 0 },
   left = { 0, 1 }, leftBeforeGap = { 0, 2 }, leftAfterGap = { 0, 3 },
   right = { 4, 1 }, rightBeforeGap = { 4, 2 }, rightAfterGap = { 4, 3 },
   bottomLeft = { 0, 4 }, bottom = { 3, 4 }, bottomBeforeGap = { 1, 4 }, bottomAfterGap = { 2, 4 }, bottomRight = { 4, 4 },
-  -- A wall between two rooms is the left half of one piece next to the right half of another.
-  -- Where it meets an outer wall, that wall's straight piece covers the outer half (`top` or `bottom`).
-  between = { left = "right", right = "left" },
-  betweenBeforeGap = { left = "rightBeforeGap", right = "leftBeforeGap" },
-  betweenAfterGap = { left = "rightAfterGap", right = "leftAfterGap" },
-  topJoin = { left = "topRight", right = "topLeft", top = "top" },
-  bottomJoin = { left = "bottomRight", right = "bottomLeft", bottom = "bottom" },
 }
 -- Floors repeat a `size` x `size` block of tiles from TilesetInteriorFloor, starting at `column, row`.
 local FLOORS = { wood = { column = 11, row = 0, size = 3 }, kitchen = { column = 1, row = 1, size = 1 } }
 -- Sheet, column, row, and size in tiles (1x1 when left out). `on` lists things standing on the
 -- piece, as sheet, column, row and pixel offset. A one-tile sprite drawn wider has `widen`: the
--- source pixel columns (first, last + 1) repeated between its halves.
+-- source pixel columns (first, last + 1) repeated between its halves. `columns` draws only some of
+-- a sprite's tile columns, side by side (the loveseat is the sofa without its middle). `closeRight`
+-- covers the sprite's last pixel columns with its first ones, mirrored: the shop counter is cut from
+-- a longer one, open on the right.
 local FURNITURE = {
   counter = { "TilesetHouse", 17, 18, 2, 1, on = {
     { "TilesetElement", 0, 10, 2, -10 }, { "TilesetElement", 1, 10, art.TILE + 2, -6 },
@@ -279,17 +302,19 @@ local FURNITURE = {
   tv = { "metaretro/Tv", 0, 0, 2, 2 },
   console = { "metaretro/Consoles", 0, 0 },
   sofa = { "metaretro/Sofa", 0, 0, 3, 1 },
+  loveseat = { "metaretro/Sofa", 0, 0, columns = { 0, 2 } },
   bookshelf = { "TilesetElement", 8, 7, 2, 2 },
   plant = { "TilesetElement", 0, 7, 1, 2 },
   bed = { "TilesetBed", 7, 3, 2, 3 },
   desk = { "TilesetElement", 10, 0 },
+  wideDesk = { "EmptyDesk", 0, 0, 2, 1, widen = { 7, 9 } },
   chair = { "TilesetElement", 11, 0 },
   dresser = { "TilesetElement", 6, 7, 2, 2 },
   displayTable = { "TilesetElement", 2, 10, 3, 1 },
   orbStatue = { "TilesetHouse", 3, 15, 2, 2 },
   frogStatue = { "TilesetHouse", 3, 17, 2, 2 },
   pillar = { "TilesetHouse", 0, 15, 1, 3 },
-  shopCounter = { "TilesetHouse", 17, 18, 2, 1 },
+  shopCounter = { "TilesetHouse", 17, 18, 2, 1, closeRight = 4 },
 }
 art.OUTSIDE_COLOR = { 0.08, 0.11, 0.11 } -- the black around the walls
 
@@ -299,19 +324,30 @@ function art.floor(kind, x, y, px, py)
   sprite("TilesetInteriorFloor", floor.column + x % floor.size, floor.row + (y + 1) % floor.size, px, py)
 end
 
-function art.wall(piece, px, py)
-  local wall = WALLS[piece]
-  if wall.left then
-    local left, right, half = WALLS[wall.left], WALLS[wall.right], SOURCE / 2
-    region("TilesetWallSimple", left[1] * SOURCE, left[2] * SOURCE, half, SOURCE, px, py)
-    region("TilesetWallSimple", right[1] * SOURCE + half, right[2] * SOURCE, half, SOURCE, px + art.TILE / 2, py)
-    local top, bottom = WALLS[wall.top], WALLS[wall.bottom]
-    if top then region("TilesetWallSimple", top[1] * SOURCE, top[2] * SOURCE, SOURCE, half, px, py) end
-    if bottom then
-      region("TilesetWallSimple", bottom[1] * SOURCE, bottom[2] * SOURCE + half, SOURCE, half, px, py + art.TILE / 2)
+local WALL_TOP = { 230 / 255, 172 / 255, 133 / 255 } -- the plain top of a wall, inside thick ones
+local WALL_EDGE = 3 -- source pixels of outside along a wall's outer edge
+
+-- A wall tile from its four quarters' pieces (see interior.wallPiece).
+function art.wall(quarters, px, py)
+  local half = SOURCE / 2
+  for i, name in ipairs(quarters) do
+    local dx, dy = (i - 1) % 2 * half, i > 2 and half or 0
+    if name == "fill" or name == "notch" then
+      love.graphics.setColor(WALL_TOP)
+      love.graphics.rectangle("fill", px + dx * SCALE, py + dy * SCALE, half * SCALE, half * SCALE)
+      if name == "notch" then
+        -- The outside's edge, in the tile's own corner.
+        local edge = WALL_EDGE * SCALE
+        love.graphics.setColor(art.OUTSIDE_COLOR)
+        love.graphics.rectangle("fill", px + (dx > 0 and art.TILE - edge or 0), py + (dy > 0 and art.TILE - edge or 0),
+          edge, edge)
+      end
+      love.graphics.setColor(1, 1, 1)
+    else
+      local piece = WALLS[name]
+      region("TilesetWallSimple", piece[1] * SOURCE + dx, piece[2] * SOURCE + dy, half, half,
+        px + dx * SCALE, py + dy * SCALE)
     end
-  else
-    sprite("TilesetWallSimple", wall[1], wall[2], px, py)
   end
 end
 
@@ -328,8 +364,19 @@ function art.furniture(kind, px, py)
   local piece = FURNITURE[kind]
   if piece.widen then
     widened(piece[1], piece[2], piece[3], px, py, piece[4], piece.widen[1], piece.widen[2])
+  elseif piece.columns then
+    for i, column in ipairs(piece.columns) do
+      sprite(piece[1], piece[2] + column, piece[3], px + (i - 1) * art.TILE, py)
+    end
   else
     sprite(piece[1], piece[2], piece[3], px, py, piece[4], piece[5])
+  end
+  if piece.closeRight then
+    local left, top, width = piece[2] * SOURCE, piece[3] * SOURCE, piece.closeRight
+    local key = table.concat({ piece[1], left, top, width, "edge" }, ",")
+    local img = image(piece[1])
+    quads[key] = quads[key] or love.graphics.newQuad(left, top, width, (piece[5] or 1) * SOURCE, img:getDimensions())
+    love.graphics.draw(img, quads[key], px + (piece[4] or 1) * art.TILE, py, 0, -SCALE, SCALE)
   end
   for _, item in ipairs(piece.on or {}) do
     sprite(item[1], item[2], item[3], px + item[4], py + item[5])

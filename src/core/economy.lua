@@ -3,7 +3,7 @@ local launchTitles = require("core.launchtitles")
 
 local economy = {}
 
-economy.STARTER_WALLET = 1000
+economy.STARTER_WALLET = 100
 economy.STARTER_GAMES = 3
 economy.COINS_PER_MINUTE = 2
 economy.SESSION_CAP_MINUTES = 120
@@ -30,6 +30,22 @@ function economy.price(game)
     base = base * (0.75 + math.max(0, math.min(1, rating)) * 0.5)
   end
   return roundTo(base, 5)
+end
+
+-- Granny Rose buys games back for half their price.
+function economy.sellPrice(game)
+  return math.floor(economy.price(game) / 2)
+end
+
+-- Sells an owned game back; returns true and the coins paid.
+function economy.sell(state, game)
+  if not state.owned[game.id] then
+    return false, "not owned"
+  end
+  local coins = economy.sellPrice(game)
+  state.owned[game.id] = nil
+  state.wallet = state.wallet + coins
+  return true, coins
 end
 
 function economy.playEarnings(seconds)

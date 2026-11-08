@@ -1,7 +1,7 @@
 -- Town map logic. Legend for the rows in world/townmap.lua:
 --   .  grass        =  path        T  tree        ~  water        @  player start (path)
 --   B  building     H  home door   D  console dealer door   M  game museum door   L  mall door
---   A  arcade club door   V  a villager's house door (one per villager in town today)
+--   A  arcade club door   V  a resident's house door   G  Granny Rose's house door
 --   $  signpost (readable)   %  crate   &  barrel   #  billboard (4x3 block of #)
 -- Every door sits on the bottom row of its building (a block of B, 4 wide and 3 tall, or taller for the
 -- museum), where the building's sprite draws its doorway: one tile from the left edge.
@@ -11,7 +11,8 @@ town.BUILDING_WIDTH = 4
 town.BILLBOARD_WIDTH, town.BILLBOARD_HEIGHT = 4, 3
 
 local WALKABLE = { ["."] = true, ["="] = true, ["@"] = true }
-local FIXED = { H = "home", D = "dealer", M = "museum", L = "mall", A = "arcade", V = "house" }
+local FIXED = { H = "home", D = "dealer", M = "museum", L = "mall", A = "arcade", V = "house",
+  G = "grandma" }
 local PROPS = { ["$"] = "sign", ["%"] = "crate", ["&"] = "barrel" }
 
 -- A door at (x, y), with its building's left edge and top: how far the "B" tiles reach left of it
@@ -80,8 +81,9 @@ function town.footprint(door)
   return door.left, door.top
 end
 
--- Every building on the map: home, museum, dealer, mall, arcade club and the villagers' houses (the
--- stores are inside the mall). Houses are numbered in reading order, for their look and owner.
+-- Every building on the map: home, museum, dealer, mall, arcade club, Granny Rose's house and the
+-- residents' houses (the stores are inside the mall). Houses are numbered in reading order, for their
+-- look and resident.
 function town.layout(map)
   local buildings, houses = {}, 0
   for _, building in ipairs(map.fixed) do

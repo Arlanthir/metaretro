@@ -3,11 +3,11 @@ local town = require("world.town")
 local map = town.parse(require("world.townmap"))
 
 describe("town map", function()
-  it("has a start, the town's buildings and five villagers' houses", function()
+  it("has a start, the town's buildings, Granny Rose's house and four residents' houses", function()
     assert.is_truthy(map.start)
     local kinds = {}
     for _, building in ipairs(map.fixed) do table.insert(kinds, building.kind) end
-    assert.same({ "home", "dealer", "museum", "mall", "arcade", "house", "house", "house", "house", "house" }, kinds)
+    assert.same({ "house", "dealer", "museum", "mall", "arcade", "grandma", "home", "house", "house", "house" }, kinds)
     assert.is_true(town.isWalkable(map, map.start.x, map.start.y))
   end)
 
@@ -75,17 +75,34 @@ describe("town.layout", function()
   it("has the town's fixed buildings; stores are in the mall", function()
     local kinds = {}
     for _, building in ipairs(town.layout(map)) do table.insert(kinds, building.kind) end
-    assert.same({ "home", "dealer", "museum", "mall", "arcade", "house", "house", "house", "house", "house" }, kinds)
+    assert.same({ "house", "dealer", "museum", "mall", "arcade", "grandma", "home", "house", "house", "house" }, kinds)
   end)
 end)
 
-describe("villagers' houses", function()
-  it("numbers the houses, one per villager in town each day", function()
+describe("houses", function()
+  local function find(kind)
+    for _, building in ipairs(town.layout(map)) do
+      if building.kind == kind then return building end
+    end
+  end
+
+  it("numbers the houses, one per resident", function()
     local indexes = {}
     for _, building in ipairs(town.layout(map)) do
       if building.kind == "house" then table.insert(indexes, building.index) end
     end
-    assert.same({ 1, 2, 3, 4, 5 }, indexes)
-    assert.equal(#require("core.townsfolk").KINDS, #indexes)
+    assert.same({ 1, 2, 3, 4 }, indexes)
+    assert.equal(#require("core.townsfolk").RESIDENTS, #indexes)
+  end)
+
+  it("puts Granny Rose's house just left of Home, on the street south of the plaza", function()
+    local home, grandma = find("home"), find("grandma")
+    assert.equal(home.door.y, grandma.door.y)
+    assert.is_true(grandma.door.x < home.door.x)
+    for _, building in ipairs(town.layout(map)) do
+      local x = building.door.x
+      assert.is_false(building.door.y == home.door.y and x > grandma.door.x and x < home.door.x, building.kind)
+    end
+    assert.is_true(home.door.y > map.start.y)
   end)
 end)

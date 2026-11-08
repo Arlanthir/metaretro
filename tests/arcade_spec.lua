@@ -40,4 +40,45 @@ describe("arcade", function()
   it("leaves cabinets empty when the library has few arcade games", function()
     assert.equal(1, #arcade.cabinets({ { id = "mame:1", system = "mame" }, { id = "nes:1", system = "nes" } }, 1))
   end)
+
+  it("gives a cabinet whose game is owned the week's next game, leaving the others alone", function()
+    local before = arcade.cabinets(games(), 2860)
+    local owned = { [before[2].id] = true }
+    local after = arcade.cabinets(games(), 2860, owned)
+    assert.equal(before[1].id, after[1].id)
+    assert.equal(before[3].id, after[3].id)
+    assert.equal(before[4].id, after[4].id)
+    assert.is_truthy(after[2])
+    for _, game in ipairs(before) do assert.are_not.equal(game.id, after[2].id) end
+    assert.same(after, arcade.cabinets(games(), 2860, owned))
+  end)
+
+  it("leaves a cabinet empty once every arcade game is owned", function()
+    local owned = {}
+    for i = 1, 10 do owned["fbneo:" .. i] = true end
+    assert.is_nil(next(arcade.cabinets(games(), 2860, owned)))
+  end)
+
+  it("sells a cabinet's game, which then adorns the player's cabinet", function()
+    local state = require("core.save").defaults()
+    local game = { id = "fbneo:1", system = "fbneo" }
+    assert.is_false(arcade.ownsAny(state.owned))
+    state.wallet = arcade.GAME_PRICE + 5
+    assert.is_true(arcade.buy(state, game))
+    assert.equal(5, state.wallet)
+    assert.equal("fbneo:1", state.cabinetGame)
+    assert.is_true(arcade.ownsAny(state.owned))
+    assert.same({ false, "already owned" }, { arcade.buy(state, game) })
+    assert.same({ false, "not enough coins" }, { arcade.buy(state, { id = "fbneo:2", system = "fbneo" }) })
+  end)
+
+  it("lists the owned arcade games by name", function()
+    local list = { { id = "mame:b", system = "mame", name = "beta" }, { id = "mame:a", system = "mame", name = "Alpha" },
+      { id = "nes:a", system = "nes", name = "Aardvark" }, { id = "mame:c", system = "mame", name = "Gamma" } }
+    local owned = { ["mame:b"] = true, ["mame:a"] = true, ["nes:a"] = true }
+    local names = {}
+    for _, game in ipairs(arcade.owned(list, owned)) do table.insert(names, game.name) end
+    assert.same({ "Alpha", "beta" }, names)
+    assert.is_false(arcade.ownsAny({ ["nes:./a"] = true }))
+  end)
 end)

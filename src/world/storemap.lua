@@ -1,5 +1,5 @@
--- Inside a store (and the console dealer): shelves of games, and the clerk behind the counter.
--- See world/interior.lua for the legend.
+-- Inside the console dealer: shelves, and the clerk behind the counter. See world/interior.lua for
+-- the legend.
 return {
   rooms = {
     "##########",

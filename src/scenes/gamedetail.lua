@@ -1,6 +1,5 @@
 local consoles = require("core.consoles")
 local scenes = require("core.scenes")
-local launcher = require("services.launcher")
 local ui = require("ui")
 
 local GameDetail = {}
@@ -10,7 +9,7 @@ GameDetail.__index = GameDetail
 function GameDetail.new(app, game, primary)
   primary = primary or {
     hint = "play",
-    run = function() launcher.launch(app.backend, game) end,
+    run = function() app:launch(game) end,
   }
   return setmetatable({ app = app, game = game, primary = primary, descScroll = 0, descMaxScroll = 0 }, GameDetail)
 end

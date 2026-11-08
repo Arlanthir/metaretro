@@ -84,6 +84,27 @@ describe("economy.buy", function()
   end)
 end)
 
+describe("economy.sell", function()
+  it("buys an owned game back for half its price", function()
+    local state = save.defaults()
+    local g = game({ system = "nes" })
+    state.owned[g.id] = true
+    assert.equal(20, economy.sellPrice(g))
+    assert.same({ true, 20 }, { economy.sell(state, g) })
+    assert.equal(economy.STARTER_WALLET + 20, state.wallet)
+    assert.is_nil(state.owned[g.id])
+  end)
+
+  it("rounds odd prices down and refuses games the player doesn't own", function()
+    local state = save.defaults()
+    local g = game({ system = "snes", rating = "0" })
+    assert.equal(math.floor(economy.price(g) / 2), economy.sellPrice(g))
+    assert.equal(22, economy.sellPrice(g))
+    assert.same({ false, "not owned" }, { economy.sell(state, g) })
+    assert.equal(economy.STARTER_WALLET, state.wallet)
+  end)
+end)
+
 describe("economy.buyConsole", function()
   local snes = { id = "snes", generation = 4 }
 
@@ -107,6 +128,7 @@ describe("economy.buyConsole", function()
       game({ system = "nes", path = "./other" }),
     }
     state.owned[games[1].id] = true
+    state.wallet = economy.consolePrice(snes)
     local ok, granted = economy.buyConsole(state, snes, games, function() return 1 end)
     assert.is_true(ok)
     assert.same({ games[2], games[3], games[4] }, granted)

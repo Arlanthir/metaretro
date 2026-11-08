@@ -9,8 +9,10 @@ local covers = require("services.covers")
 local townsfolk = require("core.townsfolk")
 local Dialog = require("scenes.dialog")
 local Home = require("scenes.home")
+local House = require("scenes.house")
 local Museum = require("scenes.museum")
 local GameDetail = require("scenes.gamedetail")
+local Advert = require("scenes.advert")
 local Arcade = require("scenes.arcade")
 local Mall = require("scenes.mall")
 local Store = require("scenes.store")
@@ -52,7 +54,7 @@ end
 -- Back from a building (redrawn, faded in) or from a conversation (villagers go back to wandering).
 function Town:resume()
   if self.inside then
-    self.inside = false
+    self.inside, self.building, self.interior = false, nil, nil
     self:rebuild()
     self:fadeInNow()
   end
@@ -64,12 +66,16 @@ local LABELS = {
   mall = { "Mall", "Mall" }, arcade = { "Arcade", "Arcade Club" },
 }
 
--- The building's sign and its full name; villagers' houses have no sign.
+-- Who lives in a house, or Granny Rose's.
+local function resident(building)
+  if building.kind == "grandma" then return townsfolk.GRANDMA end
+  return building.kind == "house" and townsfolk.RESIDENTS[(building.index - 1) % #townsfolk.RESIDENTS + 1] or nil
+end
+
+-- The building's sign and its full name; houses have no sign.
 function Town:label(building)
-  if building.kind == "house" then
-    local owner = building.owner
-    return nil, owner and ("%s's house"):format(owner.name) or "An empty house"
-  end
+  local person = resident(building)
+  if person then return nil, ("%s's house"):format(person.name) end
   return unpack(LABELS[building.kind])
 end
 
@@ -82,10 +88,6 @@ function Town:rebuild()
   local tile = art.TILE
   local map = self.map
   self.buildings = town.layout(map)
-  -- Today's villagers live in the houses, in roster order.
-  for _, building in ipairs(self.buildings) do
-    if building.kind == "house" then building.owner = self.villagers[building.index] end
-  end
   self.blocked = town.blockedTiles(self.buildings, art.buildingWidth)
   self.doors = {}
   for _, building in ipairs(self.buildings) do
@@ -120,6 +122,7 @@ function Town:rebuild()
     table.insert(images, ui.boxArt(homeGame))
     table.insert(images, ui.fullImage(homeGame))
   end
+  table.insert(images, Home.cabinetArt(self.app))
   -- And what the mall's posters and the arcade's cabinets show, so they're there on the way in.
   for _, path in ipairs(Mall.adPaths(self.app)) do table.insert(images, path) end
   for _, path in ipairs(Arcade.artPaths(self.app)) do table.insert(images, path) end
@@ -247,35 +250,64 @@ function Town:talkTo(villager)
   scenes.push(Dialog.new(villager.name, art.portrait(villager), reply.text, accept))
 end
 
-function Town:enterBuilding(building)
-  self.inside = true
-  if building.kind == "home" then
-    scenes.push(Home.new(self.app))
-  elseif building.kind == "museum" then
-    scenes.push(Museum.new(self.app))
-  elseif building.kind == "dealer" then
-    scenes.push(Store.new(self.app))
-  elseif building.kind == "mall" then
-    scenes.push(Mall.new(self.app))
-  elseif building.kind == "arcade" then
-    scenes.push(Arcade.new(self.app))
+local OPEN = {
+  home = Home.new, museum = Museum.new, mall = Mall.new, arcade = Arcade.new,
+  dealer = function(app) return Store.new(app) end,
+  house = function(app, building) return House.new(app, resident(building)) end,
+}
+OPEN.grandma = OPEN.house
+
+-- Goes into `building`; `at` ({ x, y, facing }) optionally puts the player somewhere other than the door.
+function Town:enterBuilding(building, at)
+  local scene = OPEN[building.kind](self.app, building)
+  self.inside, self.building, self.interior = true, building, scene
+  if at then scene:placeAt(at) end
+  scenes.push(scene)
+end
+
+-- Where the player is: in town, and in which building, where, if they're inside one. Saved when a
+-- game launches, so Metaretro starts again there afterwards (see `restore`).
+function Town:location()
+  local here = { x = self.x, y = self.y, facing = self.facing }
+  local scene = self.inside and self.interior
+  if scene then
+    here.building = key(self.building.door.x, self.building.door.y)
+    here.inside = { x = scene.x, y = scene.y, facing = scene.facing }
+  end
+  return here
+end
+
+-- Back where `location` left the player, wherever it still makes sense (the town may have changed).
+function Town:restore(location)
+  local x, y = tonumber(location.x), tonumber(location.y)
+  if x and y and town.isWalkable(self.map, x, y, self.blocked) and not self.villagerAt[key(x, y)] then
+    self.x, self.y = x, y
+    self.facing = Walker.DIRECTIONS[location.facing] and location.facing or "down"
+  end
+  local building = location.building and self.doors[location.building]
+  local inFront = building and self.x == building.door.x and self.y == building.door.y + 1
+  if inFront and not self:isClosed(building) and type(location.inside) == "table" then
+    self.facing = "down"
+    self:enterBuilding(building, location.inside)
   end
 end
 
--- The console dealer opens once Professor Cork has given the player their first console.
+-- The console dealer opens once Professor Cork has given the player their first console, and the
+-- mall once they have a console (and so a store).
 function Town:isClosed(building)
-  return building.kind == "house" or building.kind == "dealer" and not self.app.state.giftReceived
+  local state = self.app.state
+  if building.kind == "dealer" then return not state.giftReceived end
+  return building.kind == "mall" and next(state.ownedConsoles) == nil
 end
 
--- A new game starts at home, next to the bed; walking out leaves the player at Home's door.
+-- A new game, or Continue, starts at home; walking out leaves the player at Home's door.
 function Town:wakeUpAtHome()
   for _, building in ipairs(self.buildings) do
     if building.kind == "home" then
       self.x, self.y, self.facing = building.door.x, building.door.y + 1, "down"
+      self:enterBuilding(building, Home.wakeUpSpot())
     end
   end
-  self.inside = true
-  scenes.push(Home.new(self.app, true))
 end
 
 function Town:step(direction)
@@ -283,12 +315,7 @@ function Town:step(direction)
   local targetX, targetY = self:facingTile()
   local building = self:facingBuilding()
   if building and direction == "up" then
-    if building.kind == "house" then
-      -- Villagers are out and about while the player is in town.
-      local owner = building.owner
-      scenes.push(Dialog.new("", nil, owner and ("Nobody's home. %s must be out in town."):format(owner.name)
-        or "Nobody lives here yet."))
-    elseif not self:isClosed(building) then
+    if not self:isClosed(building) then
       self:startStep("up", building) -- it opens once the step ends
     end
   elseif town.isWalkable(self.map, targetX, targetY, self.blocked) and not self.villagerAt[key(targetX, targetY)] then
@@ -308,10 +335,17 @@ function Town:update(dt)
   end
 end
 
+-- The ad on the billboard the player faces, if any.
+function Town:facingAd()
+  return self.ads[self.billboardAt[key(self:facingTile())] or 0]
+end
+
 function Town:action(name)
-  local villager, prop = self:facingVillager(), self.props[key(self:facingTile())]
+  local villager, prop, ad = self:facingVillager(), self.props[key(self:facingTile())], self:facingAd()
   if name == "a" and villager and not self.move then
     self:talkTo(villager)
+  elseif name == "a" and ad and not self.move then
+    scenes.push(Advert.new(ad.game, ad.store))
   elseif name == "a" and prop and prop.kind == "sign" and not self.move then
     scenes.push(Dialog.new("Signpost", nil, WELCOME))
   elseif name == "start" then
@@ -382,11 +416,10 @@ function Town:drawHud()
   self:drawStatus()
   local building, villager = self:facingBuilding(), self:facingVillager()
   local prop = self.props[key(self:facingTile())]
-  local ad = self.ads[self.billboardAt[key(self:facingTile())] or 0]
-  local hint = building and building.kind == "house" and select(2, self:label(building))
-    or building and self:isClosed(building) and ("The %s is closed"):format(select(2, self:label(building)))
+  local ad = self:facingAd()
+  local hint = building and self:isClosed(building) and ("The %s is closed"):format(select(2, self:label(building)))
     or building and ("Up: enter %s"):format(select(2, self:label(building)))
-    or ad and ("%s at the %s"):format(ad.game.name, ad.store.title)
+    or ad and ("A: %s at the %s"):format(ad.game.name, ad.store.title)
     or villager and ("A: talk to %s"):format(villager.name)
     or prop and prop.kind == "sign" and "A: read sign" or "Start: quit"
   ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)

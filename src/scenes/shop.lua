@@ -1,13 +1,18 @@
+local arcade = require("core.arcade")
+local catalog = require("core.catalog")
 local consoles = require("core.consoles")
 local economy = require("core.economy")
 local progression = require("core.progression")
 local scenes = require("core.scenes")
 local stores = require("core.stores")
+local townsfolk = require("core.townsfolk")
 local ui = require("ui")
 local Confirm = require("scenes.confirm")
 local GameDetail = require("scenes.gamedetail")
 
--- A shop sells one list of items; `stock(app)` returns { title, subtitle, items, consoles? }.
+-- A shop sells one list of items; `stock(app)` returns { title, subtitle?, items, footnote?,
+-- consoles?, selling?, arcade? }; the footnote goes under the list. A `selling` shop is the other way round: it buys the player's games (Granny Rose). The
+-- `arcade` one sells the Arcade Club's games, for the player's own cabinet.
 local Shop = {}
 Shop.__index = Shop
 
@@ -20,8 +25,8 @@ function Shop.dealer(app)
     local timeline = progression.timeline(app.catalog.systems)
     return {
       title = "Console Dealer",
-      subtitle = ("Your generation: %d"):format(progression.currentGeneration(app.state, timeline)),
       items = progression.purchasable(app.state, timeline),
+      footnote = progression.moreToCome(app.state, timeline) and "Even more consoles yet to come!" or nil,
       consoles = true,
     }
   end)
@@ -43,6 +48,37 @@ function Shop.store(app, store)
   end)
 end
 
+-- The Arcade Club's clerk sells this week's cabinet games; `games()` lists them by cabinet.
+function Shop.arcade(app, games)
+  return Shop.new(app, function()
+    local items, cabinets = {}, games()
+    for i = 1, arcade.CABINETS do
+      if cabinets[i] then table.insert(items, cabinets[i]) end
+    end
+    return {
+      title = "Arcade Club",
+      subtitle = "This week's games, to play for free on your own cabinet",
+      items = items,
+      arcade = true,
+    }
+  end)
+end
+
+-- Granny Rose buys any owned game for half its price.
+function Shop.grandma(app)
+  return Shop.new(app, function()
+    local games = townsfolk.ownedGames(app.catalog)
+    table.sort(games, catalog.byName)
+    return {
+      title = "Granny Rose",
+      subtitle = "Games for her grandchildren, at half price",
+      items = games,
+      showConsole = true,
+      selling = true,
+    }
+  end)
+end
+
 function Shop:enter()
   self:refresh()
 end
@@ -53,7 +89,9 @@ function Shop:refresh()
 end
 
 function Shop:price(item)
-  return self.section.consoles and economy.consolePrice(item) or economy.price(item)
+  if self.section.consoles then return economy.consolePrice(item) end
+  if self.section.arcade then return arcade.GAME_PRICE end
+  return self.section.selling and economy.sellPrice(item) or economy.price(item)
 end
 
 -- Genre stores mix consoles, so their rows say which console each game is for.
@@ -65,13 +103,17 @@ end
 -- Returns a message when the purchase can't start; `onBought` runs after a confirmed purchase.
 function Shop:buy(item, onBought)
   local price = self:price(item)
+  if self.section.selling then return self:sell(item, price, onBought) end
   if self.app.state.wallet < price then
     return ("You need %d more coins for %s."):format(price - self.app.state.wallet, item.name)
   end
   scenes.push(Confirm.new(("Buy %s for %d coins?"):format(item.name, price), function()
     local ok, result
+    local firstCabinet = self.section.arcade and not arcade.ownsAny(self.app.state.owned)
     if self.section.consoles then
       ok, result = economy.buyConsole(self.app.state, item, self.app.catalog.bySystem[item.id].locked, love.math.random)
+    elseif self.section.arcade then
+      ok, result = arcade.buy(self.app.state, item)
     else
       ok, result = economy.buy(self.app.state, item)
     end
@@ -81,19 +123,35 @@ function Shop:buy(item, onBought)
     end
     self.app:refresh()
     self:refresh()
+    if onBought then onBought() end -- before any notice, which then shows over the shop
     if self.section.consoles then
       self.notice = ("Bought %s! Its store opens in town."):format(item.name)
       scenes.push(Confirm.notice(ui.starterPackMessage(item, result)))
+    elseif firstCabinet then
+      self.notice = ("Bought %s!"):format(item.name)
+      scenes.push(Confirm.notice(("%s is yours! Your very own arcade cabinet is waiting in your living room.")
+        :format(item.name)))
+    elseif self.section.arcade then
+      self.notice = ("Bought %s! Play it on your cabinet at home."):format(item.name)
     else
       self.notice = ("Bought %s!"):format(item.name)
     end
-    if onBought then onBought() end
+  end))
+end
+
+function Shop:sell(item, price, onSold)
+  scenes.push(Confirm.new(("Sell %s for %d coins?"):format(item.name, price), function()
+    if not economy.sell(self.app.state, item) then return end
+    self.app:refresh()
+    self:refresh()
+    self.notice = ("Sold %s for %d coins!"):format(item.name, price)
+    if onSold then onSold() end
   end))
 end
 
 function Shop:showDetails(item)
   scenes.push(GameDetail.new(self.app, item, {
-    hint = ("buy for %d coins"):format(self:price(item)),
+    hint = ("%s for %d coins"):format(self.section.selling and "sell" or "buy", self:price(item)),
     run = function() return self:buy(item, scenes.pop) end,
   }))
 end
@@ -121,8 +179,8 @@ function Shop:drawConsoleInfo(console, x, y, width)
   love.graphics.setFont(ui.fonts.body)
   ui.setColor("muted")
   local games = self.app.catalog.bySystem[console.id]
-  love.graphics.printf(("Released %d\nGeneration %d\n\n%d games in your library"):format(
-    console.year, console.generation, #games.owned + #games.locked), x, y + 60, width, "center")
+  love.graphics.printf(("Released %d\n\n%d titles"):format(console.year, #games.owned + #games.locked),
+    x, y + 60, width, "center")
 end
 
 function Shop:draw()
@@ -130,7 +188,7 @@ function Shop:draw()
   ui.header(section.title, self.app.state.wallet)
   love.graphics.setFont(ui.fonts.small)
   ui.setColor("muted")
-  love.graphics.printf(section.subtitle, 0, ui.HEADER_HEIGHT + 8, ui.WIDTH, "center")
+  if section.subtitle then love.graphics.printf(section.subtitle, 0, ui.HEADER_HEIGHT + 8, ui.WIDTH, "center") end
 
   local listTop = ui.HEADER_HEIGHT + 44
   local listWidth = 360
@@ -138,11 +196,20 @@ function Shop:draw()
   if #section.items == 0 then
     love.graphics.setFont(ui.fonts.body)
     ui.setColor("muted")
-    love.graphics.printf(section.consoles and "No consoles for sale right now." or "Sold out for today!",
+    local empty = section.consoles and "No consoles for sale right now."
+      or section.selling and "You have no games to sell." or "Sold out for today!"
+    love.graphics.printf(empty,
       ui.MARGIN, listTop + 20, listWidth, "center")
   else
     self.scroll = ui.list(section.items, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, listHeight,
       function(item) return self:itemLabel(item), ("%d c"):format(self:price(item)), item.cheevosId ~= nil end)
+  end
+  if section.footnote then
+    local rowHeight = ui.LIST_ROW
+    local rows = math.min(#section.items, math.floor(listHeight / rowHeight))
+    love.graphics.setFont(ui.fonts.small)
+    ui.setColor("highlight")
+    love.graphics.printf(section.footnote, ui.MARGIN, listTop + math.max(rows, 2) * rowHeight + 10, listWidth, "center")
   end
 
   local selected = section.items[self.cursor]
@@ -162,7 +229,8 @@ function Shop:draw()
     ui.setColor("coin")
     love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - ui.FOOTER_HEIGHT - 32, ui.WIDTH - ui.MARGIN * 2, "center")
   end
-  ui.footer(self.section.consoles and "A: buy   B: leave" or "A: details   Y: buy   B: leave")
+  ui.footer(self.section.consoles and "A: buy   B: leave"
+    or ("A: details   Y: %s   B: leave"):format(self.section.selling and "sell" or "buy"))
 end
 
 return Shop

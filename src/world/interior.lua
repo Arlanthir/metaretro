@@ -1,7 +1,6 @@
--- Inside buildings (world/homemap.lua, world/museummap.lua). Legend for the `rooms` rows:
+-- Inside buildings (world/homemap.lua, world/housemap.lua...). Legend for the `rooms` rows:
 --   #  wall          .  wooden floor     ,  kitchen floor     (space)  outside
---   _  doorway between rooms             E  front door (walk down onto it to leave)
---   S  a storefront's door, in the top or bottom wall (walk up or down into it)
+--   _  doorway between rooms             E  front door, in the bottom wall (walk down onto it to leave)
 -- A wall between two rooms side by side is one tile thick.
 -- The `furniture` rows place furniture (see FURNITURE); a piece fills its whole footprint with its letter.
 -- Tall pieces against the top wall may reach into the wall row, covering the wall behind them.
@@ -16,10 +15,12 @@ interior.FURNITURE = {
   v = { kind = "tv", width = 2, height = 2 },
   g = { kind = "console", width = 1, height = 1 },
   s = { kind = "sofa", width = 3, height = 1 },
+  w = { kind = "loveseat", width = 2, height = 1 },
   f = { kind = "bookshelf", width = 2, height = 2 },
   p = { kind = "plant", width = 1, height = 2 },
   b = { kind = "bed", width = 2, height = 3 },
   k = { kind = "desk", width = 1, height = 1 },
+  e = { kind = "wideDesk", width = 2, height = 1 },
   h = { kind = "chair", width = 1, height = 1 },
   r = { kind = "dresser", width = 2, height = 2 },
   l = { kind = "displayTable", width = 3, height = 1 },
@@ -29,18 +30,18 @@ interior.FURNITURE = {
   z = { kind = "shopCounter", width = 2, height = 1 },
   c = { kind = "displayCase", width = 1, height = 2 },
   a = { kind = "cabinet", width = 2, height = 3 },
-  d = { kind = "adStand", width = 1, height = 2 },
 }
 
 interior.SPOTS = {
   P = "professor", -- where Professor Cork stands in the museum
-  S = "wakeUp", -- where a new game starts, at home
+  S = "wakeUp", -- where the player starts at home
   C = "clerk", -- where a store's clerk stands, behind the counter
+  R = "resident", -- where whoever lives in a house stands
 }
 
-local FLOORS = { ["."] = "wood", [","] = "kitchen", ["_"] = "wood", E = "wood", S = "wood" }
+local FLOORS = { ["."] = "wood", [","] = "kitchen", ["_"] = "wood", E = "wood" }
 local ROOM = { ["."] = true, [","] = true }
-local GAP = { ["_"] = true, E = true, S = true }
+local GAP = { ["_"] = true, E = true }
 
 local function key(x, y)
   return x .. "," .. y
@@ -77,16 +78,10 @@ end
 
 function interior.parse(layout)
   local rows = layout.rooms
+  -- `spots` has each spot's first place; `allSpots` lists them all, in reading order.
   local map = { rows = rows, width = #rows[1], height = #rows, furniture = {}, furnitureAt = {}, spots = {},
-    storefronts = {} }
+    allSpots = {} }
   for y, row in ipairs(rows) do
-    -- Storefronts in reading order, each entered from the room's side of the wall.
-    for x = 1, #row do
-      if row:sub(x, x) == "S" then
-        local below = ROOM[interior.tile(map, x, y + 1)]
-        table.insert(map.storefronts, { x = x, y = y, direction = below and "up" or "down" })
-      end
-    end
     local x = row:find("E", 1, true)
     if x then
       map.exit = { x = x, y = y }
@@ -97,7 +92,11 @@ function interior.parse(layout)
   for y, row in ipairs(layout.furniture) do
     for x = 1, #row do
       local spot = interior.SPOTS[row:sub(x, x)]
-      if spot then map.spots[spot] = { x = x, y = y } end
+      if spot then
+        map.spots[spot] = map.spots[spot] or { x = x, y = y }
+        map.allSpots[spot] = map.allSpots[spot] or {}
+        table.insert(map.allSpots[spot], { x = x, y = y })
+      end
     end
   end
   return map
@@ -116,37 +115,86 @@ function interior.floor(map, x, y)
   end
 end
 
--- Which piece of wall goes on a wall tile, named after the side of the room it closes
--- ("top", "topLeft"...), or "between" for a wall with a room on its left and right, which meets
--- the outer walls at "topJoin" and "bottomJoin". Wall ends next to a doorway are "BeforeGap"
--- (the gap is to the right or below) or "AfterGap". Nil when the tile isn't wall next to a room.
+-- The pieces of wall a wall tile is made of, one per quarter (top-left, top-right, bottom-left,
+-- bottom-right), each named after the side of a room it closes ("top", "topLeft"...; see WALLS in
+-- world/art.lua). A quarter closes the room next to it: above or below ("bottom", "top"), else beside
+-- it ("right", "left"), else diagonally (a corner). Facing no room, it's the wall's outer edge, or an
+-- outer corner where the wall turns. Beside a doorway, the wall's end ("BeforeGap" when the gap is to
+-- the right or below, "AfterGap" otherwise). Inside a wall thicker than a tile, "fill": the top of the
+-- wall, plain; where two walls meet with outside in their corner, "notch": the same, with the
+-- outside's edge in that corner (the tileset has no piece for it). Nil when the tile isn't wall next
+-- to a room.
+local INNER_CORNER = { [-1] = { [-1] = "bottomRight", [1] = "topRight" }, [1] = { [-1] = "bottomLeft", [1] = "topLeft" } }
+local OUTER_CORNER = { [-1] = { [-1] = "topLeft", [1] = "bottomLeft" }, [1] = { [-1] = "topRight", [1] = "bottomRight" } }
+
+local function quarter(room, gap, wall, sx, sy)
+  local function vertical(side) return side < 0 and "bottom" or "top" end
+  local function horizontal(side) return side < 0 and "right" or "left" end
+  if gap(sx, 0) then
+    local side = room(0, sy) and sy or room(0, -sy) and -sy
+    if side then return vertical(side) .. (sx > 0 and "BeforeGap" or "AfterGap") end
+  end
+  if gap(0, sy) then
+    local side = room(sx, 0) and sx or room(-sx, 0) and -sx
+    if side then return horizontal(side) .. (sy > 0 and "BeforeGap" or "AfterGap") end
+  end
+  if room(0, sy) then return vertical(sy) end
+  if room(sx, 0) then return horizontal(sx) end
+  if room(sx, sy) then return INNER_CORNER[sx][sy] end
+  local alongX, alongY = wall(sx, 0), wall(0, sy)
+  if alongX and not alongY then return sy < 0 and "top" or "bottom" end
+  if alongY and not alongX then return sx < 0 and "left" or "right" end
+  if not alongX then return OUTER_CORNER[sx][sy] end
+  return wall(sx, sy) and "fill" or "notch"
+end
+
 function interior.wallPiece(map, x, y)
   if interior.tile(map, x, y) ~= "#" then return nil end
-  local function room(dx, dy) return ROOM[interior.tile(map, x + dx, y + dy)] end
-  local function gap(dx, dy) return GAP[interior.tile(map, x + dx, y + dy)] end
-  local side = room(0, 1) and "top" or room(0, -1) and "bottom"
-    or room(1, 0) and room(-1, 0) and "between" or room(1, 0) and "left" or room(-1, 0) and "right"
-  if side == "top" or side == "bottom" then
-    return side .. (gap(1, 0) and "BeforeGap" or gap(-1, 0) and "AfterGap" or "")
-  elseif side then
-    return side .. (gap(0, 1) and "BeforeGap" or gap(0, -1) and "AfterGap" or "")
+  local function room(dx, dy) return ROOM[interior.tile(map, x + dx, y + dy)] == true end
+  local function gap(dx, dy) return GAP[interior.tile(map, x + dx, y + dy)] == true end
+  local function wall(dx, dy)
+    local tile = interior.tile(map, x + dx, y + dy)
+    return tile == "#" or GAP[tile] == true
   end
-  if room(1, 1) and room(-1, 1) then return "topJoin" end
-  if room(1, -1) and room(-1, -1) then return "bottomJoin" end
-  return room(1, 1) and "topLeft" or room(-1, 1) and "topRight" or room(1, -1) and "bottomLeft"
-    or room(-1, -1) and "bottomRight" or nil
+  local rooms, last = 0, nil
+  for _, d in ipairs(AROUND) do
+    if room(d[1], d[2]) then rooms, last = rooms + 1, d end
+  end
+  if rooms == 0 then return nil end
+  if rooms == 1 and last[1] ~= 0 and last[2] ~= 0 then
+    -- A room's corner: the corner piece whole, which rounds off more than its quarters would.
+    local corner = INNER_CORNER[last[1]][last[2]]
+    return { corner, corner, corner, corner }
+  end
+  return {
+    quarter(room, gap, wall, -1, -1), quarter(room, gap, wall, 1, -1),
+    quarter(room, gap, wall, -1, 1), quarter(room, gap, wall, 1, 1),
+  }
 end
 
 function interior.furnitureAt(map, x, y)
   return map.furnitureAt[key(x, y)]
 end
 
--- Floor and doorways the player can stand on (the front door is left by walking onto it).
--- `absent(piece)` optionally says a piece isn't there (yet), so its tiles are free.
+-- The counter tile a clerk (spot C; the first one by default) serves from, in front of them (below,
+-- or above), and the way the clerk faces it.
+function interior.counter(map, clerk)
+  clerk = clerk or map.spots.clerk
+  local below = interior.furnitureAt(map, clerk.x, clerk.y + 1)
+  local dy = below and below.kind == "shopCounter" and 1 or -1
+  return { x = clerk.x, y = clerk.y + dy }, dy > 0 and "down" or "up"
+end
+
+-- Furniture low enough to walk over.
+local LOW = { chair = true, stool = true }
+
+-- Floor and doorways the player can stand on (the front door is left by walking onto it), chairs
+-- and stools included. `absent(piece)` optionally says a piece isn't there (yet), so its tiles are free.
 function interior.isWalkable(map, x, y, absent)
   local tile = interior.tile(map, x, y)
   local piece = map.furnitureAt[key(x, y)]
-  return (ROOM[tile] or tile == "_") and not (piece and not (absent and absent(piece)))
+  local blocking = piece and not LOW[piece.kind] and not (absent and absent(piece))
+  return (ROOM[tile] or tile == "_") and not blocking
 end
 
 return interior

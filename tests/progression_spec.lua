@@ -41,6 +41,11 @@ end)
 describe("progression.purchasable", function()
   local timeline = progression.timeline(systems("nes", "mastersystem", "snes", "megadrive", "psx", "n64", "gba"))
 
+  it("tells whether more consoles are yet to come", function()
+    assert.is_true(progression.moreToCome(stateOwning("nes"), timeline))
+    assert.is_false(progression.moreToCome(stateOwning("nes", "snes", "psx"), timeline))
+  end)
+
   it("offers the oldest generation to a player with no consoles", function()
     assert.same({ "nes", "mastersystem" }, ids(progression.purchasable(save.defaults(), timeline)))
   end)
@@ -81,6 +86,13 @@ describe("progression.syncOwnedConsoles", function()
       { id = "snes:./b.sfc", system = "snes" },
     })
     assert.same({ gba = true }, state.ownedConsoles)
+  end)
+
+  it("doesn't count arcade games, which play on the player's cabinet", function()
+    local state = save.defaults()
+    state.owned["mame:./a.zip"] = true
+    progression.syncOwnedConsoles(state, { { id = "mame:./a.zip", system = "mame" } })
+    assert.same({}, state.ownedConsoles)
   end)
 end)
 

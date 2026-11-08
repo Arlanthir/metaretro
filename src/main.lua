@@ -1,5 +1,6 @@
 local backend = require("backends.backend")
 local achievements = require("core.achievements")
+local arcade = require("core.arcade")
 local catalog = require("core.catalog")
 local consoles = require("core.consoles")
 local covers = require("services.covers")
@@ -13,6 +14,7 @@ local progression = require("core.progression")
 local retroachievements = require("services.retroachievements")
 local save = require("core.save")
 local scenes = require("core.scenes")
+local selectbutton = require("core.selectbutton")
 local stores = require("core.stores")
 local ui = require("ui")
 local town = require("world.town")
@@ -23,6 +25,7 @@ local Town = require("scenes.town")
 
 local app = { town = town.parse(require("world.townmap")) }
 local showFps = false
+local selectTracker = selectbutton.new()
 local screenshotIn -- dev aid: `--screenshot <seconds>` saves screenshot.png to the save dir, then quits
 
 function app:persist()
@@ -124,30 +127,46 @@ local function prepareNow(newGame)
   while app.preparing do prepareStep() end
 end
 
-local function enterTown()
+-- Launches `game`; Metaretro starts again where the player is now once it's over. An arcade game
+-- puts its art on the player's cabinet at home.
+function app:launch(game)
+  if arcade.isArcade(game) then
+    self.state.cabinetGame = game.id
+    self:persist()
+  end
+  launcher.launch(self.backend, game, self.townScene and self.townScene:location())
+end
+
+-- `location` (optional, see Town:location) is where the player was when they launched a game.
+local function enterTown(location)
   app:persist()
   retroachievements.sync(app, app.prepared.firstSession)
   input.ignoreFor(0.5)
   local town = Town.new(app)
+  app.townScene = town
   scenes.switch(town)
   if not app.state.introDone then
     -- A new game: meet Professor Cork, then wake up at home.
     town:wakeUpAtHome()
     scenes.push(Intro.new(app))
+  elseif location then
+    town:restore(location)
+  else
+    town:wakeUpAtHome() -- Continue
   end
 end
 
 -- Continues (or starts a new game) right away when it's ready; otherwise shows a loading message
 -- until the library is read and the game set up.
-local function start(newGame)
+local function start(newGame, location)
   app.started = true
   if isPrepared(newGame) then
-    enterTown()
+    enterTown(location)
     return
   end
   scenes.switch(Loading.new("Loading your library...", function()
     prepareNow(newGame)
-    enterTown()
+    enterTown(location)
   end, function() return app.listing ~= nil end))
 end
 
@@ -163,7 +182,13 @@ function love.load(args)
   input.setNintendoLayout(argValue(args, "--layout") == "nintendo")
   input.setHandler(function(action)
     if action == "select" then
-      showFps = not showFps
+      -- Ten quick presses: a cheat for coins, once the game has started.
+      if selectbutton.tap(selectTracker, love.timer.getTime()) and app.townScene then
+        app.state.wallet = app.state.wallet + selectbutton.CHEAT_COINS
+        app:persist()
+        app:announce(("+%d coins"):format(selectbutton.CHEAT_COINS))
+        log("cheat: +%d coins", selectbutton.CHEAT_COINS)
+      end
     else
       scenes.action(action)
     end
@@ -175,9 +200,11 @@ function love.load(args)
   library.start(app.backend.name)
   log("started with: %s", table.concat(args, " "))
   app.hasSave = love.filesystem.getInfo(save.FILE) ~= nil
-  -- Back from a game Metaretro launched: straight back to town.
-  if launcher.consumeResume() and app.hasSave then
-    start(false)
+  -- Back from a game Metaretro launched: straight back to where the player was.
+  local resume = launcher.consumeResume()
+  if resume and app.hasSave then
+    log("resuming after %s", tostring(resume.game))
+    start(false, resume.location)
   else
     scenes.switch(Title.new(app.hasSave, start))
   end
@@ -197,6 +224,7 @@ function love.update(dt)
   covers.update()
   http.update()
   input.update(dt)
+  if selectbutton.hold(selectTracker, dt, input.isDown("select")) then showFps = not showFps end
   scenes.update(dt)
   if screenshotIn then
     screenshotIn = screenshotIn - dt

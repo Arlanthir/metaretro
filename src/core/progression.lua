@@ -1,3 +1,4 @@
+local arcade = require("core.arcade")
 local consoles = require("core.consoles")
 
 local progression = {}
@@ -57,6 +58,15 @@ function progression.currentGeneration(state, timeline)
   return current
 end
 
+-- Whether the library has consoles the player can't buy yet (beyond those `purchasable` lists).
+function progression.moreToCome(state, timeline)
+  local unowned = 0
+  for _, console in ipairs(timeline) do
+    if not state.ownedConsoles[console.id] then unowned = unowned + 1 end
+  end
+  return unowned > #progression.purchasable(state, timeline)
+end
+
 -- Unowned consoles up to the next generation present in the library, so gaps never block progress.
 function progression.purchasable(state, timeline)
   local current = progression.currentGeneration(state, timeline)
@@ -76,10 +86,11 @@ function progression.purchasable(state, timeline)
   return forSale
 end
 
--- Owning a game implies owning its system, so older saves never lose access to their games.
+-- Owning a game implies owning its system, so older saves never lose access to their games. Arcade
+-- games are played on the player's own cabinet, not a console.
 function progression.syncOwnedConsoles(state, games)
   for _, game in ipairs(games) do
-    if state.owned[game.id] then
+    if state.owned[game.id] and not arcade.isArcade(game) then
       state.ownedConsoles[game.system] = true
     end
   end

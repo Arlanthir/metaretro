@@ -28,6 +28,7 @@ function save.defaults()
     giftOffered = false, -- Professor Cork has offered a console from his table
     giftReceived = false,
     giftConsole = "", -- the system id of the console he gave, if any
+    cabinetGame = "", -- the arcade game last played or bought: its art adorns the cabinet at home
   }
 end
 

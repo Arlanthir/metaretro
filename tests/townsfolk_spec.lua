@@ -84,6 +84,26 @@ describe("townsfolk", function()
     for _, kind in ipairs(townsfolk.KINDS) do assert.equal(4, perKind[kind], kind) end
   end)
 
+  it("has residents with hints and Granny Rose at home, none of them out in town", function()
+    local inTown = {}
+    for _, villager in ipairs(townsfolk.CAST) do inTown[villager.sprite] = true end
+    local people = { townsfolk.GRANDMA }
+    for _, resident in ipairs(townsfolk.RESIDENTS) do
+      assert.is_true(#resident.hints >= 3, resident.name)
+      for _, hint in ipairs(resident.hints) do assert.is_nil(hint:find("%", 1, true), hint) end
+      table.insert(people, resident)
+    end
+    for _, person in ipairs(people) do
+      assert.is_nil(inTown[person.sprite], person.name)
+      for _, suffix in ipairs({ "", "Face" }) do
+        local path = "src/assets/ninja-adventure/villagers/" .. person.sprite .. suffix .. ".png"
+        local file = io.open(path, "rb")
+        assert.truthy(file, path)
+        file:close()
+      end
+    end
+  end)
+
   it("lets villagers wander only on nearby grass that isn't under a tree", function()
     local rows = { "....", "..T.", "...." }
     local function tileAt(x, y) local row = rows[y]; return row and row:sub(x, x) or "T" end
@@ -145,6 +165,7 @@ describe("townsfolk", function()
     local unplayed = game("unplayed", { name = "Super Metroid" })
     local catalog = { systems = { { id = "snes" } }, bySystem = { snes = { owned = { unplayed }, locked = {} } } }
     local context = { state = state, catalog = catalog, timeline = {}, today = "2026-11-06", random = first }
+    state.ownedConsoles.snes = true
     local tomo = townsfolk.CAST[1]
     local reply = townsfolk.talk(tomo, context)
     assert.equal(unplayed, reply.game)
@@ -155,6 +176,19 @@ describe("townsfolk", function()
       local line = townsfolk.talk(villager, context)
       assert.is_nil(line.game)
       assert.truthy(#line.text > 0)
+    end
+  end)
+end)
+
+describe("townsfolk before the first console", function()
+  it("sends the player to Professor Cork in the museum, whoever they talk to", function()
+    local context = { state = save.defaults(), catalog = { systems = {}, bySystem = {} }, timeline = {},
+      today = "2026-11-06", random = first }
+    for _, villager in ipairs(townsfolk.CAST) do
+      local reply = townsfolk.talk(villager, context)
+      assert.is_nil(reply.game)
+      assert.truthy(reply.text:find("Professor Cork", 1, true), villager.name)
+      assert.truthy(reply.text:find("museum", 1, true), villager.name)
     end
   end)
 end)

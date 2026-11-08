@@ -1,6 +1,7 @@
 -- The Arcade Club's cabinets: arcade games from the library (systems Metaretro otherwise leaves out
 -- of stores and the collection), a new set every week. A play costs a coin and earns coins like
--- any other game.
+-- any other game. The clerk sells the cabinets' games, to play for free on the player's own cabinet
+-- at home; a cabinet whose game was bought gets another one for the rest of the week.
 local daily = require("core.daily")
 
 local arcade = {}
@@ -11,6 +12,7 @@ arcade.SYSTEMS = {
 }
 arcade.CABINETS = 4
 arcade.PRICE = 1
+arcade.GAME_PRICE = 100 -- to own a cabinet's game
 
 local WEEK = 7 * 86400
 
@@ -19,20 +21,56 @@ function arcade.week(time)
   return math.floor((time + 3 * 86400) / WEEK)
 end
 
--- This week's games, one per cabinet (fewer when the library has fewer arcade games), the same all
--- week.
-function arcade.cabinets(games, week)
+function arcade.isArcade(game)
+  return arcade.SYSTEMS[game.system] == true
+end
+
+-- The arcade games of `games` that `owned` (a set of game ids) has, by name.
+function arcade.owned(games, owned)
+  local list = {}
+  for _, game in ipairs(games) do
+    if arcade.isArcade(game) and owned[game.id] then table.insert(list, game) end
+  end
+  table.sort(list, function(a, b) return a.name:lower() < b.name:lower() end)
+  return list
+end
+
+-- This week's games, by cabinet: the same all week, and none of them in `owned` (a set of game ids):
+-- a cabinet whose game is owned takes the week's next one instead. Cabinets stay empty when the
+-- library runs out of arcade games.
+function arcade.cabinets(games, week, owned)
+  owned = owned or {}
   local pool = {}
   for _, game in ipairs(games) do
-    if arcade.SYSTEMS[game.system] then table.insert(pool, game) end
+    if arcade.isArcade(game) then table.insert(pool, game) end
   end
   table.sort(pool, function(a, b) return a.id < b.id end)
   local random = daily.random("arcade week " .. week)
+  local function draw() return #pool > 0 and table.remove(pool, random(#pool)) or nil end
   local picked = {}
-  while #picked < arcade.CABINETS and #pool > 0 do
-    table.insert(picked, table.remove(pool, random(#pool)))
+  for i = 1, arcade.CABINETS do picked[i] = draw() end
+  for i = 1, arcade.CABINETS do
+    while picked[i] and owned[picked[i].id] do picked[i] = draw() end
   end
   return picked
+end
+
+-- Whether `owned` (a set of game ids, "system:path") has any arcade game: the player has a cabinet.
+function arcade.ownsAny(owned)
+  for id in pairs(owned) do
+    if arcade.SYSTEMS[id:match("^(.-):")] then return true end
+  end
+  return false
+end
+
+-- Buys a cabinet's game for the player's own cabinet; returns true, or false and why not.
+function arcade.buy(state, game)
+  if state.owned[game.id] then return false, "already owned" end
+  if state.wallet < arcade.GAME_PRICE then return false, "not enough coins" end
+  state.wallet = state.wallet - arcade.GAME_PRICE
+  state.owned[game.id] = true
+  state.cabinetGame = game.id
+  return true
 end
 
 return arcade
