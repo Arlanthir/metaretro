@@ -17,6 +17,11 @@ The games come from the player's own collection and its scraped metadata, so sto
 - Sell games you don't wish to play anymore.
 - Watch trailers for new games on TV, or ask the townsfolk to suggest what to play next.
 
+## Installation
+
+1. Download [v0.1.0](https://github.com/Arlanthir/retrotownstory/releases/download/v0.1.0/retrotownstory-0.1.0.zip) from the releases page.
+2. Place it in `/userdata/system/.local/share/PortMaster/autoinstall` or unzip it to `/roms/ports` without creating extra folders.
+
 ## RetroAchievements Setup
 
 To earn coins from achievements, create `retroachievements.txt` next to `retrotownstory.love` with your web API key from <https://retroachievements.org/settings>:
