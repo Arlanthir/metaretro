@@ -1,5 +1,7 @@
 # Retro Town Story
 
+![screenshot](port/screenshot.png)
+
 Retro Town Story is a (meta)game for retro handhelds like the Anbernic RG 40XXV, to help players progressively unlock their game collection and choose what to play from it. It runs on EmulationStation (Knulli, Batocera), with other backends to follow.
 
 The original idea came from PakUI's BitPal, which has the same aim. The twist here is a top-down RPG (like Pokémon) where the player walks around a town whose shops sell retro games.
@@ -16,6 +18,23 @@ The games come from the player's own collection and its scraped metadata, so sto
 - **Townsfolk:** villagers wander town each day, each with a different kind of tip on what to play next. Residents in their houses explain how things work, and Granny Rose buys games you're done with for half their price.
 - Coming back from a game puts you right where you left off.
 
+## RetroAchievements Setup
+
+To earn coins from achievements, create `retroachievements.txt` next to `retrotownstory.love` with your web API key from <https://retroachievements.org/settings>:
+
+```
+apikey=YOUR_WEB_API_KEY
+username=YourName
+```
+
+- On the device: `/userdata/roms/ports/retrotownstory/retroachievements.txt` (`roms/ports/retrotownstory/` on the SD card). `scripts/build-port.sh` doesn't copy it, so copy it yourself; updating the port's files leaves it in place.
+- On desktop: `retroachievements.txt` at the repo root, since `love src` looks in the folder above `src/`. It's in `.gitignore`.
+- `username` is optional on Knulli, where it's read from the RetroAchievements login in `batocera.conf`. On desktop (mock backend) it's required.
+
+After you play an owned game, the next launch checks its achievements online (games that can't be checked stay queued). New unlocks pay 5 coins per point (twice in hardcore); unlocks from before tracking started pay half, once.
+
+---
+
 ## Development
 
 Built with [LÖVE](https://love2d.org) 11.5 and distributed as a PortMaster port.
@@ -30,20 +49,9 @@ Built with [LÖVE](https://love2d.org) 11.5 and distributed as a PortMaster port
 
 Town and menu art comes from the [Ninja Adventure asset pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-boy and AAA (CC0). The font is [Ark Pixel](https://github.com/TakWolf/ark-pixel-font) 10px (SIL Open Font License, see `src/assets/fonts/`), which also covers Japanese titles. Only the images in use are in `src/assets/ninja-adventure/`; the full pack can be unzipped into `example-data/ninja-adventure/` (ignored by git) to pick more. The TV, consoles, cabinets and sofa are the game's own, drawn in the pack's palette (`src/assets/retrotownstory/`).
 
-### RetroAchievements
+### AI Disclosure
 
-To earn coins from achievements, create `retroachievements.txt` next to `retrotownstory.love` with your web API key from <https://retroachievements.org/settings>:
-
-```
-apikey=YOUR_WEB_API_KEY
-username=YourName
-```
-
-- On the device: `/userdata/roms/ports/retrotownstory/retroachievements.txt` (`roms/ports/retrotownstory/` on the SD card). `scripts/build-port.sh` doesn't copy it, so copy it yourself; updating the port's files leaves it in place.
-- On desktop: `retroachievements.txt` at the repo root, since `love src` looks in the folder above `src/`. It's in `.gitignore`.
-- `username` is optional on Knulli, where it's read from the RetroAchievements login in `batocera.conf`. On desktop (mock backend) it's required.
-
-After you play an owned game, the next launch checks its achievements online (games that can't be checked stay queued). New unlocks pay 5 coins per point (twice in hardcore); unlocks from before tracking started pay half, once.
+The programming was AI-assisted by Claude.
 
 ## Wishlist
 

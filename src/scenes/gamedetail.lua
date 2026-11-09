@@ -38,7 +38,7 @@ function GameDetail:achievementsLine()
     return "Achievements: yes"
   end
   local coins = self.app.state.achievementCoins[tostring(game.cheevosId)]
-  return coins and ("Achievements: %d coins earned"):format(coins) or "Achievements: none paid yet"
+  return coins and ("Achievements: %d coins earned"):format(coins) or "Achievements: none yet"
 end
 
 function GameDetail:draw()
