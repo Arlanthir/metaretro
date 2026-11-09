@@ -10,13 +10,12 @@ The games come from the player's own collection and its scraped metadata, so sto
 
 ## In the game
 
-- **Home:** the console under the TV opens your collection, by console, and plays your games. The TV shows videos of the games on sale in town today. Your own arcade cabinet appears in the office once you buy an arcade game.
-- **Museum:** Professor Cork gives you your first console. Glass cases show the best-selling consoles in your library.
-- **Console Dealer:** buy more consoles, each with a starter pack of three games.
-- **Mall:** a store per console you own, plus stores per game genre, all in a large mall. New picks every day; posters and billboards show what's on sale.
-- **Arcade Club:** four cabinets with new arcade games every week, a coin a play. The clerk sells them for your cabinet at home.
-- **Townsfolk:** villagers wander town each day, each with a different kind of tip on what to play next. Residents in their houses explain how things work, and Granny Rose buys games you're done with for half their price.
-- Coming back from a game puts you right where you left off.
+- Start with only one console, three games and a few coins.
+- Play your games to earn more coins. Unlock their RetroAchievements to earn a coin bonus.
+- Spend coins on new consoles and games.
+- Play and buy Arcade games at the Arcade Club, with new cabinets every week.
+- Sell games you don't wish to play anymore.
+- Watch trailers for new games on TV, or ask the townsfolk to suggest what to play next.
 
 ## RetroAchievements Setup
 
@@ -24,16 +23,16 @@ To earn coins from achievements, create `retroachievements.txt` next to `retroto
 
 ```
 apikey=YOUR_WEB_API_KEY
-username=YourName
+username=YourUserName
 ```
 
-- On the device: `/userdata/roms/ports/retrotownstory/retroachievements.txt` (`roms/ports/retrotownstory/` on the SD card). `scripts/build-port.sh` doesn't copy it, so copy it yourself; updating the port's files leaves it in place.
-- On desktop: `retroachievements.txt` at the repo root, since `love src` looks in the folder above `src/`. It's in `.gitignore`.
-- `username` is optional on Knulli, where it's read from the RetroAchievements login in `batocera.conf`. On desktop (mock backend) it's required.
-
-After you play an owned game, the next launch checks its achievements online (games that can't be checked stay queued). New unlocks pay 5 coins per point (twice in hardcore); unlocks from before tracking started pay half, once.
+- The file should be in `roms/ports/retrotownstory/` on the SD card.
 
 ---
+
+## Donations
+
+If you wish to send a token of your appreciation, you may do so via [Ko-Fi](https://ko-fi.com/arlanthir).
 
 ## Development
 

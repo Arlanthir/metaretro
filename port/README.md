@@ -3,10 +3,11 @@
 Your game library becomes a little town. Play the games you own to earn coins, then spend them in the
 town's stores to unlock more of your collection.
 
-- Earn 2 coins per minute of play, and coins for RetroAchievements.
-- Get your first console from Professor Cork at the museum and buy more at the Console Dealer.
-- Each console you own opens a game store in the mall, with new picks every day.
+- Start with only one console, three games and a few coins.
+- Play your games to earn more coins. Unlock their RetroAchievements to earn a coin bonus.
+- Spend coins on new consoles and games.
 - Play and buy Arcade games at the Arcade Club, with new cabinets every week.
+- Sell games you don't wish to play anymore.
 - Watch trailers for new games on TV, or ask the townsfolk to suggest what to play next.
 
 ## Setup
