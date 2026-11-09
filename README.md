@@ -1,6 +1,6 @@
 # Retro Town Story
 
-![screenshot](port/screenshot.png)
+![Retro Town](port/screenshot.png) ![Buying games](port/screenshot-shop.png)
 
 Retro Town Story is a (meta)game for retro handhelds like the Anbernic RG 40XXV, to help players progressively unlock their game collection and choose what to play from it. It runs on EmulationStation (Knulli, Batocera), with other backends to follow.
 

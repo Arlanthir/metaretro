@@ -1,6 +1,6 @@
 #!/bin/bash
-# Draws the port's art for EmulationStation into port/: screenshot.png (gameplay in town), cover.png
-# (box art) and logo.png (the name, on transparency). Runs a copy of src/ with scripts/port-art/driver.lua
+# Draws the port's art for EmulationStation into port/: screenshot.png (gameplay in town), screenshot-shop.png
+# (buying games in a store, for the README), cover.png (box art) and logo.png (the name, on transparency). Runs a copy of src/ with scripts/port-art/driver.lua
 # appended. LOVE overrides the love binary.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)

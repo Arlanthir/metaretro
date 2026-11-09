@@ -11,6 +11,7 @@ local town = require("world.town")
 local covers = require("services.covers")
 local Title = require("scenes.title")
 local Town = require("scenes.town")
+local Shop = require("scenes.shop")
 
 local OUT = assert(os.getenv("PORT_ART_OUT"), "PORT_ART_OUT is not set")
 
@@ -112,23 +113,43 @@ local function logo()
   return canvas:newImageData()
 end
 
+-- Buying games: a store's menu, with today's picks, their prices and the selected one's box art.
+local function shop()
+  local store = app.stores[1]
+  for _, candidate in ipairs(app.stores) do
+    if candidate.id == "snes" then store = candidate end
+  end
+  local scene = Shop.store(app, store)
+  scenes.push(scene)
+  scene.cursor = 2
+end
+
+local function capture(name)
+  return function()
+    love.graphics.captureScreenshot(function(image) write(name, image) end)
+  end
+end
+
 local STEPS = {
   boxArt,
   function() end, function() end, function() end, -- covers load
-  function()
-    love.graphics.captureScreenshot(function(image) write("screenshot.png", image) end)
-  end,
+  capture("screenshot.png"),
+  shop,
+  function() end, function() end, -- covers load
+  capture("screenshot-shop.png"),
+  scenes.pop,
   function()
     write("cover.png", cover())
     write("logo.png", logo())
   end,
 }
-local baseUpdate, frame, step = love.update, 0, 0
+local baseUpdate, frame, step, inTown = love.update, 0, 0, false
 function love.update(dt)
   baseUpdate(dt)
   covers.update()
   frame = frame + 1
-  if app.townScene and scenes.stack[#scenes.stack] == app.townScene and frame % 30 == 0 then
+  inTown = inTown or (app.townScene ~= nil and scenes.stack[#scenes.stack] == app.townScene)
+  if inTown and frame % 30 == 0 then
     step = step + 1
     if STEPS[step] then STEPS[step]() else love.event.quit() end
   end
