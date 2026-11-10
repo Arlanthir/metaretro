@@ -35,8 +35,10 @@ function app:persist()
 end
 
 -- Shows a short message where the player walks, in town or at home (now, or when they're back from a menu).
+-- Messages queue up and show one after another.
+app.announcements = {}
 function app:announce(message)
-  self.announcement = message
+  table.insert(self.announcements, message)
 end
 
 local function isConsole(systemId)
@@ -98,7 +100,7 @@ local function prepare(newGame)
   if newGame then app.state.settings = app.listing.saved.settings end
   if app.state.seed == "" then app.state.seed = ("%08x"):format(love.math.random(0, 0x7fffffff)) end
   daily.useSeed(app.state.seed)
-  app.announcement = nil
+  app.announcements = {}
   if newGame then
     -- Play logged so far belongs to the previous game, and achievements count from now.
     app.state.consumedSessions = #sessions

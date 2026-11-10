@@ -119,16 +119,14 @@ function Walker:drawFade()
   end
 end
 
--- Picks up the app's latest announcement (see app:announce) and counts down the one on show.
+-- Counts down the announcement on show, then shows the app's next one (see app:announce).
 function Walker:updateToast(dt)
-  local app = self.app
-  if app.announcement then
-    self.toast, self.toastTime = app.announcement, TOAST_SECONDS
-    app.announcement = nil
-  end
   if self.toast then
     self.toastTime = self.toastTime - dt
     if self.toastTime <= 0 then self.toast = nil end
+  end
+  if not self.toast and #self.app.announcements > 0 then
+    self.toast, self.toastTime = table.remove(self.app.announcements, 1), TOAST_SECONDS
   end
 end
 
