@@ -7,7 +7,7 @@ economy.STARTER_WALLET = 100
 economy.STARTER_GAMES = 3
 economy.COINS_PER_MINUTE = 2
 economy.SESSION_CAP_MINUTES = 120
-economy.COINS_PER_RA_POINT = 5
+economy.COINS_PER_RA_POINT = 1
 economy.HARDCORE_MULTIPLIER = 2
 -- Achievements unlocked before the game started tracking them pay this fraction, once.
 economy.PAST_ACHIEVEMENT_RATE = 0.5

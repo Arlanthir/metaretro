@@ -34,7 +34,7 @@ function Collection.arcade(app)
     if arcade.SYSTEMS[system.id] then
       local games = {}
       for _, game in ipairs(app.backend.listGames(system.id)) do
-        if catalog.isShown(game, app.state.settings) then table.insert(games, game) end
+        if catalog.isShown(game, app.settings) then table.insert(games, game) end
       end
       local mine = arcade.owned(games, app.state.owned)
       if #mine > 0 then table.insert(tabs, { name = system.name, games = mine, total = #games }) end

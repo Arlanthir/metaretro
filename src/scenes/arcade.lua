@@ -32,7 +32,7 @@ local WELCOME = ("Welcome to the Arcade Club! Each play is %d coin, and new game
 
 -- This week's games, by cabinet (see arcade.cabinets).
 function Arcade.games(app)
-  return arcade.cabinets(catalog.allGames(app.backend, app.state.settings), arcade.week(os.time()), app.state.owned)
+  return arcade.cabinets(catalog.allGames(app.backend, app.settings), arcade.week(os.time()), app.state.owned)
 end
 local games = Arcade.games
 

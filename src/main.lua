@@ -22,6 +22,7 @@ local ui = require("ui")
 local version = require("core.version")
 local town = require("world.town")
 local Loading = require("scenes.loading")
+local Menu = require("scenes.menu")
 local Intro = require("scenes.intro")
 local Title = require("scenes.title")
 local Town = require("scenes.town")
@@ -48,7 +49,7 @@ end
 
 -- Rebuilds everything derived from the save after it changes.
 function app:rebuild()
-  self.catalog = catalog.build(self.backend, self.state, isConsole)
+  self.catalog = catalog.build(self.backend, self.state, isConsole, self.settings)
   self.stores = stores.list(self.state, self.catalog, progression.timeline(self.catalog.systems))
 end
 
@@ -59,12 +60,14 @@ function app:refresh()
 end
 
 -- After Settings change which games are shown: the stores, collection and town follow at once.
--- Inside a building, the town catches up when the player walks out.
+-- Inside a building, the town catches up when the player walks out. On the title screen, a game
+-- already set up (see `prepare`) is set up again with them.
 function app:applySettings()
-  local settings = self.state.settings
+  local settings = self.settings
   log("settings: peripheral games %s, Japanese-only games %s", settings.showPeripheral and "shown" or "hidden",
     settings.showJapanese and "shown" or "hidden")
-  self:refresh()
+  save.writeSettings(love.filesystem, settings)
+  if self.catalog then self:rebuild() end
   if self.townScene and not self.townScene.inside then self.townScene:rebuild() end
 end
 
@@ -98,8 +101,6 @@ local function prepare(newGame)
   local sessions = playtime.parseLog(love.filesystem.read(playtime.LOG))
   app.sessions = sessions
   app.state = newGame and save.defaults() or app.listing.saved
-  -- Settings are the player's, not the game's: they outlast a new game.
-  if newGame then app.state.settings = app.listing.saved.settings end
   if app.state.seed == "" then app.state.seed = ("%08x"):format(love.math.random(0, 0x7fffffff)) end
   daily.useSeed(app.state.seed)
   app.announcements = {}
@@ -225,13 +226,14 @@ function love.load(args)
   library.start(app.backend.name)
   log("Retro Town Story %s started with: %s", version, table.concat(args, " "))
   app.hasSave = love.filesystem.getInfo(save.FILE) ~= nil
+  app.settings = save.loadSettings(love.filesystem)
   -- Back from a game it launched: straight back to where the player was.
   local resume = launcher.consumeResume()
   if resume and app.hasSave then
     log("resuming after %s", tostring(resume.game))
     start(false, resume.location)
   else
-    scenes.switch(Title.new(app.hasSave, start, app.town))
+    scenes.switch(Title.new(app.hasSave, start, app.town, function() scenes.push(Menu.settings(app)) end))
   end
 end
 

@@ -1,4 +1,4 @@
--- The title screen: Continue (when there's a save), New Game or Quit, over the town panning slowly
+-- The title screen: Continue (when there's a save), New Game, Settings or Quit, over the town panning slowly
 -- by, with townsfolk strolling along its main street. The library is read in the background
 -- meanwhile, so choosing usually goes straight to town (see `start` in main.lua).
 local log = require("core.log")
@@ -22,13 +22,16 @@ local STROLL_SPEED = 36 -- pixels per second
 local STROLLERS = { "Villager4", "OldWoman", "Child", "Noble", "Cavegirl" }
 local GAP = 150
 
--- `start(newGame)` begins the chosen game; `map` is the town (world/town.lua's parse).
-function Title.new(hasSave, start, map)
+-- `start(newGame)` begins the chosen game; `map` is the town (world/town.lua's parse);
+-- `openSettings()` shows the Settings menu.
+function Title.new(hasSave, start, map, openSettings)
   local options = {}
   if hasSave then table.insert(options, { label = "Continue", newGame = false }) end
   table.insert(options, { label = "New Game", newGame = true })
+  table.insert(options, { label = "Settings", settings = true })
   table.insert(options, { label = "Quit", quit = true })
-  return setmetatable({ options = options, cursor = 1, hasSave = hasSave, start = start, map = map, time = 0 }, Title)
+  return setmetatable({ options = options, cursor = 1, hasSave = hasSave, start = start, map = map, time = 0,
+    openSettings = openSettings }, Title)
 end
 
 function Title:enter()
@@ -46,7 +49,9 @@ function Title:action(name)
     self.cursor = self.cursor % #self.options + 1
   elseif name == "a" then
     local option = self.options[self.cursor]
-    if option.quit then
+    if option.settings then
+      self.openSettings()
+    elseif option.quit then
       log("quit from the title screen")
       love.event.quit()
     elseif option.newGame and self.hasSave then

@@ -23,15 +23,15 @@ end
 local isShown = catalog.isShown
 
 -- Returns { systems = {sorted system entries}, bySystem = { [id] = { owned = {...}, locked = {...} } } }.
--- `include(systemId)` optionally limits which systems appear, and games the settings hide are left out.
+-- `include(systemId)` optionally limits which systems appear, and games `settings` hide are left out.
 -- Each game gets its genre `category`.
-function catalog.build(backend, state, include)
+function catalog.build(backend, state, include, settings)
   local result = { systems = {}, bySystem = {} }
   for _, system in ipairs(backend.listSystems()) do
     local games = (not include or include(system.id)) and backend.listGames(system.id) or {}
     local owned, locked = {}, {}
     for _, game in ipairs(games) do
-      if isShown(game, state.settings) then
+      if isShown(game, settings) then
         game.category = game.category or genres.categorize(game.genre)
         table.insert(state.owned[game.id] and owned or locked, game)
       end

@@ -22,7 +22,6 @@ function save.defaults()
     creditedGametime = {},
     lastPlayed = {}, -- game id -> epoch of the last play the game noticed
     consumedSessions = 0,
-    settings = {},
     player = "boy", -- the look chosen in the intro (see townsfolk.PLAYER_LOOKS)
     introDone = false,
     giftOffered = false, -- Professor Cork has offered a console from his table
@@ -63,6 +62,19 @@ end
 
 function save.write(fs, state)
   return fs.write(save.FILE, json.encode(state))
+end
+
+-- The player's settings live apart from the save: they're there before the save is read (on the
+-- title screen), and a New Game keeps them. { showPeripheral, showJapanese }, both off by default.
+save.SETTINGS_FILE = "settings.json"
+
+function save.loadSettings(fs)
+  local ok, data = pcall(json.decode, fs.read(save.SETTINGS_FILE) or "")
+  return ok and type(data) == "table" and data or {}
+end
+
+function save.writeSettings(fs, settings)
+  return fs.write(save.SETTINGS_FILE, json.encode(settings))
 end
 
 return save

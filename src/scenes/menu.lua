@@ -18,8 +18,9 @@ local SETTINGS = {
 }
 
 -- Showing or hiding groups of games everywhere in town; applied when the player leaves Settings.
+-- From the title screen too, before there's a game going.
 function Menu.settings(app)
-  local settings, before = app.state.settings, {}
+  local settings, before = app.settings, {}
   local items = {}
   for _, setting in ipairs(SETTINGS) do
     before[setting.key] = settings[setting.key] == true

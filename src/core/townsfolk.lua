@@ -220,8 +220,8 @@ townsfolk.RESIDENTS = {
   { id = "ona", name = "Elder Ona", sprite = "Shaman", hints = {
     ("Every minute you spend playing pays %d coins, up to %d minutes a session. The coins are waiting when you get back.")
       :format(economy.COINS_PER_MINUTE, economy.SESSION_CAP_MINUTES),
-    ("RetroAchievements pay %d coins for every point, and twice that in hardcore mode.")
-      :format(economy.COINS_PER_RA_POINT),
+    economy.COINS_PER_RA_POINT == 1 and "RetroAchievements pay a coin for every point, and twice that in hardcore mode."
+      or ("RetroAchievements pay %d coins for every point, and twice that in hardcore mode."):format(economy.COINS_PER_RA_POINT),
     "Achievements you unlocked before coming to town still pay, at half the rate, once.",
     "Games that are scraped with achievement data show a trophy in the lists.",
   } },

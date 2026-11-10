@@ -99,10 +99,9 @@ describe("catalog settings", function()
 
   it("shows each group when its setting is on", function()
     local state = save.defaults()
-    state.settings.showPeripheral = true
-    assert.same({ "Duck Hunt", "Gumshoe", "Mario" }, names(catalog.build(backend, state).bySystem.nes.locked))
-    state.settings = { showJapanese = true }
-    assert.same({ "Kirby", "Mario" }, names(catalog.build(backend, state).bySystem.nes.locked))
+    local function shown(settings) return names(catalog.build(backend, state, nil, settings).bySystem.nes.locked) end
+    assert.same({ "Duck Hunt", "Gumshoe", "Mario" }, shown({ showPeripheral = true }))
+    assert.same({ "Kirby", "Mario" }, shown({ showJapanese = true }))
   end)
 
   it("hides owned games too", function()
