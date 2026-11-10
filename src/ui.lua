@@ -268,8 +268,9 @@ function ui.truncate(font, text, maxWidth)
 end
 
 -- A small cup silhouette marking games with RetroAchievements.
-function ui.trophy(x, y)
-  ui.setColor("trophy")
+-- The achievements trophy; `gold` for a game whose whole set is unlocked.
+function ui.trophy(x, y, gold)
+  ui.setColor(gold and "stars" or "trophy")
   love.graphics.rectangle("fill", x + 2, y, 8, 5, 2)
   love.graphics.rectangle("fill", x + 3, y + 4, 6, 2)
   love.graphics.rectangle("fill", x, y + 1, 2, 3)
@@ -312,7 +313,7 @@ function ui.stars(x, y, rating)
 end
 
 -- Draws a scrolling list; `label(item)` returns the text, an optional right-aligned value
--- and whether to mark the row with a trophy.
+-- and whether to mark the row with a trophy ("gold" for a gold one).
 -- Returns the scroll offset that keeps the cursor visible.
 function ui.list(items, cursor, scroll, x, y, width, height, label)
   local rowHeight = ui.LIST_ROW
@@ -337,7 +338,7 @@ function ui.list(items, cursor, scroll, x, y, width, height, label)
     ui.setColor("text")
     love.graphics.print(ui.truncate(f, text, width - 28 - valueWidth - trophyWidth), x + 20, textY)
     if trophy then
-      ui.trophy(x + width - 8 - valueWidth - 14, textY + ui.iconOffset(11))
+      ui.trophy(x + width - 8 - valueWidth - 14, textY + ui.iconOffset(11), trophy == "gold")
     end
     if value then
       ui.setColor("coin")

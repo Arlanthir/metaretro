@@ -3,7 +3,6 @@ local achievements = require("core.achievements")
 local catalog = require("core.catalog")
 local consoles = require("core.consoles")
 local http = require("services.http")
-local json = require("lib.json")
 local log = require("core.log")
 
 local retroachievements = {}
@@ -66,16 +65,51 @@ function retroachievements.trackingSince(current, firstSession, now)
   return first and first < since and first or since
 end
 
+-- The player's RetroAchievements account, { username, apikey }, or nil when it isn't set up.
+local function account(app)
+  local config = readConfig()
+  local credentials = app.backend.raCredentials and app.backend.raCredentials()
+  local username = config and (config.username or credentials and credentials.username)
+  if config and config.apikey and username then return { username = username, apikey = config.apikey } end
+  return nil
+end
+
+function retroachievements.isSetUp(app)
+  return account(app) ~= nil
+end
+
+-- Fetches a game's achievements and the player's progress (decoded on the HTTP thread), noting
+-- whether the set is complete (see achievements.noteCompletion);
+-- `callback(progress)` gets nil when the account isn't set up or RetroAchievements didn't answer.
+function retroachievements.progress(app, gameId, callback, user)
+  user = user or account(app)
+  if not user then return callback(nil) end
+  http.get(retroachievements.PROGRESS_URL:format(tonumber(gameId), urlEncode(user.username), urlEncode(user.apikey)),
+    function(progress)
+      if progress and app.state and achievements.noteCompletion(app.state, progress) then app:persist() end
+      callback(progress)
+    end, "core.achievements:decodeProgress")
+end
+
+-- Pays an owned game's unlocks that haven't been paid yet (see achievements.credit), and announces
+-- them; returns the coins.
+function retroachievements.credit(app, gameId, progress)
+  local state = app.state
+  local coins = achievements.credit(state, progress, state.achievementsSince)
+  state.pendingAchievementGames[tostring(gameId)] = nil
+  app:persist()
+  log("retroachievements: game %s paid %d coins", gameId, coins)
+  return coins
+end
+
 -- Fetches every pending game in the background; games that fail (e.g. offline) stay pending.
 -- First, owned consoles with games that have a ROM hash but no id get their game lists (see
 -- core/achievements), which can turn pending hashes into games to check.
 -- `firstSession` is the start epoch of the first game session launched from the game, if any.
 function retroachievements.sync(app, firstSession)
   local state = app.state
-  local config = readConfig()
-  local credentials = app.backend.raCredentials and app.backend.raCredentials()
-  local username = config and (config.username or credentials and credentials.username)
-  if not (config and config.apikey and username) then
+  local user = account(app)
+  if not user then
     log("retroachievements: no API key or username in %s, skipping", retroachievements.CONFIG)
     return
   end
@@ -84,21 +118,17 @@ function retroachievements.sync(app, firstSession)
 
   local total = 0
   local function check(gameId)
-    http.get(retroachievements.PROGRESS_URL:format(tonumber(gameId), urlEncode(username), urlEncode(config.apikey)), function(body)
-      local ok, progress = pcall(json.decode, body or "")
-      if not ok or type(progress) ~= "table" or type(progress.Achievements) ~= "table" then
+    retroachievements.progress(app, gameId, function(progress)
+      if not progress then
         log("retroachievements: couldn't check game %s, will retry next launch", gameId)
         return
       end
-      local coins = achievements.credit(state, progress, state.achievementsSince)
-      state.pendingAchievementGames[gameId] = nil
-      app:persist()
-      log("retroachievements: game %s paid %d coins", gameId, coins)
+      local coins = retroachievements.credit(app, gameId, progress)
       total = total + coins
       if coins > 0 then
         app:announce(("+%d coins from achievements"):format(total))
       end
-    end)
+    end, user)
   end
 
   -- Pending hashes the cache already knows become games to check.
@@ -117,7 +147,7 @@ function retroachievements.sync(app, firstSession)
 
   local count = 0
   for _ in pairs(state.pendingAchievementGames) do count = count + 1 end
-  log("retroachievements: checking %d games as %s, counting unlocks since %s", count, username, state.achievementsSince)
+  log("retroachievements: checking %d games as %s, counting unlocks since %s", count, user.username, state.achievementsSince)
   for gameId in pairs(state.pendingAchievementGames) do check(gameId) end
 
   local games = catalog.allGames(app.backend)
@@ -143,7 +173,7 @@ function retroachievements.sync(app, firstSession)
   log("retroachievements: looking up ids by ROM hash on %d consoles", #wanted)
   local remaining = #wanted
   for _, console in ipairs(wanted) do
-    http.get(retroachievements.GAME_LIST_URL:format(console, urlEncode(config.apikey)), function(ids)
+    http.get(retroachievements.GAME_LIST_URL:format(console, urlEncode(user.apikey)), function(ids)
       remaining = remaining - 1
       if ids then
         cache.fetched[tostring(console)] = os.time()

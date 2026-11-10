@@ -1,3 +1,4 @@
+local achievements = require("core.achievements")
 local arcade = require("core.arcade")
 local catalog = require("core.catalog")
 local consoles = require("core.consoles")
@@ -8,6 +9,7 @@ local stores = require("core.stores")
 local townsfolk = require("core.townsfolk")
 local ui = require("ui")
 local Confirm = require("scenes.confirm")
+local Achievements = require("scenes.achievements")
 local GameDetail = require("scenes.gamedetail")
 
 -- A shop sells one list of items; `stock(app)` returns { title, subtitle?, items, footnote?,
@@ -165,6 +167,8 @@ function Shop:action(name)
     self.cursor = self.cursor % #items + 1
   elseif name == "a" and selected and not self.section.consoles then
     self:showDetails(selected)
+  elseif name == "x" and selected and not self.section.consoles and selected.cheevosId then
+    scenes.push(Achievements.new(self.app, selected))
   elseif (name == "a" or name == "y") and selected then
     self.notice = self:buy(selected)
   elseif name == "b" then
@@ -202,7 +206,7 @@ function Shop:draw()
       ui.MARGIN, listTop + 20, listWidth, "center")
   else
     self.scroll = ui.list(section.items, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, listHeight,
-      function(item) return self:itemLabel(item), ("%d c"):format(self:price(item)), item.cheevosId ~= nil end)
+      function(item) return self:itemLabel(item), ("%d c"):format(self:price(item)), achievements.trophy(self.app.state, item) end)
   end
   if section.footnote then
     local rowHeight = ui.LIST_ROW
@@ -230,7 +234,9 @@ function Shop:draw()
     love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - ui.FOOTER_HEIGHT - 32, ui.WIDTH - ui.MARGIN * 2, "center")
   end
   ui.footer(self.section.consoles and "A: buy   B: leave"
-    or ("A: details   Y: %s   B: leave"):format(self.section.selling and "sell" or "buy"))
+    or ("A: details   %sY: %s   B: leave"):format(
+      self.section.items[self.cursor] and self.section.items[self.cursor].cheevosId and "X: achievements   " or "",
+      self.section.selling and "sell" or "buy"))
 end
 
 return Shop

@@ -1,6 +1,8 @@
+local achievements = require("core.achievements")
 local consoles = require("core.consoles")
 local scenes = require("core.scenes")
 local ui = require("ui")
+local Achievements = require("scenes.achievements")
 
 local GameDetail = {}
 GameDetail.__index = GameDetail
@@ -19,6 +21,8 @@ function GameDetail:action(name)
     self.notice = self.primary.run(self)
   elseif name == "b" then
     scenes.pop()
+  elseif name == "x" and self.game.cheevosId then
+    scenes.push(Achievements.new(self.app, self.game))
   elseif name == "up" or name == "down" then
     local step = name == "up" and -1 or 1
     self.descScroll = math.max(0, math.min(self.descMaxScroll, self.descScroll + step))
@@ -34,15 +38,17 @@ local TROPHY_HEIGHT = 11
 local BEFORE_WIDTH = 18 -- a leading icon (12px) and the gap after it
 
 -- A pixel lower than centred on the capitals (it can't be exact at 11px): it reads better there.
-local function trophy(x, y)
-  ui.trophy(x, y + ui.iconOffset(TROPHY_HEIGHT) + 1)
+local function drawTrophy(x, y, gold)
+  ui.trophy(x, y + ui.iconOffset(TROPHY_HEIGHT) + 1, gold)
 end
 
 -- The achievements row: whether the game has any (with the trophy before it), and once it's owned,
 -- the coins they've paid, as a coin icon and the amount.
 function GameDetail:achievementsRow()
   local game = self.game
-  if not game.cheevosId then
+  local kind = achievements.trophy(self.app.state, game)
+  local function trophy(x, y) drawTrophy(x, y, kind == "gold") end
+  if not kind then
     return { "Achievements: none known" }
   elseif not self.app.state.owned[game.id] then
     return { "Achievements: yes", before = trophy }
@@ -104,7 +110,8 @@ function GameDetail:draw()
     ui.setColor("coin")
     love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - ui.FOOTER_HEIGHT - 32, ui.WIDTH - ui.MARGIN * 2, "center")
   end
-  ui.footer(("A: %s   %sB: back"):format(self.primary.hint, self.descMaxScroll > 0 and "Up/Down: scroll   " or ""))
+  ui.footer(("A: %s   %s%sB: back"):format(self.primary.hint, self.descMaxScroll > 0 and "Up/Down: scroll   " or "",
+    self.game.cheevosId and "X: achievements   " or ""))
 end
 
 -- The description, wrapped to `width` and scrolled with up/down when it's taller than `height`.

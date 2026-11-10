@@ -16,6 +16,7 @@ function save.defaults()
     offers = {},
     seenAchievements = {}, -- achievement id -> "softcore" or "hardcore" once paid
     achievementCoins = {}, -- RetroAchievements game id -> coins paid for its achievements
+    completedAchievements = {}, -- RetroAchievements game id -> true once its whole set is unlocked (a gold trophy)
     achievementsSince = "", -- UTC time tracking started; earlier unlocks pay less
     pendingAchievementGames = {}, -- RetroAchievements game ids to check at the next sync
     pendingAchievementHashes = {}, -- ROM hashes of played games whose id is still being looked up

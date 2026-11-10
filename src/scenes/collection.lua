@@ -1,10 +1,12 @@
 -- The player's games, a tab per system: the consoles' games (from the console at home), or the
 -- arcade games (from the cabinet at home, see Collection.arcade). A opens a game's details, where it
 -- can be played.
+local achievements = require("core.achievements")
 local arcade = require("core.arcade")
 local catalog = require("core.catalog")
 local scenes = require("core.scenes")
 local ui = require("ui")
+local Achievements = require("scenes.achievements")
 local GameDetail = require("scenes.gamedetail")
 
 local Collection = {}
@@ -75,6 +77,8 @@ function Collection:action(name)
     self.cursor = self.cursor % #games + 1
   elseif name == "a" and games[self.cursor] then
     scenes.push(GameDetail.new(self.app, games[self.cursor]))
+  elseif name == "x" and games[self.cursor] and games[self.cursor].cheevosId then
+    scenes.push(Achievements.new(self.app, games[self.cursor]))
   elseif name == "b" then
     scenes.pop()
   end
@@ -105,7 +109,7 @@ function Collection:draw()
   local listTop = ui.HEADER_HEIGHT + 68
   local listWidth = 360
   self.scroll = ui.list(games, self.cursor, self.scroll, ui.MARGIN, listTop, listWidth, ui.HEIGHT - listTop - 60,
-    function(game) return game.name, nil, game.cheevosId ~= nil end)
+    function(game) return game.name, nil, achievements.trophy(self.app.state, game) end)
 
   -- The first games of the neighbouring tabs are what L/R shows next.
   local neighbours = {}
@@ -123,7 +127,8 @@ function Collection:draw()
     ui.coverWithCaption(selected, coverX, listTop, ui.WIDTH - coverX - ui.MARGIN, 220)
   end
 
-  ui.footer(("L/R: %s   A: details   B: leave"):format(shelved.tabWord:lower()))
+  ui.footer(("L/R: %s   A: details   %sB: leave"):format(shelved.tabWord:lower(),
+    selected and selected.cheevosId and "X: achievements   " or ""))
 end
 
 return Collection

@@ -25,6 +25,12 @@ function http.get(url, callback, parser)
   send({ url = url, parser = parser }, callback)
 end
 
+-- Saves the response to `file` (an absolute path); the callback gets true once it's there. A failed
+-- download leaves no file behind.
+function http.download(url, file, callback)
+  send({ url = url, file = file }, callback)
+end
+
 -- Posts `body` as JSON.
 function http.post(url, body, callback)
   send({ url = url, body = body }, callback)

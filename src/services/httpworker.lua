@@ -44,13 +44,29 @@ local function fetch(url, post)
   return ok and (body ~= "" and body or (post and "" or nil)) or nil, status
 end
 
+-- Downloads into `file` through a temporary file, so a broken download never looks finished.
+local function download(url, file)
+  local partial = file .. ".part"
+  local pipe = io.popen(("curl -sL --max-time 20 -o %s -w '%%{http_code}' %s 2>/dev/null"):format(quote(partial), quote(url)))
+  local status = tonumber(pipe and pipe:read("*a") or "")
+  if pipe then pipe:close() end
+  local ok = status and status >= 200 and status < 300 and os.rename(partial, file)
+  if not ok then os.remove(partial) end
+  return ok and true or false, status
+end
+
 while true do
   local request = requests:demand()
-  local result, status = fetch(request.url, request.body)
-  result = result or false
-  if result and request.parser then
-    local module, name = request.parser:match("^(.-):(.+)$")
-    result = require(module)[name](result) or false
+  local result, status
+  if request.file then
+    result, status = download(request.url, request.file)
+  else
+    result, status = fetch(request.url, request.body)
+    result = result or false
+    if result and request.parser then
+      local module, name = request.parser:match("^(.-):(.+)$")
+      result = require(module)[name](result) or false
+    end
   end
   results:push({ id = request.id, body = result, status = status })
 end

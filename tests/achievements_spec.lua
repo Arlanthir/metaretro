@@ -100,3 +100,71 @@ describe("achievements ids by ROM hash", function()
     assert.same({ fetched = {}, ids = {} }, achievements.decodeIdCache("{broken"))
   end)
 end)
+
+describe("achievements.list", function()
+  local progress = { Achievements = {
+    ["12"] = { ID = 12, Title = "Second", Description = "Do the second thing", Points = 10, BadgeName = "250336",
+      DisplayOrder = 2, DateEarned = "2026-11-01 10:00:00", DateEarnedHardcore = "2026-11-01 10:00:00" },
+    ["15"] = { ID = 15, Title = "First", Description = "Do the first thing", Points = 5, BadgeName = "250337",
+      DisplayOrder = 1, DateEarned = "2026-11-02 10:00:00" },
+    ["9"] = { ID = 9, Title = "Last", Description = "Locked", Points = 25, BadgeName = "250338", DisplayOrder = 3 },
+  } }
+
+  it("orders achievements for display, with whether and how each was unlocked", function()
+    local totals = achievements.list(progress)
+    local titles = {}
+    for i, achievement in ipairs(totals.list) do titles[i] = achievement.title end
+    assert.same({ "First", "Second", "Last" }, titles)
+    assert.same({ true, false }, { totals.list[1].unlocked, totals.list[1].hardcore })
+    assert.same({ true, true }, { totals.list[2].unlocked, totals.list[2].hardcore })
+    assert.is_false(totals.list[3].unlocked)
+    assert.equal("250338", totals.list[3].badge)
+  end)
+
+  it("adds up the set and what's unlocked", function()
+    local totals = achievements.list(progress)
+    assert.same({ 2, 40, 15 }, { totals.unlocked, totals.points, totals.pointsEarned })
+  end)
+
+  it("breaks display order ties by id", function()
+    local totals = achievements.list({ Achievements = { { ID = 7, Title = "b" }, { ID = 3, Title = "a" } } })
+    assert.same({ "a", "b" }, { totals.list[1].title, totals.list[2].title })
+  end)
+end)
+
+describe("achievements.decodeProgress", function()
+  it("decodes a progress response and rejects anything else", function()
+    assert.same({ Achievements = {} }, achievements.decodeProgress('{"Achievements":{}}'))
+    assert.is_nil(achievements.decodeProgress("<html>oops"))
+    assert.is_nil(achievements.decodeProgress('{"error":"bad key"}'))
+  end)
+end)
+
+describe("achievements.noteCompletion", function()
+  local function progress(...)
+    local list = {}
+    for i, earnedOn in ipairs({ ... }) do list[i] = { ID = i, Points = 5, DateEarned = earnedOn or nil } end
+    return { ID = 42, Achievements = list }
+  end
+
+  it("marks a game gold once its whole set is unlocked, and not before", function()
+    local state = save.defaults()
+    assert.is_false(achievements.noteCompletion(state, progress("2026-11-01 10:00:00", false)))
+    assert.is_nil(state.completedAchievements["42"])
+    assert.is_true(achievements.noteCompletion(state, progress("2026-11-01 10:00:00", "2026-11-02 10:00:00")))
+    assert.equal("gold", achievements.trophy(state, { cheevosId = 42 }))
+  end)
+
+  it("takes the gold away when the set grows", function()
+    local state = save.defaults()
+    achievements.noteCompletion(state, progress("2026-11-01 10:00:00"))
+    assert.is_true(achievements.noteCompletion(state, progress("2026-11-01 10:00:00", false)))
+    assert.is_true(achievements.trophy(state, { cheevosId = 42 }))
+  end)
+
+  it("never makes an empty set gold", function()
+    local state = save.defaults()
+    assert.is_false(achievements.noteCompletion(state, progress()))
+    assert.is_nil(achievements.trophy(state, {}))
+  end)
+end)

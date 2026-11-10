@@ -28,7 +28,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `genres`: 12 categories.
   - `peripherals`: games that need a light gun, R.O.B., paddles, a wheel, a mat, a microphone or a mouse (`needsOne`): ScreenScraper's "Lightgun Shooter" genre, plus known games by system and the start of their name.
   - `townsfolk`: the villager cast, daily roster, wandering rule and recommendations; the houses' `RESIDENTS` (with their hints) and `GRANDMA`.
-  - `achievements`: RetroAchievements pay rules, and finding game ids from ROM hashes (`hashIds`, `resolveIds`, `consolesToRefresh`).
+  - `achievements`: RetroAchievements pay rules, a game's set for display (`list`, `decodeProgress`), complete sets (`noteCompletion`, `trophy`: gold once every achievement is unlocked, kept in `state.completedAchievements` from every progress response, sync or list), and finding game ids from ROM hashes (`hashIds`, `resolveIds`, `consolesToRefresh`).
   - `daily`: a deterministic random generator keyed by date (or week), mixed with the save's own `seed` (`daily.useSeed`, set at startup), so the day's billboards, mall order, villagers and arcade cabinets hold all day but differ between players. A New Game gets a new seed. Store offers aren't seeded: they're drawn with `love.math.random` on a store's first visit of the day and kept in `state.offers`.
   - `save`: defaults and migration, and the separate settings file.
   - `input`: key repeat, `stopRepeats`, Nintendo layout.
@@ -37,7 +37,8 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - `services/`:
   - `covers` and `coverworker`: threaded cover loading with prefetch, an LRU of 64, and GPU shrinking to 320px.
   - `http` and `httpworker`: curl or wget on a thread. They retry 429s, which RetroAchievements sends to bursts. A `parser` ("module:function") can decode a big response on the thread.
-  - `retroachievements`: the sync.
+  - `retroachievements`: the sync, and one game's progress (`progress`, decoded on the HTTP thread; `credit` pays its unlocks).
+  - `badges`: achievement badges (`media.retroachievements.org/Badge/<name>.png`, `_lock` for locked ones), downloaded once into the save folder's `badges/` (`http.download`), turned into images one per frame.
   - `library` and `libraryworker`: read every system's games on a thread; backends take the result with `useListing`.
   - `playtime`: session log plus gametime.
   - `video` and `videoworker`: video playback for the TV. ffmpeg decodes the picture (320x240 at 20fps) and the sound (44.1kHz stereo, into a QueueableSource) on two threads; both start together.
@@ -53,7 +54,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - `scenes/`:
   - `walker`: the base for scenes the player walks around (town and interiors): steps, door fades, camera, toasts, the Start menu (`openMenu`). The camera centres maps that fit between the wallet bar and the hint bar between them, so nothing hides behind either; taller maps scroll above the hint bar. Walking out of a building, the player keeps going while the d-pad is held.
   - `interior`: the base for buildings' insides (walking, furniture, people, the door out). `home`, `museum`, `mall`, `store` and `house` extend it through hooks (`interact`, `hintFor`, `live`, `absent`, `drawOnTop`).
-  - title (Continue / New Game / Settings / Quit), intro (Professor Cork, then picking one of four looks), town, museum, arcade (the Arcade Club), mall (the stores along a corridor; A on a clerk or the counter in front of them opens that store's menu), store (the dealer's inside, the same way), advert (a billboard's or poster's ad up close, on A), house (a resident or Granny Rose), tv (the reel), shop (the store, dealer, Granny Rose and Arcade Club menus), collection (the console's games, or with `Collection.arcade` the home cabinet's), gamedetail, dialog, confirm, loading, menu (Start's menu, Settings and Quit, and the Settings menu itself: `Menu.pause`, `Menu.settings`).
+  - title (Continue / New Game / Settings / Quit), intro (Professor Cork, then picking one of four looks), town, museum, arcade (the Arcade Club), mall (the stores along a corridor; A on a clerk or the counter in front of them opens that store's menu), store (the dealer's inside, the same way), advert (a billboard's or poster's ad up close, on A), house (a resident or Granny Rose), tv (the reel), shop (the store, dealer, Granny Rose and Arcade Club menus), collection (the console's games, or with `Collection.arcade` the home cabinet's), gamedetail (X: achievements, for games with a set; X does the same from the collection and the shop lists), achievements (the game's set: badge, title, points, description, unlocked or hardcore; scrolls a row at a time; opening an owned game's list also pays its unpaid unlocks), dialog, confirm, loading, menu (Start's menu, Settings and Quit, and the Settings menu itself: `Menu.pause`, `Menu.settings`).
 - `ui.lua`: fonts, panels (nine-slice), hint bars with button icons, lists, covers, and the `ui.boxArt` (thumbnail) / `ui.fullImage` (image) helpers.
 
 ## Rules and numbers (change here, not in the README)

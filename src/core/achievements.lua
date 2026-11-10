@@ -40,6 +40,64 @@ function achievements.credit(state, progress, since)
   return coins
 end
 
+-- A game progress response (API_GetGameInfoAndUserProgress) decoded, or nil when it isn't one.
+-- Runs on the HTTP thread (see services/http's `parser`), so it must never raise.
+function achievements.decodeProgress(body)
+  local ok, progress = pcall(json.decode, body)
+  return ok and type(progress) == "table" and type(progress.Achievements) == "table" and progress or nil
+end
+
+-- A game's achievements in RetroAchievements' display order, each as { id, title, description,
+-- points, badge, unlocked, hardcore }, with the set's totals: { list, unlocked, points, pointsEarned }.
+function achievements.list(progress)
+  local list = {}
+  for _, achievement in pairs(progress.Achievements or {}) do
+    local hardcore = earned(achievement.DateEarnedHardcore)
+    table.insert(list, {
+      id = tonumber(achievement.ID) or 0,
+      order = tonumber(achievement.DisplayOrder) or 0,
+      title = tostring(achievement.Title or ""),
+      description = tostring(achievement.Description or ""),
+      points = tonumber(achievement.Points) or 0,
+      badge = achievement.BadgeName and tostring(achievement.BadgeName) or nil,
+      unlocked = hardcore or earned(achievement.DateEarned),
+      hardcore = hardcore,
+    })
+  end
+  -- Display order first; RetroAchievements leaves it at 0 for many sets, so ids break ties.
+  table.sort(list, function(a, b)
+    if a.order ~= b.order then return a.order < b.order end
+    return a.id < b.id
+  end)
+  local totals = { list = list, unlocked = 0, points = 0, pointsEarned = 0 }
+  for _, achievement in ipairs(list) do
+    totals.points = totals.points + achievement.points
+    if achievement.unlocked then
+      totals.unlocked = totals.unlocked + 1
+      totals.pointsEarned = totals.pointsEarned + achievement.points
+    end
+  end
+  return totals
+end
+
+-- Notes whether the game in a progress response has its whole set unlocked (a set that grows can
+-- make it incomplete again); returns true when that changed.
+function achievements.noteCompletion(state, progress)
+  local totals, id = achievements.list(progress), progress.ID and tostring(progress.ID)
+  if not id then return false end
+  local complete = #totals.list > 0 and totals.unlocked == #totals.list or nil
+  if state.completedAchievements[id] == complete then return false end
+  state.completedAchievements[id] = complete
+  return true
+end
+
+-- The trophy a game shows in lists and details: "gold" once its set is complete, true while it has
+-- achievements, nil without any known.
+function achievements.trophy(state, game)
+  if not game.cheevosId then return nil end
+  return state.completedAchievements[tostring(game.cheevosId)] and "gold" or true
+end
+
 -- Games scraped with RetroAchievements' ROM hash but no game id get the id from RetroAchievements'
 -- per-console game lists. The cache is { fetched, ids }: fetched maps a RetroAchievements console
 -- id (as a string) to when its list was fetched (epoch), and ids maps a lowercase ROM hash to a
