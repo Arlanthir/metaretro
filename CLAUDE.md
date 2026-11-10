@@ -9,7 +9,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - Port: `scripts/build-port.sh` builds `dist/ports/` (`Retro Town Story.sh` and `retrotownstory/`) and `dist/retrotownstory-<version>.zip` (the same, for PortMaster's installer). The user copies `dist/ports/` to the device and pastes back `log.txt`.
 - Port art: `scripts/port-art.sh` redraws `port/screenshot.png` (gameplay in town; the billboards show box art the script draws for the mock games, since the port's images must not show real games' art), `port/screenshot-shop.png` (the SNES Store's menu, for the README only; ES takes one screenshot), `port/cover.png` (box art, with no building signs) and `port/logo.png` (the name on transparency), from the game's own drawing (`scripts/port-art/driver.lua`, run on a copy of `src/` with its own save). Rerun it after visual changes to the town or the logo.
 - Version: `src/core/version.lua` (0.1.0 so far) holds the game's version, shown on the title screen, logged at startup ("Retro Town Story 0.1.0 started with: ..."), and put in the zip's name by `scripts/build-port.sh`. Change it there only.
-- Launch titles: `scripts/generate-launch-titles.py [page.html] [roms dir]` regenerates `src/core/launchtitles.lua`. Never edit that file by hand.
+- Launch titles: `src/core/launchtitles.lua` is edited by hand. Each game's IDs come from scraped gamelists; leave them out where none is known.
 - Console sprites: `love scripts/draw-consoles src` redraws `src/assets/retrotownstory/Consoles.png` and `src/world/consolelooks.lua` from the drawings in the script. Never edit those two files by hand. A preview with names goes to the script's LÖVE save folder.
 
 ## Code map (src/)
