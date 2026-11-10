@@ -72,7 +72,8 @@ stores.EXACT_STOCK = 50
 -- A store's daily selection: up to OFFER_SIZE random games from its stock (the GotX store puts the
 -- current picks first), saved in `state.offers`
 -- so it stays put until `today` changes. Bought games just drop out of the day's selection; a game
--- whose ROM is missing (see core/roms) gives its place to another draw, so the store stays full.
+-- whose ROM is missing (see core/roms), or that left the stock unbought (hidden by Settings), gives
+-- its place to another draw, so the store stays full.
 -- The missing games the draws come across are kept with the offer for the day, and left out of the
 -- stock count. A small store (up to EXACT_STOCK games) has the rest of its stock checked too, so its
 -- count is exact; a big one's count leaves out only the missing games its draws met.
@@ -95,14 +96,19 @@ function stores.offer(store, state, built, timeline, today, random)
     return false
   end
 
+  -- A bought game stays in the day's ids (shown no more); one that left the stock otherwise, hidden
+  -- by Settings for instance, is dropped for good and another drawn instead, so a store keeps its
+  -- OFFER_SIZE games but never gets more draws than if the setting had been on all day.
   local ids, wanted = {}, rerolled and stores.OFFER_SIZE or 0
   for _, id in ipairs(rerolled and {} or offer.ids) do
-    if byId[id] and not present(byId[id]) then
+    local gone = byId[id] == nil and not state.owned[id]
+    if gone or byId[id] and not present(byId[id]) then
       wanted = wanted + 1
     else
       table.insert(ids, id)
     end
   end
+  local replaced = not rerolled and wanted > 0
   if wanted > 0 then
     local taken, pool = {}, {}
     for _, id in ipairs(ids) do taken[id] = true end
@@ -136,7 +142,7 @@ function stores.offer(store, state, built, timeline, today, random)
       for _, game in ipairs(pool) do present(game) end
     end
   end
-  local changed = rerolled or found
+  local changed = rerolled or found or replaced
   if changed then
     local missingIds = {}
     for id in pairs(missing) do table.insert(missingIds, id) end

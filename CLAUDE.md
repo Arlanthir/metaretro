@@ -81,7 +81,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - Starter packs: 3 games from curated launch titles, then the launch window, then the rest. Japanese-only games come last (when Settings show them): they're only used when there aren't enough others, as with the PC Engine. Buying a console grants its own pack.
 - **Stores:**
   - Genre stores need ≥30 games of that genre across owned consoles (`stores.MIN_GENRE_GAMES`).
-  - Daily offer: 5 random games per store.
+  - Daily offer: 5 random games per store. A bought game drops out of the day's offer; one that leaves the stock unbought (hidden by Settings, or its ROM missing) is replaced by another draw and doesn't come back that day, so toggling a setting can't draw more than the offer it would have had (`stores.offer`).
 - **Houses:** every house can be entered. Each of the four residents (`townsfolk.RESIDENTS`, by house in reading order) gives hints about how Retro Town Story works, one after another. They never wander in town.
 - **Granny Rose:** lives left of Home and buys any owned game for half its price, rounded down (`economy.sellPrice`, `Shop.grandma`). A sold game goes back to the stores. She left the wandering cast; Sultan Amir took her place.
 - **Villagers:** 20 in the cast, 4 for each of 5 kinds; one villager per kind each day. Each starts on a random grass tile (not above a tree), at least 8 tiles from the others and 3 from the player's start (`townsfolk.MIN_SPACING`, `START_CLEARANCE`); wander radius 2, grass only.

@@ -113,7 +113,7 @@ describe("stores.offer", function()
   it("drops bought games from the day's selection without replacing them", function()
     local state = stateWithNes()
     stores.offer(nesStore, state, bigBuilt, timeline, "2026-11-05", first)
-    manyGames[1].bought = true
+    state.owned[manyGames[1].id] = true
     local remaining = {}
     for i = 2, #manyGames do remaining[#remaining + 1] = manyGames[i] end
     local afterPurchase = { bySystem = { nes = { owned = { manyGames[1] }, locked = remaining } } }
@@ -216,6 +216,30 @@ describe("stores.offer", function()
       assert.is_true(changed)
       assert.same({ "nes:Game 01", "nes:Game 02", "nes:Game 04", "nes:Game 05", "nes:Game 06" }, ids(games))
     end)
+  end)
+
+  it("replaces games hidden by Settings once, and never draws more for showing them again", function()
+    local state = stateWithNes()
+    stores.offer(nesStore, state, bigBuilt, timeline, "2026-11-05", first) -- Games 01 to 05
+    local function builtWithout(hidden)
+      local shown = {}
+      for _, g in ipairs(manyGames) do
+        if not hidden[g.id] then table.insert(shown, g) end
+      end
+      return { bySystem = { nes = { owned = {}, locked = shown } } }
+    end
+    -- Hiding Game 02 and Game 04: they're replaced with other games.
+    local hidden = { ["nes:Game 02"] = true, ["nes:Game 04"] = true }
+    local games, changed = stores.offer(nesStore, state, builtWithout(hidden), timeline, "2026-11-05", first)
+    assert.is_true(changed)
+    assert.same({ "nes:Game 01", "nes:Game 03", "nes:Game 05", "nes:Game 06", "nes:Game 07" }, ids(games))
+    -- Showing them again: no new draws, and they don't come back today.
+    local again, changedAgain = stores.offer(nesStore, state, bigBuilt, timeline, "2026-11-05", first)
+    assert.is_false(changedAgain)
+    assert.same(ids(games), ids(again))
+    -- Hiding them once more: nothing to replace.
+    local _, changedThird = stores.offer(nesStore, state, builtWithout(hidden), timeline, "2026-11-05", first)
+    assert.is_false(changedThird)
   end)
 
   it("offers everything when the stock is small", function()
