@@ -10,6 +10,8 @@
 --                         -> shell command that runs the game and blocks until it exits;
 --                            controllers is { { index, guid, name, buttons, hats, axes }, ... }
 --   playStats(game)       -> { playcount, gametime (seconds) }
+--   hasRom(game)          optional; whether the game's ROM is on disk (see core/roms), true when absent
+--   useCache(cache)       optional; keeps parsed games in a services/librarycache between starts
 --   esGameId(game)        -> EmulationStation's id for the game (optional; without it, play isn't sent to ES)
 --   raCredentials()       -> { username } or nil
 

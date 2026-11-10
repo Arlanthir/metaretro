@@ -6,7 +6,14 @@ require("love.timer")
 local achievements = require("core.achievements")
 local save = require("core.save")
 
+require("love.data")
 local backend = require("backends." .. ...)
+local librarycache = require("services.librarycache")
+-- Parsed gamelists are kept for next time; a change to the parser makes them all be parsed again.
+if backend.useCache then
+  local parser = love.filesystem.read("backends/gamelist.lua") or ""
+  backend.useCache(librarycache.new(love.filesystem, love.data.encode("string", "hex", love.data.hash("md5", parser))))
+end
 local channel = love.thread.getChannel("library")
 local started = love.timer.getTime()
 local systems = backend.listSystems()

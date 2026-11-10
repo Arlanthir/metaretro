@@ -17,12 +17,34 @@ describe("knulli backend", function()
     assert.same({ gba = "Game Boy Advance", snes = "Super Nintendo" }, ids)
   end)
 
-  it("lists games of a system, skipping entries whose ROM is missing", function()
-    local games = knulli.listGames("snes")
-    assert.equal(1, #games)
-    assert.equal("Super Metroid", games[1].name)
+  it("lists every gamelist entry, and tells which ROMs are missing", function()
+    local present = {}
+    for _, game in ipairs(knulli.listGames("snes")) do present[game.name] = knulli.hasRom(game) end
+    assert.same({ ["Super Metroid"] = true, ["No Metadata.sfc"] = false }, present)
     assert.equal(1, #knulli.listGames("gba"))
     assert.same({}, knulli.listGames("missing"))
+  end)
+
+  it("counts a ROM folder as there", function()
+    assert.is_true(knulli.hasRom({ name = "Folder game", rom = "tests/fixtures/roms/gba" }))
+  end)
+
+  it("parses a gamelist once, then reads it from the cache while it's unchanged", function()
+    local librarycache = require("services.librarycache")
+    local files = {}
+    local fs = { read = function(path) return files[path] end, createDirectory = function() end,
+      write = function(path, contents) files[path] = contents end }
+    knulli.useCache(librarycache.new(fs, "test"))
+    knulli.useListing({ games = {} })
+    assert.equal("Super Metroid", knulli.listGames("snes")[1].name)
+    assert.is_not_nil(files["library/snes.lua"])
+
+    -- Mark the cached copy, so a second read shows where it came from.
+    files["library/snes.lua"] = files["library/snes.lua"]:gsub('%["name"%]="Super Metroid"', '["name"]="Cached Metroid"')
+    knulli.useListing({ games = {} })
+    assert.equal("Cached Metroid", knulli.listGames("snes")[1].name)
+    knulli.useCache(nil)
+    knulli.useListing({ games = {} })
   end)
 
   local pad = { index = 0, guid = "1900abcd", name = "H700 Gamepad", buttons = 15, hats = 1, axes = 4 }

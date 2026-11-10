@@ -6,6 +6,7 @@ local consoles = require("core.consoles")
 local badges = require("services.badges")
 local covers = require("services.covers")
 local daily = require("core.daily")
+local roms = require("core.roms")
 local esplay = require("services.esplay")
 local http = require("services.http")
 local input = require("core.input")
@@ -88,7 +89,8 @@ local function adoptLibrary(listing)
   for _, games in pairs(listing.games) do count = count + #games end
   local timings = listing.timings
   log("backend=%s systems=%d games=%d parsed in %.2fs%s", app.backend.name, #listing.systems, count, listing.seconds,
-    timings and (" (read %.2fs, find %.2fs, parse %.2fs)"):format(timings.read, timings.find, timings.parse) or "")
+    timings and (" (read %.2fs, parse %.2fs, cache %.2fs; %d systems parsed, %d cached)")
+      :format(timings.read, timings.parse, timings.cache, timings.parsed, timings.cached) or "")
 end
 
 -- Gives the frame back while setting up runs in the background (see `prepareSoon`).
@@ -151,7 +153,9 @@ end
 
 -- Launches `game`; Retro Town Story starts again where the player is now once it's over. An arcade game
 -- puts its art on the player's cabinet at home.
+-- A game whose ROM is gone returns a message to show instead.
 function app:launch(game)
+  if not roms.present(game) then return "This game's ROM is missing." end
   if arcade.isArcade(game) then
     self.state.cabinetGame = game.id
     self:persist()
@@ -224,6 +228,7 @@ function love.load(args)
   scenes.onChange = input.stopRepeats
 
   app.backend = backend.select(argValue(args, "--backend"))
+  roms.useCheck(app.backend.hasRom)
   library.start(app.backend.name)
   log("Retro Town Story %s started with: %s", version, table.concat(args, " "))
   app.hasSave = love.filesystem.getInfo(save.FILE) ~= nil

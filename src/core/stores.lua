@@ -1,6 +1,7 @@
 local catalog = require("core.catalog")
 local daily = require("core.daily")
 local genres = require("core.genres")
+local roms = require("core.roms")
 
 -- Stores in town: one per owned console, plus a genre store for every category with enough games on
 -- those consoles (a tiny genre would offer the same few games every day).
@@ -55,35 +56,50 @@ end
 stores.OFFER_SIZE = 5
 
 -- A store's daily selection: up to OFFER_SIZE random games from its stock, saved in `state.offers`
--- so it stays put until `today` changes. Bought games just drop out of the day's selection.
--- Returns the offered games, whether a new selection was drawn (so the caller can save),
--- and how many games the store has in stock overall.
+-- so it stays put until `today` changes. Bought games just drop out of the day's selection; a game
+-- whose ROM is missing (see core/roms) gives its place to another draw, so the store stays full.
+-- Returns the offered games, whether the selection changed (so the caller can save), and how many
+-- games the store has in stock overall.
 function stores.offer(store, state, built, timeline, today, random)
   local stock = stores.stock(store, state, built, timeline)
-  local byId, pool = {}, {}
-  for i, game in ipairs(stock) do
-    byId[game.id] = game
-    pool[i] = game
-  end
+  local byId = {}
+  for _, game in ipairs(stock) do byId[game.id] = game end
 
   local offer = state.offers[store.id]
   local rerolled = not offer or offer.day ~= today
-  if rerolled then
-    offer = { day = today, ids = {} }
-    while #offer.ids < stores.OFFER_SIZE and #pool > 0 do
-      table.insert(offer.ids, table.remove(pool, random(#pool)).id)
+  local ids, wanted = {}, rerolled and stores.OFFER_SIZE or 0
+  for _, id in ipairs(rerolled and {} or offer.ids) do
+    if byId[id] and not roms.present(byId[id]) then
+      wanted = wanted + 1
+    else
+      table.insert(ids, id)
     end
-    state.offers[store.id] = offer
   end
+  local changed = rerolled or wanted > 0
+  if wanted > 0 then
+    local taken, pool = {}, {}
+    for _, id in ipairs(ids) do taken[id] = true end
+    for _, game in ipairs(stock) do
+      if not taken[game.id] then table.insert(pool, game) end
+    end
+    while wanted > 0 and #pool > 0 do
+      local game = table.remove(pool, random(#pool))
+      if roms.present(game) then
+        table.insert(ids, game.id)
+        wanted = wanted - 1
+      end
+    end
+  end
+  if changed then state.offers[store.id] = { day = today, ids = ids } end
 
   local games = {}
-  for _, id in ipairs(offer.ids) do
+  for _, id in ipairs(ids) do
     if byId[id] then
       table.insert(games, byId[id])
     end
   end
   table.sort(games, catalog.byName)
-  return games, rerolled, #stock
+  return games, changed, #stock
 end
 
 -- Every game in today's store picks, as { game, store }, each game once (under the first store

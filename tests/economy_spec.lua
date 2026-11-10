@@ -219,6 +219,22 @@ describe("economy.grantStarterPack", function()
     assert.same({ games[2], games[4], games[1] }, granted)
   end)
 
+  it("skips games whose ROM is missing and draws others instead", function()
+    local roms = require("core.roms")
+    local state = save.defaults()
+    local games = {
+      game({ path = "./launch", releasedate = "19901121T000000" }),
+      game({ path = "./gone", releasedate = "19901121T000000" }),
+      game({ path = "./late", releasedate = "19950101T000000" }),
+      game({ path = "./later", releasedate = "19960101T000000" }),
+    }
+    roms.useCheck(function(g) return g.path ~= "./gone" end)
+    local granted = economy.grantStarterPack(state, games, first)
+    roms.useCheck(nil)
+    assert.same({ games[1], games[3], games[4] }, granted)
+    assert.is_nil(state.owned[games[2].id])
+  end)
+
   it("prefers curated launch titles over the launch window", function()
     local state = save.defaults()
     local games = {

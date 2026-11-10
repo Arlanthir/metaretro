@@ -1,8 +1,9 @@
 -- The Arcade Club's cabinets: arcade games from the library (systems the game otherwise leaves out
 -- of stores and the collection), a new set every week. A play costs a coin and earns coins like
 -- any other game. The clerk sells the cabinets' games, to play for free on the player's own cabinet
--- at home; a cabinet whose game was bought gets another one for the rest of the week.
+-- at home; a cabinet whose game was bought (or whose ROM is missing) gets another one for the week.
 local daily = require("core.daily")
+local roms = require("core.roms")
 
 local arcade = {}
 
@@ -50,7 +51,7 @@ function arcade.cabinets(games, week, owned)
   local picked = {}
   for i = 1, arcade.CABINETS do picked[i] = draw() end
   for i = 1, arcade.CABINETS do
-    while picked[i] and owned[picked[i].id] do picked[i] = draw() end
+    while picked[i] and (owned[picked[i].id] or not roms.present(picked[i])) do picked[i] = draw() end
   end
   return picked
 end

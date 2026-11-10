@@ -49,11 +49,9 @@ function knulli.listSystems()
   return systems
 end
 
-local MEDIA_DIRS = { "images", "videos", "manuals", "media", "downloaded_images", "downloaded_videos" }
-local PRUNE = "\\( -name " .. table.concat(MEDIA_DIRS, " -o -name ") .. " \\) -prune -o -print"
-
 local clock = love and love.timer and love.timer.getTime or os.clock
-knulli.timings = { read = 0, find = 0, parse = 0 }
+knulli.timings = { read = 0, parse = 0, cache = 0, cached = 0, parsed = 0 }
+knulli.cache = nil -- see useCache
 
 local function timed(phase, fn, ...)
   local started = clock()
@@ -62,38 +60,65 @@ local function timed(phase, fn, ...)
   return result
 end
 
--- One find per system is much cheaper on an SD card than opening every ROM; media folders are skipped.
-local function filesUnder(dir)
-  local paths = {}
-  local listing = io.popen("find " .. shellQuote(dir) .. " " .. PRUNE .. " 2>/dev/null")
-  for path in listing:lines() do
-    paths[path] = true
+-- Each system's gamelist stamp (modification time and size, with the ROMs folder), from one stat
+-- for all of them: busybox's `-c` on the device, BSD's `-f` on a Mac.
+local stamps
+local function gamelistStamps()
+  if stamps then return stamps end
+  stamps = {}
+  local files = shellQuote(knulli.romsDir) .. "/*/gamelist.xml"
+  local listing = io.popen(("stat -c '%%Y %%s %%n' %s 2>/dev/null || stat -f '%%m %%z %%N' %s 2>/dev/null")
+    :format(files, files))
+  for line in listing:lines() do
+    local mtime, size, path = line:match("^(%d+) (%d+) (.+)$")
+    local system = path and path:match("([^/]+)/gamelist%.xml$")
+    if system then stamps[system] = ("%s %s %s"):format(mtime, size, knulli.romsDir) end
   end
   listing:close()
-  return paths
+  return stamps
 end
 
--- Like ES, ignore gamelist entries whose ROM is no longer on disk.
+-- A system's gamelist entries: from the cache when its gamelist hasn't changed, otherwise parsed
+-- (and cached). Nil without a gamelist.
+local function entriesFor(systemId, systemDir)
+  local cache = knulli.cache
+  local stamp = cache and gamelistStamps()[systemId]
+  local entries = stamp and timed("cache", cache.get, cache, systemId, stamp)
+  if entries then
+    knulli.timings.cached = knulli.timings.cached + 1
+    return entries
+  end
+  local xml = timed("read", readFile, systemDir .. "/gamelist.xml")
+  if not xml then return nil end
+  entries = timed("parse", gamelist.parse, xml, systemId, systemDir)
+  knulli.timings.parsed = knulli.timings.parsed + 1
+  if stamp then timed("cache", cache.put, cache, systemId, stamp, entries) end
+  return entries
+end
+
+-- Every gamelist entry, including ones whose ROM is gone (gamelists keep stale entries): listing
+-- every ROM folder took about a second at startup, so games are checked when they're handed out
+-- instead (see hasRom and core/roms).
 function knulli.listGames(systemId)
   if not gamesBySystem[systemId] then
-    local systemDir = knulli.romsDir .. "/" .. systemId
-    local xml = timed("read", readFile, systemDir .. "/gamelist.xml")
-    local games = {}
-    if xml then
-      local present = timed("find", filesUnder, systemDir)
-      local entries = timed("parse", gamelist.parse, xml, systemId, systemDir)
-      for _, game in ipairs(entries) do
-        if present[game.rom] then
-          table.insert(games, game)
-        end
-      end
-      if #games < #entries then
-        log("%s: skipped %d gamelist entries with missing ROMs", systemId, #entries - #games)
-      end
-    end
-    gamesBySystem[systemId] = games
+    gamesBySystem[systemId] = entriesFor(systemId, knulli.romsDir .. "/" .. systemId) or {}
   end
   return gamesBySystem[systemId]
+end
+
+-- Whether the game's ROM (a file, or a folder for some systems) is on disk.
+function knulli.hasRom(game)
+  local file = io.open(game.rom, "rb")
+  if file then file:close() return true end
+  -- Opening a folder can fail; renaming a path to itself succeeds whenever it exists.
+  if os.rename(game.rom, game.rom) then return true end
+  log("%s: ROM missing (%s)", game.name, game.rom)
+  return false
+end
+
+-- Keeps parsed gamelists in `cache` (a services/librarycache), so only changed ones are parsed.
+function knulli.useCache(cache)
+  knulli.cache = cache
 end
 
 -- Takes the systems and games read on the library thread, as { systems, games = { [id] = games } }.

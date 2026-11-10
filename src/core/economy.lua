@@ -1,5 +1,6 @@
 local consoles = require("core.consoles")
 local launchTitles = require("core.launchtitles")
+local roms = require("core.roms")
 
 local economy = {}
 
@@ -179,8 +180,10 @@ function economy.grantStarterPack(state, games, random, systems)
   for _, pool in ipairs({ curated, launch, rest, japanese }) do
     while #granted < economy.STARTER_GAMES and #pool > 0 do
       local game = table.remove(pool, random(#pool))
-      state.owned[game.id] = true
-      table.insert(granted, game)
+      if roms.present(game) then
+        state.owned[game.id] = true
+        table.insert(granted, game)
+      end
     end
   end
   return granted

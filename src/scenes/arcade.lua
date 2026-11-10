@@ -5,6 +5,7 @@
 local arcade = require("core.arcade")
 local catalog = require("core.catalog")
 local log = require("core.log")
+local roms = require("core.roms")
 local scenes = require("core.scenes")
 local covers = require("services.covers")
 local ui = require("ui")
@@ -94,6 +95,10 @@ end
 
 function Arcade:play(game)
   local app = self.app
+  if not roms.present(game) then
+    scenes.push(Confirm.notice("This cabinet is out of order."))
+    return
+  end
   if app.state.wallet < arcade.PRICE then
     scenes.push(Confirm.notice("You need a coin to play."))
     return

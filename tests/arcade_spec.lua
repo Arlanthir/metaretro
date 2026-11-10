@@ -8,6 +8,16 @@ local function games()
 end
 
 describe("arcade", function()
+  it("gives a cabinet whose game's ROM is missing the week's next game", function()
+    local roms = require("core.roms")
+    local before = arcade.cabinets(games(), 2860)
+    roms.useCheck(function(g) return g.id ~= before[1].id end)
+    local after = arcade.cabinets(games(), 2860)
+    roms.useCheck(nil)
+    assert.are_not.equal(before[1].id, after[1].id)
+    assert.same({ before[2], before[3], before[4] }, { after[2], after[3], after[4] })
+  end)
+
   it("starts weeks on Monday", function()
     local sunday = os.time({ year = 2026, month = 11, day = 8, hour = 12 })
     local monday = os.time({ year = 2026, month = 11, day = 9, hour = 12 })

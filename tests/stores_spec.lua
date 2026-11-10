@@ -121,6 +121,72 @@ describe("stores.offer", function()
     assert.same({ "nes:Game 02", "nes:Game 03", "nes:Game 04", "nes:Game 05" }, ids(games))
   end)
 
+  describe("with missing ROMs", function()
+    local roms = require("core.roms")
+    local missing = {}
+    before_each(function()
+      missing = {}
+      roms.useCheck(function(g) return not missing[g.id] end)
+    end)
+    after_each(function() roms.useCheck(nil) end)
+
+    it("draws another game in place of one whose ROM is missing", function()
+      missing["nes:Game 02"] = true
+      local games = stores.offer(nesStore, stateWithNes(), bigBuilt, timeline, "2026-11-05", first)
+      assert.same({ "nes:Game 01", "nes:Game 03", "nes:Game 04", "nes:Game 05", "nes:Game 06" }, ids(games))
+    end)
+
+    -- A console store of `total` games where the first `deleted` have lost their ROMs, over two
+    -- visits and the next day: always the same present games, never a missing one.
+    local function storeOf(total, deleted)
+      local stock = {}
+      for i = 1, total do
+        stock[i] = game("nes", ("Game %02d"):format(i), "platform")
+        if i <= deleted then missing[stock[i].id] = true end
+      end
+      local storeBuilt = { bySystem = { nes = { owned = {}, locked = stock } } }
+      local state = stateWithNes()
+      local random = function(n) return math.random(n) end
+      local today, again, inStock = stores.offer(nesStore, state, storeBuilt, timeline, "2026-11-05", random)
+      local secondVisit, changed = stores.offer(nesStore, state, storeBuilt, timeline, "2026-11-05", random)
+      local nextDay = stores.offer(nesStore, state, storeBuilt, timeline, "2026-11-06", random)
+      assert.same(ids(today), ids(secondVisit))
+      assert.is_false(changed)
+      return ids(today), ids(nextDay), inStock
+    end
+
+    it("fills the offer from the games that are left: 10 games, 5 deleted", function()
+      local today, nextDay, inStock = storeOf(10, 5)
+      local present = { "nes:Game 06", "nes:Game 07", "nes:Game 08", "nes:Game 09", "nes:Game 10" }
+      assert.same(present, today)
+      assert.same(present, nextDay)
+      assert.equal(10, inStock) -- the stock count still includes the stale entries
+    end)
+
+    it("offers the one game left: 5 games, 4 deleted", function()
+      local today, nextDay = storeOf(5, 4)
+      assert.same({ "nes:Game 05" }, today)
+      assert.same({ "nes:Game 05" }, nextDay)
+    end)
+
+    it("offers nothing when every ROM is gone: 5 games, all deleted", function()
+      local today, nextDay, inStock = storeOf(5, 5)
+      assert.same({}, today)
+      assert.same({}, nextDay)
+      assert.equal(5, inStock)
+    end)
+
+    it("replaces a game whose ROM went missing during the day", function()
+      local state = stateWithNes()
+      stores.offer(nesStore, state, bigBuilt, timeline, "2026-11-05", first)
+      missing["nes:Game 03"] = true
+      roms.useCheck(function(g) return not missing[g.id] end) -- forget what was checked
+      local games, changed = stores.offer(nesStore, state, bigBuilt, timeline, "2026-11-05", first)
+      assert.is_true(changed)
+      assert.same({ "nes:Game 01", "nes:Game 02", "nes:Game 04", "nes:Game 05", "nes:Game 06" }, ids(games))
+    end)
+  end)
+
   it("offers everything when the stock is small", function()
     local state = save.defaults()
     state.ownedConsoles.nes = true

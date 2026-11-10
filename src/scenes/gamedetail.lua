@@ -11,7 +11,7 @@ GameDetail.__index = GameDetail
 function GameDetail.new(app, game, primary)
   primary = primary or {
     hint = "play",
-    run = function() app:launch(game) end,
+    run = function() return app:launch(game) end,
   }
   return setmetatable({ app = app, game = game, primary = primary, descScroll = 0, descMaxScroll = 0 }, GameDetail)
 end
