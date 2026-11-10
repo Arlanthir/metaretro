@@ -28,6 +28,7 @@ function save.defaults()
     giftOffered = false, -- Professor Cork has offered a console from his table
     giftReceived = false,
     giftConsole = "", -- the system id of the console he gave, if any
+    seed = "", -- mixed into daily picks so they differ between players (see daily.useSeed); set at the first start
     cabinetGame = "", -- the arcade game last played or bought: its art adorns the cabinet at home
   }
 end

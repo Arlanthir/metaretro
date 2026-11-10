@@ -4,6 +4,7 @@ local arcade = require("core.arcade")
 local catalog = require("core.catalog")
 local consoles = require("core.consoles")
 local covers = require("services.covers")
+local daily = require("core.daily")
 local http = require("services.http")
 local input = require("core.input")
 local launcher = require("services.launcher")
@@ -95,6 +96,8 @@ local function prepare(newGame)
   app.state = newGame and save.defaults() or app.listing.saved
   -- Settings are the player's, not the game's: they outlast a new game.
   if newGame then app.state.settings = app.listing.saved.settings end
+  if app.state.seed == "" then app.state.seed = ("%08x"):format(love.math.random(0, 0x7fffffff)) end
+  daily.useSeed(app.state.seed)
   app.announcement = nil
   if newGame then
     -- Play logged so far belongs to the previous game, and achievements count from now.

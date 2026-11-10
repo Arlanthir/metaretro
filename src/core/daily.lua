@@ -1,10 +1,19 @@
 -- Deterministic randomness keyed by text (usually today's date), so daily picks stay put all day.
+-- With the player's seed (see `useSeed`), each player gets their own picks on the same day.
 local daily = {}
+
+local playerSeed = ""
+
+-- Mixes `seed` (the save's own, see save.defaults) into every key from now on.
+function daily.useSeed(seed)
+  playerSeed = seed or ""
+end
 
 local MODULUS = 2147483647 -- 2^31 - 1, for a Park-Miller generator
 
 -- Returns random(n) -> 1..n, the same sequence every time for the same `text`.
 function daily.random(text)
+  text = playerSeed .. "|" .. text
   -- FNV-style hash, so texts that differ by one character (consecutive dates) start far apart.
   local seed = 2166136261 % MODULUS
   for i = 1, #text do
