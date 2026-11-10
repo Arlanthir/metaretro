@@ -1,4 +1,6 @@
+local economy = require("core.economy")
 local genres = require("core.genres")
+local peripherals = require("core.peripherals")
 
 local catalog = {}
 
@@ -11,18 +13,30 @@ function catalog.byName(a, b)
 end
 local byName = catalog.byName
 
+-- Whether the player's settings show `game`: games that need a peripheral and Japanese-only games
+-- are hidden unless the settings show them.
+function catalog.isShown(game, settings)
+  settings = settings or {}
+  return (settings.showPeripheral or not peripherals.needsOne(game))
+    and (settings.showJapanese or not economy.isJapaneseOnly(game))
+end
+local isShown = catalog.isShown
+
 -- Returns { systems = {sorted system entries}, bySystem = { [id] = { owned = {...}, locked = {...} } } }.
--- `include(systemId)` optionally limits which systems appear. Each game gets its genre `category`.
+-- `include(systemId)` optionally limits which systems appear, and games the settings hide are left out.
+-- Each game gets its genre `category`.
 function catalog.build(backend, state, include)
   local result = { systems = {}, bySystem = {} }
   for _, system in ipairs(backend.listSystems()) do
     local games = (not include or include(system.id)) and backend.listGames(system.id) or {}
     local owned, locked = {}, {}
     for _, game in ipairs(games) do
-      game.category = game.category or genres.categorize(game.genre)
-      table.insert(state.owned[game.id] and owned or locked, game)
+      if isShown(game, state.settings) then
+        game.category = game.category or genres.categorize(game.genre)
+        table.insert(state.owned[game.id] and owned or locked, game)
+      end
     end
-    if #games > 0 then
+    if #owned + #locked > 0 then
       table.sort(owned, byName)
       table.sort(locked, byName)
       table.insert(result.systems, system)
@@ -33,11 +47,12 @@ function catalog.build(backend, state, include)
   return result
 end
 
-function catalog.allGames(backend)
+-- Every game in the library; with `settings`, only the ones they show.
+function catalog.allGames(backend, settings)
   local games = {}
   for _, system in ipairs(backend.listSystems()) do
     for _, game in ipairs(backend.listGames(system.id)) do
-      table.insert(games, game)
+      if not settings or isShown(game, settings) then table.insert(games, game) end
     end
   end
   return games

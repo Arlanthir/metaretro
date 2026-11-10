@@ -119,7 +119,7 @@ function Interior:action(name)
     if person then person.facing = Walker.OPPOSITE[self.facing] end
     if piece or person then self:interact(piece, person) end
   elseif name == "start" then
-    self:confirmQuit()
+    self:openMenu()
   end
 end
 
@@ -152,7 +152,7 @@ function Interior:draw()
   self:drawStatus()
   local hint = self:hintFor(self:facingThings())
     or self:facingExit() and ("Down: leave %s"):format(self.place)
-    or "Start: quit"
+    or "Start: menu"
   ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)
 end
 

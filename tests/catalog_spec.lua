@@ -12,8 +12,11 @@ local function fakeBackend(library)
       for _, entry in ipairs(library) do
         if entry.id == systemId then
           local games = {}
-          for _, name in ipairs(entry.games) do
-            table.insert(games, { id = catalog.gameId(systemId, name), system = systemId, path = name, name = name })
+          for _, spec in ipairs(entry.games) do
+            -- A name, or a table of the game's fields with its name.
+            local game = type(spec) == "table" and spec or { name = spec }
+            game.id, game.system, game.path = catalog.gameId(systemId, game.name), systemId, game.name
+            table.insert(games, game)
           end
           return games
         end
@@ -69,5 +72,47 @@ describe("catalog", function()
 
   it("flattens all games", function()
     assert.equal(4, #catalog.allGames(backend))
+  end)
+end)
+
+describe("catalog settings", function()
+  local backend = fakeBackend({
+    { id = "nes", name = "NES", games = {
+      "Mario", { name = "Duck Hunt" }, { name = "Gumshoe", genre = "Lightgun Shooter" },
+      { name = "Kirby", lang = "jp" },
+    } },
+    { id = "pcengine", name = "PC Engine", games = { { name = "Bomberman", lang = "jp" } } },
+  })
+
+  local function names(games)
+    local list = {}
+    for _, game in ipairs(games) do table.insert(list, game.name) end
+    table.sort(list)
+    return list
+  end
+
+  it("hides games that need a peripheral and Japanese-only games by default", function()
+    local built = catalog.build(backend, save.defaults())
+    assert.same({ "Mario" }, names(built.bySystem.nes.locked))
+    assert.is_nil(built.bySystem.pcengine) -- nothing left to show
+  end)
+
+  it("shows each group when its setting is on", function()
+    local state = save.defaults()
+    state.settings.showPeripheral = true
+    assert.same({ "Duck Hunt", "Gumshoe", "Mario" }, names(catalog.build(backend, state).bySystem.nes.locked))
+    state.settings = { showJapanese = true }
+    assert.same({ "Kirby", "Mario" }, names(catalog.build(backend, state).bySystem.nes.locked))
+  end)
+
+  it("hides owned games too", function()
+    local state = save.defaults()
+    state.owned[catalog.gameId("nes", "Kirby")] = true
+    assert.same({}, catalog.build(backend, state).bySystem.nes.owned)
+  end)
+
+  it("filters all games only when given settings", function()
+    assert.equal(5, #catalog.allGames(backend))
+    assert.same({ "Mario" }, names(catalog.allGames(backend, {})))
   end)
 end)

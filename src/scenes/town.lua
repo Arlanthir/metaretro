@@ -365,7 +365,7 @@ function Town:action(name)
   elseif name == "a" and prop and prop.kind == "sign" and not self.move then
     scenes.push(Dialog.new("Signpost", nil, WELCOME))
   elseif name == "start" then
-    self:confirmQuit()
+    self:openMenu()
   end
 end
 
@@ -437,7 +437,7 @@ function Town:drawHud()
     or building and ("Up: enter %s"):format(select(2, Town.label(building)))
     or ad and ("A: %s at the %s"):format(ad.game.name, ad.store.title)
     or villager and ("A: talk to %s"):format(villager.name)
-    or prop and prop.kind == "sign" and "A: read sign" or "Start: quit"
+    or prop and prop.kind == "sign" and "A: read sign" or "Start: menu"
   ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)
 end
 

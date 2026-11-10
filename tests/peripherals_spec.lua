@@ -1,0 +1,17 @@
+local peripherals = require("core.peripherals")
+
+describe("peripherals.needsOne", function()
+  it("flags light gun shooters by genre, on any system", function()
+    assert.is_true(peripherals.needsOne({ system = "psx", name = "Time Crisis", genre = "Lightgun Shooter" }))
+    assert.is_false(peripherals.needsOne({ system = "psx", name = "Contra", genre = "Shooter / Run and Gun" }))
+  end)
+
+  it("flags known games by the start of their name, per system", function()
+    assert.is_true(peripherals.needsOne({ system = "nes", name = "Duck Hunt (World)", genre = "Hunting and Fishing" }))
+    assert.is_true(peripherals.needsOne({ system = "nes", name = "Family Trainer 4 : Jogging Race" }))
+    assert.is_true(peripherals.needsOne({ system = "snes", name = "Mario Paint" }))
+    assert.is_true(peripherals.needsOne({ system = "atari2600", name = "Kaboom!" }))
+    assert.is_false(peripherals.needsOne({ system = "atari5200", name = "Super Breakout" }))
+    assert.is_false(peripherals.needsOne({ system = "nes", name = "Super Mario Bros." }))
+  end)
+end)

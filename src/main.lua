@@ -54,6 +54,16 @@ function app:refresh()
   self:persist()
 end
 
+-- After Settings change which games are shown: the stores, collection and town follow at once.
+-- Inside a building, the town catches up when the player walks out.
+function app:applySettings()
+  local settings = self.state.settings
+  log("settings: peripheral games %s, Japanese-only games %s", settings.showPeripheral and "shown" or "hidden",
+    settings.showJapanese and "shown" or "hidden")
+  self:refresh()
+  if self.townScene and not self.townScene.inside then self.townScene:rebuild() end
+end
+
 local function argValue(args, flag)
   for i, value in ipairs(args) do
     if value == flag then
@@ -83,6 +93,8 @@ end
 local function prepare(newGame)
   local sessions = playtime.parseLog(love.filesystem.read(playtime.LOG))
   app.state = newGame and save.defaults() or app.listing.saved
+  -- Settings are the player's, not the game's: they outlast a new game.
+  if newGame then app.state.settings = app.listing.saved.settings end
   app.announcement = nil
   if newGame then
     -- Play logged so far belongs to the previous game, and achievements count from now.

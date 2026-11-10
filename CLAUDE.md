@@ -26,6 +26,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `stores`: the store list, daily offers and billboard `featured` picks.
   - `catalog`: owned and locked games.
   - `genres`: 12 categories.
+  - `peripherals`: games that need a light gun, R.O.B., paddles, a wheel, a mat, a microphone or a mouse (`needsOne`): ScreenScraper's "Lightgun Shooter" genre, plus known games by system and the start of their name.
   - `townsfolk`: the villager cast, daily roster, wandering rule and recommendations; the houses' `RESIDENTS` (with their hints) and `GRANDMA`.
   - `achievements`: RetroAchievements pay rules, and finding game ids from ROM hashes (`hashIds`, `resolveIds`, `consolesToRefresh`).
   - `daily`: a deterministic random generator keyed by date.
@@ -49,9 +50,9 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - `interior`, `homemap`, `housemap` and `museummap`: buildings' insides, as a rooms layer and a furniture layer. The furniture layer also marks spots (`P` the professor, `S` where the player starts at home, `R` a house's resident, `C` a clerk; `map.allSpots` lists repeated ones). Wall tiles are drawn a quarter at a time, each quarter from the piece that closes the room next to it (`interior.wallPiece`), so walls between rooms and their junctions need no special cases. Whole corner pieces stay whole. A wall two tiles thick is two walls side by side, each closing its own room.
   - `art`: all town and Home drawing from the Ninja Adventure sheets, plus our own TV, console and sofa in `assets/retrotownstory/` (the pack has none).
 - `scenes/`:
-  - `walker`: the base for scenes the player walks around (town and interiors): steps, door fades, camera, toasts, the quit prompt. The camera centres maps that fit between the wallet bar and the hint bar between them, so nothing hides behind either; taller maps scroll above the hint bar. Walking out of a building, the player keeps going while the d-pad is held.
+  - `walker`: the base for scenes the player walks around (town and interiors): steps, door fades, camera, toasts, the Start menu (`openMenu`). The camera centres maps that fit between the wallet bar and the hint bar between them, so nothing hides behind either; taller maps scroll above the hint bar. Walking out of a building, the player keeps going while the d-pad is held.
   - `interior`: the base for buildings' insides (walking, furniture, people, the door out). `home`, `museum`, `mall`, `store` and `house` extend it through hooks (`interact`, `hintFor`, `live`, `absent`, `drawOnTop`).
-  - title (Continue / New Game / Quit), intro (Professor Cork, then picking one of four looks), town, museum, arcade (the Arcade Club), mall (the stores along a corridor; A on a clerk or the counter in front of them opens that store's menu), store (the dealer's inside, the same way), advert (a billboard's or poster's ad up close, on A), house (a resident or Granny Rose), tv (the reel), shop (the store, dealer, Granny Rose and Arcade Club menus), collection (the console's games, or with `Collection.arcade` the home cabinet's), gamedetail, dialog, confirm, loading.
+  - title (Continue / New Game / Quit), intro (Professor Cork, then picking one of four looks), town, museum, arcade (the Arcade Club), mall (the stores along a corridor; A on a clerk or the counter in front of them opens that store's menu), store (the dealer's inside, the same way), advert (a billboard's or poster's ad up close, on A), house (a resident or Granny Rose), tv (the reel), shop (the store, dealer, Granny Rose and Arcade Club menus), collection (the console's games, or with `Collection.arcade` the home cabinet's), gamedetail, dialog, confirm, loading, menu (Start's menu, Settings and Quit, and the Settings menu itself: `Menu.pause`, `Menu.settings`).
 - `ui.lua`: fonts, panels (nine-slice), hint bars with button icons, lists, covers, and the `ui.boxArt` (thumbnail) / `ui.fullImage` (image) helpers.
 
 ## Rules and numbers (change here, not in the README)
@@ -70,7 +71,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
   - New Game: the intro (pick a look), then starting at home with no console. Professor Cork, in the museum next to Home, offers one of the 3 oldest consoles in the library (`progression.giftChoices`). Picking it from his table gives it free with its starter pack (`economy.giftConsole`).
   - The console dealer is closed, with a door over its doorway, until the gift, and the mall until the player owns a console (`Town:isClosed`). Until then, every villager sends the player to Professor Cork in the museum (`townsfolk.NO_CONSOLE`).
   - Saves from before the intro skip it, and the gift counts as received (`save.migrate`).
-  - Starter packs: 3 games from curated launch titles, then the launch window, then the rest. Japanese-only games come last: they're only used when there aren't enough others, as with the PC Engine. Buying a console grants its own pack.
+  - Starter packs: 3 games from curated launch titles, then the launch window, then the rest. Japanese-only games come last (when Settings show them): they're only used when there aren't enough others, as with the PC Engine. Buying a console grants its own pack.
 - **Stores:**
   - Genre stores need ≥30 games of that genre across owned consoles (`stores.MIN_GENRE_GAMES`).
   - Daily offer: 5 random games per store.
@@ -82,6 +83,7 @@ LÖVE 11.5 + LuaJIT game distributed as a PortMaster port. The target is an Anbe
 - **Non-console systems:** The game's library only uses the consoles in `core/consoles.lua`. Computers and engines (dos, amiga, devilutionx, cannonball, xash3d…) appear nowhere. Arcade systems (fbneo, mame, arcade, naomi, cps…, see `arcade.SYSTEMS`) appear only in the Arcade Club's cabinets, never in stores, Home, starter packs or counts.
 - **Ports:** Knulli's `ports` folder is ignored; the game itself lives there.
 - **Gamelist entries:** entries marked `<hidden>`, and entries whose ROM file is missing (gamelists keep stale ones), are skipped by `backends/knulli.lua`.
+- **Settings (Start, then Settings):** games that need a peripheral (`core/peripherals`) and Japanese-only games (`economy.isJapaneseOnly`) are hidden until the player shows them (`state.settings.showPeripheral`, `showJapanese`; a New Game keeps them). Hidden games are left out of the catalog (`catalog.isShown`), so nothing shows them: stores, offers, billboards, posters, the TV, starter packs, the collection (owned ones too) and the Arcade Club's cabinets. A console with only hidden games disappears. Play of a hidden game still pays. Changing a setting rebuilds the catalog and the town at once (`app:applySettings`); inside a building, the town catches up on the way out.
 - **No genre setting yet:** no genres are hidden by choice. Small genres only lack a genre store (see the rules above; Music, in the user's library); their games still sell in console stores.
 
 ## Look and feel decisions

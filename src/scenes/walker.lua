@@ -4,7 +4,8 @@
 local input = require("core.input")
 local ui = require("ui")
 local art = require("world.art")
-local Confirm = require("scenes.confirm")
+local scenes = require("core.scenes")
+local Menu = require("scenes.menu")
 
 local Walker = {}
 Walker.__index = Walker
@@ -139,8 +140,8 @@ function Walker:drawStatus()
   end
 end
 
-function Walker:confirmQuit()
-  Confirm.quit()
+function Walker:openMenu()
+  scenes.push(Menu.pause(self.app))
 end
 
 return Walker
