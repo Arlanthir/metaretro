@@ -125,15 +125,16 @@ local function autotile(set, matches, x, y, px, py)
   sprite(set.sheet, set.column + offset[1], set.row + offset[2], px, py)
 end
 
--- Ground for one tile: `kind` is "path", "water" or "grass"; `matches(x, y)` tells whether a
--- neighbouring tile is the same kind, so paths and ponds get proper edges.
+-- Ground for one tile: `kind` is "path", "water", "grass" or "lawn" (grass with no tufts or
+-- flowers, under the GotX board); `matches(x, y)` tells whether a neighbouring tile is the same
+-- kind, so paths and ponds get proper edges.
 function art.ground(kind, matches, x, y, px, py)
   sprite(GRASS[1], GRASS[2], GRASS[3], px, py)
   if kind == "path" then
     autotile(PATH, matches, x, y, px, py)
   elseif kind == "water" then
     autotile(WATER, matches, x, y, px, py)
-  elseif noise(x, y) < DECORATION_CHANCE then
+  elseif kind == "grass" and noise(x, y) < DECORATION_CHANCE then
     local decoration = pick(DECORATIONS, x, y, 1)
     sprite(decoration[1], decoration[2], decoration[3], px, py)
   end

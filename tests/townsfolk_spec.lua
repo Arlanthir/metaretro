@@ -276,3 +276,39 @@ describe("townsfolk on GotX", function()
     assert.is_nil(reply.game) -- the usual topic, with nothing to recommend in this library
   end)
 end)
+
+describe("townsfolk's GotX trivia", function()
+  local winner = { kind = "retro", date = "2026-10-31", title = "Magician Lord" }
+  local game = { id = "fbneo:maglord", name = "Magician Lord" }
+  local info = { winners = { winner }, current = {}, gameOf = { [winner] = game }, loans = {}, winnersOf = {} }
+
+  local function lines(owned)
+    local state = save.defaults()
+    state.ownedConsoles.nes = true
+    if owned then state.owned[game.id] = true end
+    local seen = {}
+    -- Every choice of line, with the GotX topic always picked first.
+    for choice = 1, #townsfolk.GOTX_TRIVIA + #townsfolk.GOTX_TRIVIA_OWNED do
+      local calls = 0
+      local random = function(n)
+        calls = calls + 1
+        if calls == 1 then return 1 end -- talk about GotX
+        return math.min(choice, n)
+      end
+      local catalog = { systems = {}, bySystem = { nes = { owned = {}, locked = {} } }, gotx = info }
+      seen[townsfolk.talk(townsfolk.CAST[1], { state = state, catalog = catalog, timeline = {}, today = "2026-11-10",
+        random = random }).text] = true
+    end
+    return seen
+  end
+
+  it("never says the player has a game they don't own", function()
+    for text in pairs(lines(false)) do assert.is_nil(text:find("You've got", 1, true), text) end
+  end)
+
+  it("can say so when they do", function()
+    local said = false
+    for text in pairs(lines(true)) do said = said or text:find("You've got", 1, true) ~= nil end
+    assert.is_true(said)
+  end)
+end)

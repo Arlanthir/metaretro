@@ -299,11 +299,14 @@ townsfolk.GOTX_CURRENT = {
 townsfolk.GOTX_TRIVIA = {
   "Did you know %s was %s? The GotX club loved it.",
   "Fun fact: %s was %s!",
+}
+-- Only for past winners the player owns.
+townsfolk.GOTX_TRIVIA_OWNED = {
   "You've got %s, haven't you? It was %s, you know.",
 }
 
 -- A GotX line for the library's picks, or nil when there's nothing to say: { text, game }.
-local function gotxLine(info, random)
+local function gotxLine(info, state, random)
   local current, past, isCurrent = {}, {}, {}
   for _, winner in ipairs(info.current) do
     isCurrent[winner] = true
@@ -322,7 +325,12 @@ local function gotxLine(info, random)
   elseif #past > 0 then
     local winner = past[random(#past)]
     local game = info.gameOf[winner]
-    local line = townsfolk.GOTX_TRIVIA[random(#townsfolk.GOTX_TRIVIA)]
+    local lines = {}
+    for _, line in ipairs(townsfolk.GOTX_TRIVIA) do table.insert(lines, line) end
+    if state.owned[game.id] then
+      for _, line in ipairs(townsfolk.GOTX_TRIVIA_OWNED) do table.insert(lines, line) end
+    end
+    local line = lines[random(#lines)]
     return { text = line:format(game.name, gotx.title(winner)), game = game }
   end
   return nil
@@ -485,7 +493,7 @@ function townsfolk.talk(villager, context)
   end
   local info = context.catalog.gotx
   if info and random(townsfolk.GOTX_CHANCE) == 1 then
-    local line = gotxLine(info, random)
+    local line = gotxLine(info, state, random)
     if line then return line end
   end
   local owned = townsfolk.ownedGames(context.catalog)

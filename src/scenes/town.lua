@@ -23,7 +23,8 @@ local Town = Walker.extend({})
 
 local VILLAGER_STEPS_PER_SECOND = 3
 local VILLAGER_PAUSE = { 1.5, 4 } -- seconds between villager steps
-local GROUND = { ["="] = "path", ["@"] = "path", ["~"] = "water" }
+-- The GotX board's tiles are plain lawn: a flower there would peek out from under the board.
+local GROUND = { ["="] = "path", ["@"] = "path", ["~"] = "water", X = "lawn" }
 local WELCOME = "Welcome to Retro Town! Play your games to earn coins, then spend them in the shops. "
   .. "The townsfolk always have a tip or two."
 
