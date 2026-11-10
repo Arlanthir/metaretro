@@ -272,9 +272,9 @@ function art.gotxBoard(px, py, panels, font)
   end
   love.graphics.setColor(0.27, 0.16, 0.10)
   love.graphics.rectangle("fill", board.x - 4, board.y - 4, board.w + 8, board.h + 8, 4)
-  love.graphics.setColor(0.13, 0.10, 0.08)
+  love.graphics.setColor(0.36, 0.22, 0.13)
   love.graphics.rectangle("fill", board.x, board.y, board.w, board.h)
-  love.graphics.setColor(0.98, 0.58, 0.28)
+  love.graphics.setColor(0.98, 0.91, 0.74)
   love.graphics.setFont(font)
   love.graphics.printf("Games of the X", board.x, board.y - 4, board.w, "center")
 
@@ -291,9 +291,9 @@ function art.gotxBoard(px, py, panels, font)
       love.graphics.setColor(1, 1, 1)
       love.graphics.draw(image, math.floor(slot.x + (slot.w - w) / 2), math.floor(slot.y + (slot.h - h) / 2), 0, scale, scale)
     else
-      love.graphics.setColor(0.27, 0.22, 0.17)
+      love.graphics.setColor(0.27, 0.16, 0.10)
       love.graphics.rectangle("fill", slot.x, slot.y, slot.w, slot.h, 3)
-      love.graphics.setColor(0.72, 0.64, 0.52)
+      love.graphics.setColor(0.98, 0.91, 0.74)
       love.graphics.printf("?", slot.x, slot.y + math.floor((slot.h - font:getHeight()) / 2), slot.w, "center")
     end
   end
