@@ -10,6 +10,7 @@
 --                         -> shell command that runs the game and blocks until it exits;
 --                            controllers is { { index, guid, name, buttons, hats, axes }, ... }
 --   playStats(game)       -> { playcount, gametime (seconds) }
+--   esGameId(game)        -> EmulationStation's id for the game (optional; without it, play isn't sent to ES)
 --   raCredentials()       -> { username } or nil
 
 local CANDIDATES = { "backends.knulli", "backends.mock" }

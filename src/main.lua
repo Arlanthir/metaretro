@@ -5,6 +5,7 @@ local catalog = require("core.catalog")
 local consoles = require("core.consoles")
 local covers = require("services.covers")
 local daily = require("core.daily")
+local esplay = require("services.esplay")
 local http = require("services.http")
 local input = require("core.input")
 local launcher = require("services.launcher")
@@ -95,6 +96,7 @@ end
 -- so the title screen can get the likely choice ready while it waits (see `start`).
 local function prepare(newGame)
   local sessions = playtime.parseLog(love.filesystem.read(playtime.LOG))
+  app.sessions = sessions
   app.state = newGame and save.defaults() or app.listing.saved
   -- Settings are the player's, not the game's: they outlast a new game.
   if newGame then app.state.settings = app.listing.saved.settings end
@@ -159,6 +161,11 @@ end
 local function enterTown(location)
   app:persist()
   retroachievements.sync(app, app.prepared.firstSession)
+  -- Once ES has the play, its gametime has grown by what the session log already paid for.
+  esplay.sync(app.backend, catalog.allGames(app.backend), app.sessions, function(game, total)
+    app.state.creditedGametime[game.id] = (app.state.creditedGametime[game.id] or 0) + total.seconds
+    app:persist()
+  end)
   input.ignoreFor(0.5)
   local town = Town.new(app)
   app.townScene = town

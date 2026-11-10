@@ -142,6 +142,11 @@ function knulli.launchCommand(game, controllers)
     knulli.controllersConfig(controllers or {}, devices), shellQuote(game.system), shellQuote(game.rom))
 end
 
+-- EmulationStation's id for a game in its web API: the MD5 of the ROM's full path, in hex.
+function knulli.esGameId(game)
+  return love.data.encode("string", "hex", love.data.hash("md5", game.rom))
+end
+
 function knulli.playStats(game)
   return { playcount = game.playcount, gametime = game.gametime }
 end

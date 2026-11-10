@@ -87,3 +87,21 @@ describe("launcher.parseResume", function()
     assert.same({ game = "snes:./a" }, launcher.parseResume(json.encode({ game = "snes:./a", location = "x" })))
   end)
 end)
+
+describe("playtime.totals", function()
+  local sessions = playtime.parseLog("snes:./a\t100\t700\ngba:./b\t0\t60\nsnes:./a\t1000\t1300\ngba:./b\t2000\t2005\n")
+
+  it("adds up each game's sessions, with when the last one ended", function()
+    assert.same({ ["snes:./a"] = { count = 2, seconds = 900, last = 1300 }, ["gba:./b"] = { count = 2, seconds = 60, last = 2005 } },
+      playtime.totals(sessions))
+  end)
+
+  it("counts sessions too short for EmulationStation as plays without time", function()
+    assert.same({ count = 1, seconds = 0, last = 2005 }, playtime.totals(sessions, 4)["gba:./b"])
+  end)
+
+  it("starts from the given session", function()
+    assert.same({ ["snes:./a"] = { count = 1, seconds = 300, last = 1300 }, ["gba:./b"] = { count = 1, seconds = 0, last = 2005 } },
+      playtime.totals(sessions, 3))
+  end)
+end)

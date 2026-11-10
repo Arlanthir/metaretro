@@ -1,4 +1,5 @@
--- Background GETs; callbacks run on the main thread from http.update().
+-- Background requests; callbacks run on the main thread from http.update(), with the body (nil unless
+-- the request succeeded) and the HTTP status (nil when there was no answer).
 -- `parser` ("module:function") optionally turns the body into a table on the background thread,
 -- for responses too big to decode on the main thread without a hitch on the device.
 local http = {}
@@ -7,7 +8,7 @@ local requests, results, thread
 local callbacks = {}
 local nextId = 0
 
-function http.get(url, callback, parser)
+local function send(request, callback)
   if not thread then
     requests = love.thread.getChannel("http_requests")
     results = love.thread.getChannel("http_results")
@@ -16,7 +17,17 @@ function http.get(url, callback, parser)
   end
   nextId = nextId + 1
   callbacks[nextId] = callback
-  requests:push({ id = nextId, url = url, parser = parser })
+  request.id = nextId
+  requests:push(request)
+end
+
+function http.get(url, callback, parser)
+  send({ url = url, parser = parser }, callback)
+end
+
+-- Posts `body` as JSON.
+function http.post(url, body, callback)
+  send({ url = url, body = body }, callback)
 end
 
 function http.update()
@@ -25,7 +36,7 @@ function http.update()
   while result do
     local callback = callbacks[result.id]
     callbacks[result.id] = nil
-    callback(result.body or nil)
+    callback(result.body or nil, result.status)
     result = results:pop()
   end
   local err = thread:getError()

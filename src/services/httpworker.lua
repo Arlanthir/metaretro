@@ -12,9 +12,10 @@ local function quote(text)
   return "'" .. text:gsub("'", "'\\''") .. "'"
 end
 
--- The body and HTTP status; the status is nil when curl isn't there.
-local function curl(url)
-  local pipe = io.popen(("curl -sL --max-time 20 -w '\\n%%{http_code}' %s 2>/dev/null"):format(quote(url)))
+-- The body and HTTP status; the status is nil when curl isn't there. With `post`, sends it as JSON.
+local function curl(url, post)
+  local data = post and ("-X POST -H 'Content-Type: application/json' --data-binary %s "):format(quote(post)) or ""
+  local pipe = io.popen(("curl -sL --max-time 20 %s-w '\\n%%{http_code}' %s 2>/dev/null"):format(data, quote(url)))
   local output = pipe and pipe:read("*a") or ""
   if pipe then pipe:close() end
   local body, status = output:match("^(.*)\n(%d%d%d)$")
@@ -28,26 +29,28 @@ local function wget(url)
   return body
 end
 
--- The body of a successful response, or nil.
-local function fetch(url)
+-- The body of a successful response (or nil), and the status. Posts need curl.
+local function fetch(url, post)
   local body, status
   for attempt = 1, #RETRY_WAITS + 1 do
-    body, status = curl(url)
+    body, status = curl(url, post)
     if status ~= 429 then break end
     love.timer.sleep(RETRY_WAITS[attempt] or 0)
   end
-  if not status then
+  if not status and not post then
     body, status = wget(url), 200
   end
-  return status >= 200 and status < 300 and body ~= "" and body or nil
+  local ok = status and status >= 200 and status < 300
+  return ok and (body ~= "" and body or (post and "" or nil)) or nil, status
 end
 
 while true do
   local request = requests:demand()
-  local result = fetch(request.url) or false
+  local result, status = fetch(request.url, request.body)
+  result = result or false
   if result and request.parser then
     local module, name = request.parser:match("^(.-):(.+)$")
     result = require(module)[name](result) or false
   end
-  results:push({ id = request.id, body = result })
+  results:push({ id = request.id, body = result, status = status })
 end

@@ -16,6 +16,23 @@ function playtime.parseLog(text)
   return sessions
 end
 
+-- Each game's logged play from session `first` on (default: all of it), as EmulationStation counts
+-- play: { [id] = { count, seconds, last } }. Sessions shorter than MIN_SECONDS add no time, and
+-- `last` is when the latest one ended.
+playtime.MIN_SECONDS = 10
+function playtime.totals(sessions, first)
+  local totals = {}
+  for i = first or 1, #sessions do
+    local session = sessions[i]
+    local total = totals[session.id] or { count = 0, seconds = 0, last = 0 }
+    total.count = total.count + 1
+    if session.seconds >= playtime.MIN_SECONDS then total.seconds = total.seconds + session.seconds end
+    total.last = math.max(total.last, session.start + session.seconds)
+    totals[session.id] = total
+  end
+  return totals
+end
+
 -- Returns the coins earned and the games played since the last credit.
 -- Play shows up in the game's session log and, on backends that track it, in the game's gametime
 -- (which also covers play outside the game); each game pays for whichever shows more.
