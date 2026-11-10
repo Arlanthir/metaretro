@@ -303,3 +303,50 @@ describe("stores.onSale", function()
     assert.equal("F-Zero", sale[1].game.name)
   end)
 end)
+
+describe("the GotX store", function()
+  local winners = {}
+  for i = 1, 8 do winners[i] = { title = "Winner " .. i } end
+  local library = {}
+  for i = 1, 8 do library[i] = game("nes", ("Game %02d"):format(i), "platform") end
+  local other = game("snes", "Not a winner", "platform")
+
+  local function builtWith(currentPicks)
+    local gameOf, winnersOf = {}, {}
+    for i, winner in ipairs(winners) do
+      gameOf[winner] = library[i]
+      winnersOf[library[i].id] = { winner }
+    end
+    return {
+      bySystem = { nes = { owned = {}, locked = library }, snes = { owned = {}, locked = { other } } },
+      gotx = { current = currentPicks, gameOf = gameOf, winnersOf = winnersOf, loans = {} },
+    }
+  end
+
+  local function storeIn(list)
+    for _, store in ipairs(list) do
+      if store.kind == "gotx" then return store end
+    end
+  end
+
+  it("opens when GotX winners for the owned consoles are for sale", function()
+    local state = save.defaults()
+    assert.is_nil(storeIn(stores.list(state, builtWith({}), timeline)))
+    state.ownedConsoles.snes = true
+    assert.is_nil(storeIn(stores.list(state, builtWith({}), timeline)))
+    state.ownedConsoles.nes = true
+    local store = storeIn(stores.list(state, builtWith({}), timeline))
+    assert.equal("GotX Store", store.title)
+    assert.equal(8, #stores.stock(store, state, builtWith({}), timeline))
+  end)
+
+  it("offers the current picks first, then random winners", function()
+    local state = save.defaults()
+    state.ownedConsoles.nes = true
+    local built = builtWith({ winners[7], winners[3] })
+    local store = storeIn(stores.list(state, built, timeline))
+    local last = function(n) return n end -- the random draws take the end of the stock
+    stores.offer(store, state, built, timeline, "2026-11-05", last)
+    assert.same({ "nes:Game 07", "nes:Game 03", "nes:Game 08", "nes:Game 06", "nes:Game 05" }, state.offers.gotx.ids)
+  end)
+end)

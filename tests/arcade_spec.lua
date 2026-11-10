@@ -8,6 +8,29 @@ local function games()
 end
 
 describe("arcade", function()
+  it("gives the first cabinets to featured games, and moves the week's games along", function()
+    local week = arcade.cabinets(games(), 2860)
+    local featured = { id = "fbneo:gotx", system = "fbneo" }
+    local list = games()
+    table.insert(list, featured)
+    local cabinets = arcade.cabinets(list, 2860, {}, { featured })
+    assert.equal(featured, cabinets[1])
+    -- The pool grew by one game, so compare ids: the rest are the week's first three.
+    local ids = { cabinets[2].id, cabinets[3].id, cabinets[4].id }
+    local weekIds = {}
+    for _, game in ipairs(arcade.cabinets(list, 2860)) do table.insert(weekIds, game.id) end
+    assert.same({ weekIds[1], weekIds[2], weekIds[3] }, ids)
+    assert.equal(arcade.CABINETS, #week)
+  end)
+
+  it("leaves out a featured game the player owns", function()
+    local featured = { id = "fbneo:gotx", system = "fbneo" }
+    local list = games()
+    table.insert(list, featured)
+    local cabinets = arcade.cabinets(list, 2860, { ["fbneo:gotx"] = true }, { featured })
+    for _, game in ipairs(cabinets) do assert.are_not.equal(featured, game) end
+  end)
+
   it("gives a cabinet whose game's ROM is missing the week's next game", function()
     local roms = require("core.roms")
     local before = arcade.cabinets(games(), 2860)

@@ -38,8 +38,9 @@ end
 
 -- This week's games, by cabinet: the same all week, and none of them in `owned` (a set of game ids):
 -- a cabinet whose game is owned takes the week's next one instead. Cabinets stay empty when the
--- library runs out of arcade games.
-function arcade.cabinets(games, week, owned)
+-- library runs out of arcade games. `featured` games (the current GotX arcade picks) take the first
+-- cabinets, and the week's games move along after them.
+function arcade.cabinets(games, week, owned, featured)
   owned = owned or {}
   local pool = {}
   for _, game in ipairs(games) do
@@ -53,7 +54,21 @@ function arcade.cabinets(games, week, owned)
   for i = 1, arcade.CABINETS do
     while picked[i] and (owned[picked[i].id] or not roms.present(picked[i])) do picked[i] = draw() end
   end
-  return picked
+  local cabinets, taken = {}, {}
+  for _, game in ipairs(featured or {}) do
+    if #cabinets < arcade.CABINETS and not taken[game.id] and not owned[game.id] and roms.present(game) then
+      taken[game.id] = true
+      table.insert(cabinets, game)
+    end
+  end
+  for i = 1, arcade.CABINETS do
+    local game = picked[i]
+    if game and #cabinets < arcade.CABINETS and not taken[game.id] then
+      taken[game.id] = true
+      table.insert(cabinets, game)
+    end
+  end
+  return cabinets
 end
 
 -- Whether `owned` (a set of game ids, "system:path") has any arcade game: the player has a cabinet.

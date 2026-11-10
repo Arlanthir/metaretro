@@ -16,6 +16,7 @@ The games come from the player's own collection and its scraped metadata, so sto
 - Play and buy Arcade games at the Arcade Club, with new cabinets every week.
 - Sell games you don't wish to play anymore.
 - Watch trailers for new games on TV, or ask the townsfolk to suggest what to play next.
+- Follow [retrohandhelds.gg](https://retrohandhelds.gg)'s GotX game club: its Games of the Month, Game of the Quarter and RetroBits are on the town's board, on loan to play while they're current, and for sale at the GotX Store.
 
 ## Installation
 
@@ -47,11 +48,16 @@ Built with [LÖVE](https://love2d.org) 11.5 and distributed as a PortMaster port
 - Controls on keyboard: arrows, `Z`/`Enter` = A, `X`/`Esc` = B (hold to run), `A`/`S` = X/Y, `Q`/`W` = L/R, `Space` = Start, `Tab` = Select (hold for the FPS counter).
 - Tests: `luarocks install busted`, then `busted` from the repo root.
 - Screenshot: `love src --screenshot 2` saves `screenshot.png` to the LÖVE save folder after 2 seconds and quits.
+- GotX: `scripts/update-gotx.sh` refreshes the GotX winners the game ships with (`src/assets/gotx/winners.tsv`); the game also fetches newer ones itself when a new pick is due.
 - Port: `scripts/build-port.sh` builds `dist/ports/` (copy it to `/userdata/roms/ports/`) and `dist/retrotownstory-<version>.zip` (for PortMaster's installer). On its first run, the port adds its name, screenshot, box art and logo to EmulationStation. `scripts/port-art.sh` redraws that art in `port/`.
 
 ### Art
 
 Town and menu art comes from the [Ninja Adventure asset pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-boy and AAA (CC0). The font is [Ark Pixel](https://github.com/TakWolf/ark-pixel-font) 10px (SIL Open Font License, see `src/assets/fonts/`), which also covers Japanese titles. Only the images in use are in `src/assets/ninja-adventure/`; the full pack can be unzipped into `example-data/ninja-adventure/` (ignored by git) to pick more. The TV, consoles, cabinets and sofa are the game's own, drawn in the pack's palette (`src/assets/retrotownstory/`).
+
+### GotX data
+
+The GotX picks come from the [GotX Randomizer](https://github.com/blakekl/gotx-randomizer)'s database (MIT), by the [retrohandhelds.gg](https://retrohandhelds.gg) community. Only the winners are kept: no nominations and no member data.
 
 ### AI Disclosure
 
@@ -59,7 +65,6 @@ The programming was AI-assisted by Claude.
 
 ## Wishlist
 
-- Integrate with [Games of the Month](https://retrohandhelds.gg/games-of-the-month/), its GotX and RetroBits (Saturday Nights), to have strong recommendations for popular games that the player may have in their collection.
 - Release date flashbacks (this game came out on this day X years ago!)
 - Have some trivia about games.
 - Have different types of store, like a more expensive "system sellers" store or a "deep cuts" / underrated game store for cheaper.

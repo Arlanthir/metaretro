@@ -58,7 +58,11 @@ end
 while true do
   local request = requests:demand()
   local result, status
-  if request.file then
+  if request.command then
+    local pipe = io.popen(request.command)
+    result = pipe and pipe:read("*a") or false
+    if pipe then pipe:close() end
+  elseif request.file then
     result, status = download(request.url, request.file)
   else
     result, status = fetch(request.url, request.body)

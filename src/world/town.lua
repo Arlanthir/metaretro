@@ -3,12 +3,14 @@
 --   B  building     H  home door   D  console dealer door   M  game museum door   L  mall door
 --   A  arcade club door   V  a resident's house door   G  Granny Rose's house door
 --   $  signpost (readable)   %  crate   &  barrel   #  billboard (4x3 block of #)
+--   X  the GotX board (a 10x3 block of X)
 -- Every door sits on the bottom row of its building (a block of B, 4 wide and 3 tall, or taller for the
 -- museum), where the building's sprite draws its doorway: one tile from the left edge.
 local town = {}
 
 town.BUILDING_WIDTH = 4
 town.BILLBOARD_WIDTH, town.BILLBOARD_HEIGHT = 4, 3
+town.BOARD_WIDTH, town.BOARD_HEIGHT = 10, 3
 
 local WALKABLE = { ["."] = true, ["="] = true, ["@"] = true }
 local FIXED = { H = "home", D = "dealer", M = "museum", L = "mall", A = "arcade", V = "house",
@@ -35,6 +37,8 @@ function town.parse(rows)
         table.insert(map.props, { kind = PROPS[tile], x = x, y = y })
       elseif tile == "#" and row:sub(x - 1, x - 1) ~= "#" and (rows[y - 1] or ""):sub(x, x) ~= "#" then
         table.insert(map.billboards, { x = x, y = y }) -- top-left corner
+      elseif tile == "X" and not map.board then
+        map.board = { x = x, y = y } -- top-left corner
       elseif FIXED[tile] then
         table.insert(map.fixed, { kind = FIXED[tile], door = door(rows, x, y) })
       end
@@ -50,7 +54,7 @@ end
 
 -- Plots: building and billboard spots, solid only where something actually stands.
 local function isPlotTile(tile)
-  return tile == "B" or tile == "#" or FIXED[tile] ~= nil
+  return tile == "B" or tile == "#" or tile == "X" or FIXED[tile] ~= nil
 end
 
 -- `blocked` (from town.blockedTiles, plus any billboards in use) frees the parts of plots nothing

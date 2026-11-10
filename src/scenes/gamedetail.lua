@@ -7,17 +7,18 @@ local Achievements = require("scenes.achievements")
 local GameDetail = {}
 GameDetail.__index = GameDetail
 
--- `primary` is what A does: { hint, run(detail) }; owned games default to playing.
+-- `primary` is what A does: { hint, run(detail) }; owned games default to playing, and `false`
+-- leaves A doing nothing (a game only shown, e.g. from the GotX board).
 function GameDetail.new(app, game, primary)
-  primary = primary or {
+  primary = primary == nil and {
     hint = "play",
     run = function() return app:launch(game) end,
-  }
+  } or primary
   return setmetatable({ app = app, game = game, primary = primary, descScroll = 0, descMaxScroll = 0 }, GameDetail)
 end
 
 function GameDetail:action(name)
-  if name == "a" then
+  if name == "a" and self.primary then
     self.notice = self.primary.run(self)
   elseif name == "b" then
     scenes.pop()
@@ -50,7 +51,7 @@ function GameDetail:achievementsRow()
   local function trophy(x, y) drawTrophy(x, y, kind == "gold") end
   if not kind then
     return { "Achievements: none known" }
-  elseif not self.app.state.owned[game.id] then
+  elseif not self.app:canPlay(game) then
     return { "Achievements: yes", before = trophy }
   end
   -- A game RetroAchievements hasn't been asked about yet has no entry: it's earned nothing either.
@@ -110,7 +111,8 @@ function GameDetail:draw()
     ui.setColor("coin")
     love.graphics.printf(self.notice, ui.MARGIN, ui.HEIGHT - ui.FOOTER_HEIGHT - 32, ui.WIDTH - ui.MARGIN * 2, "center")
   end
-  ui.footer(("A: %s   %s%sB: back"):format(self.primary.hint, self.descMaxScroll > 0 and "Up/Down: scroll   " or "",
+  ui.footer(("%s%s%sB: back"):format(self.primary and ("A: %s   "):format(self.primary.hint) or "",
+    self.descMaxScroll > 0 and "Up/Down: scroll   " or "",
     self.game.cheevosId and "X: achievements   " or ""))
 end
 

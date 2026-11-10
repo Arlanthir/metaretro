@@ -229,3 +229,50 @@ describe("townsfolk.lastPlayedGame", function()
     assert.is_nil(townsfolk.lastPlayedGame(save.defaults(), { { id = "nes:new", system = "nes" } }))
   end)
 end)
+
+describe("townsfolk on GotX", function()
+  local function info(current, past)
+    local winners, gameOf = {}, {}
+    for _, list in ipairs({ past, current }) do
+      for _, entry in ipairs(list) do
+        table.insert(winners, entry.winner)
+        gameOf[entry.winner] = entry.game
+      end
+    end
+    local currentWinners = {}
+    for i, entry in ipairs(current) do currentWinners[i] = entry.winner end
+    return { winners = winners, current = currentWinners, gameOf = gameOf, loans = {}, winnersOf = {} }
+  end
+
+  local function talk(gotxInfo, random)
+    local state = save.defaults()
+    state.ownedConsoles.nes = true
+    local catalog = { systems = {}, bySystem = { nes = { owned = {}, locked = {} } }, gotx = gotxInfo }
+    return townsfolk.talk(townsfolk.CAST[1], { state = state, catalog = catalog, timeline = {}, today = "2026-11-10",
+      random = random })
+  end
+
+  local shantae = { id = "gbc:shantae", name = "Shantae" }
+  local sm64 = { id = "n64:sm64", name = "Super Mario 64" }
+  local monthPick = { winner = { kind = "gotm", date = "2026-11-01", theme = "Novemb-her 2026", title = "Shantae" },
+    game = shantae }
+  local pastPick = { winner = { kind = "gotm", date = "2020-08-01", title = "Super Mario 64" }, game = sm64 }
+
+  it("mentions a current pick in the library, with the month's theme", function()
+    local reply = talk(info({ monthPick }, {}), function() return 1 end)
+    assert.equal(shantae, reply.game)
+    assert.truthy(reply.text:find("Novemb-her 2026", 1, true))
+    assert.truthy(reply.text:find("Shantae", 1, true))
+  end)
+
+  it("tells trivia about a past winner in the library", function()
+    local reply = talk(info({}, { pastPick }), function() return 1 end)
+    assert.equal(sm64, reply.game)
+    assert.truthy(reply.text:find("Super Mario 64 was Game of the Month in August 2020", 1, true))
+  end)
+
+  it("keeps to the usual topics most of the time", function()
+    local reply = talk(info({ monthPick }, { pastPick }), function(n) return n end)
+    assert.is_nil(reply.game) -- the usual topic, with nothing to recommend in this library
+  end)
+end)

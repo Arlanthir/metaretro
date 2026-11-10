@@ -8,6 +8,7 @@ local stores = require("core.stores")
 local covers = require("services.covers")
 local townsfolk = require("core.townsfolk")
 local Dialog = require("scenes.dialog")
+local Gotx = require("scenes.gotx")
 local Home = require("scenes.home")
 local House = require("scenes.house")
 local Museum = require("scenes.museum")
@@ -169,6 +170,10 @@ function Town:rebuild()
     table.insert(images, ui.fullImage(homeGame))
   end
   table.insert(images, Home.cabinetArt(self.app))
+  for _, pick in ipairs(self.app.catalog.gotx.current) do
+    local game = self.app.catalog.gotx.gameOf[pick]
+    table.insert(images, game and ui.boxArt(game))
+  end
   -- And what the mall's posters and the arcade's cabinets show, so they're there on the way in.
   for _, path in ipairs(Mall.adPaths(self.app)) do table.insert(images, path) end
   for _, path in ipairs(Arcade.artPaths(self.app)) do table.insert(images, path) end
@@ -184,6 +189,15 @@ function Town:rebuild()
           self.blocked[key(x, y)] = true
         end
       end
+    end
+  end
+  -- The GotX board always stands; its panels show the current picks' box art.
+  self.boardAt = {}
+  local board = map.board
+  for x = board and board.x or 1, board and board.x + town.BOARD_WIDTH - 1 or 0 do
+    for y = board.y, board.y + town.BOARD_HEIGHT - 1 do
+      self.boardAt[key(x, y)] = true
+      self.blocked[key(x, y)] = true
     end
   end
   self.props = {}
@@ -261,7 +275,12 @@ function Town:talkTo(villager)
   app:persist() -- store tips can roll the day's store picks
   local accept = reply.game and {
     hint = "show me",
-    run = function() scenes.push(GameDetail.new(app, reply.game)) end,
+    run = function()
+      -- A GotX pick can be one the player can't play (yet): then it's only shown.
+      local primary
+      if not app:canPlay(reply.game) then primary = false end
+      scenes.push(GameDetail.new(app, reply.game, primary))
+    end,
   }
   scenes.push(Dialog.new(villager.name, art.portrait(villager), reply.text, accept))
 end
@@ -352,6 +371,10 @@ function Town:update(dt)
   end
 end
 
+function Town:facingBoard()
+  return self.boardAt[key(self:facingTile())] ~= nil
+end
+
 -- The ad on the billboard the player faces, if any.
 function Town:facingAd()
   return self.ads[self.billboardAt[key(self:facingTile())] or 0]
@@ -363,6 +386,8 @@ function Town:action(name)
     self:talkTo(villager)
   elseif name == "a" and ad and not self.move then
     scenes.push(Advert.new(ad.game, ad.store))
+  elseif name == "a" and self:facingBoard() and not self.move then
+    scenes.push(Gotx.new(self.app))
   elseif name == "a" and prop and prop.kind == "sign" and not self.move then
     scenes.push(Dialog.new("Signpost", nil, WELCOME))
   elseif name == "start" then
@@ -381,6 +406,7 @@ function Town:draw()
   -- Characters and billboards lower on screen stand in front of the ones above them.
   local characters = { { y = py, draw = function() art.player(screenX, screenY, self.facing, frame, self.app.state.player) end } }
   self:addBillboards(characters, camX, camY)
+  self:addBoard(characters, camX, camY)
   for _, villager in ipairs(self.villagers) do
     local vx, vy = self:villagerPixels(villager)
     local walkFrame = villager.move and math.floor(villager.move.t * 4) or 0
@@ -414,6 +440,24 @@ function Town:addBillboards(drawables, camX, camY)
   end
 end
 
+-- Adds the GotX board to `drawables` when it's on screen, sorted by its bottom row like billboards.
+function Town:addBoard(drawables, camX, camY)
+  local board = self.map.board
+  if not board then return end
+  local px, py = (board.x - 1) * art.TILE - camX, (board.y - 1) * art.TILE - camY
+  if px < -10 * art.TILE or px > ui.WIDTH or py < -3 * art.TILE or py > ui.HEIGHT + art.TILE then return end
+  local panels = {}
+  for i, pick in ipairs(self.app.catalog.gotx.current) do
+    local game = self.app.catalog.gotx.gameOf[pick]
+    local path = game and ui.boxArt(game)
+    panels[i] = { image = path and covers.get(path) or nil }
+  end
+  table.insert(drawables, {
+    y = (board.y + town.BOARD_HEIGHT - 2) * art.TILE,
+    draw = function() art.gotxBoard(px, py, panels, ui.fonts.sign) end,
+  })
+end
+
 -- Trees standing just below the player cover them with their crowns. They're redrawn only
 -- over the player's sprite (at `screenX, screenY`), so they can't cover the trees in front of them.
 function Town:drawTreesInFront(camX, camY, screenX, screenY)
@@ -438,6 +482,7 @@ function Town:drawHud()
     or building and ("Up: enter %s"):format(select(2, Town.label(building)))
     or ad and ("A: %s at the %s"):format(ad.game.name, ad.store.title)
     or villager and ("A: talk to %s"):format(villager.name)
+    or self:facingBoard() and "A: read the GotX board"
     or prop and prop.kind == "sign" and "A: read sign" or "Start: menu"
   ui.hintPanel(hint, ui.WIDTH / 2, ui.HEIGHT - 44)
 end

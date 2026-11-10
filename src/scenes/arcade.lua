@@ -31,9 +31,15 @@ local WELCOME = ("Welcome to the Arcade Club! Each play is %d coin, and new game
   .. "Fancy one of your own? I'll sell you any game here for %d coins, and a new one takes its place.")
   :format(arcade.PRICE, arcade.GAME_PRICE)
 
--- This week's games, by cabinet (see arcade.cabinets).
+-- This week's games, by cabinet (see arcade.cabinets), with the current GotX arcade picks first.
 function Arcade.games(app)
-  return arcade.cabinets(catalog.allGames(app.backend, app.settings), arcade.week(os.time()), app.state.owned)
+  local gotx = app.catalog.gotx
+  local featured = {}
+  for _, winner in ipairs(gotx.current) do
+    local game = gotx.gameOf[winner]
+    if game and arcade.isArcade(game) then table.insert(featured, game) end
+  end
+  return arcade.cabinets(catalog.allGames(app.backend, app.settings), arcade.week(os.time()), app.state.owned, featured)
 end
 local games = Arcade.games
 

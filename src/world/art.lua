@@ -258,6 +258,46 @@ function art.billboard(px, py, image, title, font)
   end
 end
 
+-- The GotX board, from the top-left of its 10x3 block at (px, py): a wide wooden board on two posts,
+-- titled, with a panel for each of the current picks. `panels` are { image } (box art, or nil for
+-- a game that isn't in the library, shown as a question mark).
+local BOARD_TOP, BOARD_HEIGHT = -26, 104
+function art.gotxBoard(px, py, panels, font)
+  local tile = art.TILE
+  local board = { x = px + 6, y = py + BOARD_TOP, w = 10 * tile - 12, h = BOARD_HEIGHT }
+  love.graphics.setColor(0.36, 0.22, 0.13)
+  for _, postX in ipairs({ px + 2 * tile, px + 8 * tile - 8 }) do
+    love.graphics.rectangle("fill", postX, board.y + board.h, 8, py + 3 * tile - 4 - board.y - board.h)
+  end
+  love.graphics.setColor(0.27, 0.16, 0.10)
+  love.graphics.rectangle("fill", board.x - 4, board.y - 4, board.w + 8, board.h + 8, 4)
+  love.graphics.setColor(0.13, 0.10, 0.08)
+  love.graphics.rectangle("fill", board.x, board.y, board.w, board.h)
+  love.graphics.setColor(0.98, 0.58, 0.28)
+  love.graphics.setFont(font)
+  love.graphics.printf("Games of the X", board.x, board.y - 4, board.w, "center")
+
+  local count = math.max(#panels, 1)
+  local gap = 6
+  local slotW = math.floor((board.w - gap * (count + 1)) / count)
+  local slotH = board.h - 28
+  for i, panel in ipairs(panels) do
+    local slot = { x = board.x + gap + (i - 1) * (slotW + gap), y = board.y + 22, w = slotW, h = slotH }
+    local image = panel.image
+    if image then
+      local scale = math.min(slot.w / image:getWidth(), slot.h / image:getHeight())
+      local w, h = image:getWidth() * scale, image:getHeight() * scale
+      love.graphics.setColor(1, 1, 1)
+      love.graphics.draw(image, math.floor(slot.x + (slot.w - w) / 2), math.floor(slot.y + (slot.h - h) / 2), 0, scale, scale)
+    else
+      love.graphics.setColor(0.27, 0.22, 0.17)
+      love.graphics.rectangle("fill", slot.x, slot.y, slot.w, slot.h, 3)
+      love.graphics.setColor(0.72, 0.64, 0.52)
+      love.graphics.printf("?", slot.x, slot.y + math.floor((slot.h - font:getHeight()) / 2), slot.w, "center")
+    end
+  end
+end
+
 -- A character from a 4-direction sheet (one column per direction, walk frames down the rows)
 -- with its shadow; `frame` counts walk frames (0 when standing still).
 function art.character(sheet, x, y, facing, frame)

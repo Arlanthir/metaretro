@@ -6,8 +6,10 @@ local consoles = require("core.consoles")
 local badges = require("services.badges")
 local covers = require("services.covers")
 local daily = require("core.daily")
+local gotx = require("core.gotx")
 local roms = require("core.roms")
 local esplay = require("services.esplay")
+local gotxsync = require("services.gotxsync")
 local http = require("services.http")
 local input = require("core.input")
 local launcher = require("services.launcher")
@@ -49,11 +51,39 @@ local function isConsole(systemId)
   return consoles.get(systemId) ~= nil
 end
 
+-- The library's arcade games (the catalog only has consoles'), as the settings show them.
+local function arcadeGames(self)
+  local games = {}
+  for _, system in ipairs(self.backend.listSystems()) do
+    if arcade.SYSTEMS[system.id] then
+      for _, game in ipairs(self.backend.listGames(system.id)) do
+        if catalog.isShown(game, self.settings) then table.insert(games, game) end
+      end
+    end
+  end
+  return games
+end
+
 -- Rebuilds everything derived from the save after it changes.
 function app:rebuild()
   self.catalog = catalog.build(self.backend, self.state, isConsole, self.settings)
+  self.catalog.gotx = gotx.attach(self.gotxWinners or {}, self.catalog, self.state, os.date("%Y-%m-%d"),
+    arcadeGames(self))
   self.stores = stores.list(self.state, self.catalog, progression.timeline(self.catalog.systems), os.date("%Y-%m-%d"),
     love.math.random)
+end
+
+-- Whether the player can play `game`: they own it, or it's a GotX pick on loan (see core/gotx).
+function app:canPlay(game)
+  return self.state.owned[game.id] or (self.catalog and self.catalog.gotx.loans[game.id]) ~= nil
+end
+
+-- The GotX winners: the copy the game ships with, or the one downloaded since (see services/gotxsync),
+-- whichever is newer.
+local function loadGotx()
+  local shipped = gotx.parse(love.filesystem.read(gotx.SHIPPED))
+  local downloaded = gotx.parse(love.filesystem.read(gotx.DOWNLOADED))
+  return gotx.latestDate(downloaded) > gotx.latestDate(shipped) and downloaded or shipped
 end
 
 -- Rebuilds after the save changes, then saves it.
@@ -71,6 +101,11 @@ function app:applySettings()
     settings.showJapanese and "shown" or "hidden")
   save.writeSettings(love.filesystem, settings)
   if self.catalog then self:rebuild() end
+  self:rebuildTown()
+end
+
+-- Redraws the town after what it shows changed; inside a building, it catches up on the way out.
+function app:rebuildTown()
   if self.townScene and not self.townScene.inside then self.townScene:rebuild() end
 end
 
@@ -123,9 +158,10 @@ local function prepare(newGame)
   for _, game in ipairs(played) do
     app.state.lastPlayed[game.id] = os.time()
   end
-  retroachievements.queue(app.state, played)
   pause()
+  app.gotxWinners = app.gotxWinners or loadGotx()
   app:rebuild()
+  retroachievements.queue(app.state, played, function(game) return app:canPlay(game) end)
   app.prepared = { newGame = newGame, firstSession = not newGame and sessions[1] and sessions[1].start or nil }
 end
 
@@ -168,6 +204,12 @@ end
 local function enterTown(location)
   app:persist()
   retroachievements.sync(app, app.prepared.firstSession)
+  -- Newer GotX picks change the board, the loans, the GotX store and what villagers say.
+  gotxsync.sync(app.gotxWinners, function(winners)
+    app.gotxWinners = winners
+    app:refresh()
+    app:rebuildTown()
+  end)
   -- Once ES has the play, its gametime has grown by what the session log already paid for.
   esplay.sync(app.backend, catalog.allGames(app.backend), app.sessions, function(game, total)
     app.state.creditedGametime[game.id] = (app.state.creditedGametime[game.id] or 0) + total.seconds

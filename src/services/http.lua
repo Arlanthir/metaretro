@@ -31,6 +31,12 @@ function http.download(url, file, callback)
   send({ url = url, file = file }, callback)
 end
 
+-- Runs a shell command on the same thread (slow ones that shouldn't hold up a frame); the callback
+-- gets its output.
+function http.run(command, callback)
+  send({ command = command }, callback)
+end
+
 -- Posts `body` as JSON.
 function http.post(url, body, callback)
   send({ url = url, body = body }, callback)

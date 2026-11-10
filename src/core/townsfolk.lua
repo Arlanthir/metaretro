@@ -3,6 +3,7 @@ local arcade = require("core.arcade")
 local daily = require("core.daily")
 local economy = require("core.economy")
 local genres = require("core.genres")
+local gotx = require("core.gotx")
 local stores = require("core.stores")
 
 local townsfolk = {}
@@ -278,6 +279,55 @@ townsfolk.NO_CONSOLE = {
 
 townsfolk.KINDS = { "neverPlayed", "genre", "achievements", "forgotten", "storeTip" }
 
+-- Any villager may talk about GotX instead, one time in GOTX_CHANCE: a current pick in the library
+-- (by the pick's kind; %s is the game, and for the month, the theme first), or a past winner.
+townsfolk.GOTX_CHANCE = 3
+townsfolk.GOTX_CURRENT = {
+  gotm = {
+    "This month's GotX theme is %s, and %s is one of the picks. Give it a go!",
+    "Have you seen the GotX board? It's %s this month, and %s made the cut.",
+  },
+  rpg = {
+    "%s is the GotX Game of the Quarter. A long one, but there's a whole quarter to play it!",
+    "I'm working through %s, the GotX Game of the Quarter. Care to join in?",
+  },
+  retro = {
+    "This week's RetroBits pick is %s. Short and sweet: perfect for a Saturday night!",
+    "RetroBits this week is %s. You could finish it before the next one comes out!",
+  },
+}
+townsfolk.GOTX_TRIVIA = {
+  "Did you know %s was %s? The GotX club loved it.",
+  "Fun fact: %s was %s!",
+  "You've got %s, haven't you? It was %s, you know.",
+}
+
+-- A GotX line for the library's picks, or nil when there's nothing to say: { text, game }.
+local function gotxLine(info, random)
+  local current, past, isCurrent = {}, {}, {}
+  for _, winner in ipairs(info.current) do
+    isCurrent[winner] = true
+    if info.gameOf[winner] then table.insert(current, winner) end
+  end
+  for _, winner in ipairs(info.winners) do
+    if not isCurrent[winner] and info.gameOf[winner] then table.insert(past, winner) end
+  end
+  if #current > 0 and (#past == 0 or random(2) == 1) then
+    local winner = current[random(#current)]
+    local game = info.gameOf[winner]
+    local lines = townsfolk.GOTX_CURRENT[winner.kind]
+    local line = lines[random(#lines)]
+    local text = winner.kind == "gotm" and line:format(winner.theme or "a good one", game.name) or line:format(game.name)
+    return { text = text, game = game }
+  elseif #past > 0 then
+    local winner = past[random(#past)]
+    local game = info.gameOf[winner]
+    local line = townsfolk.GOTX_TRIVIA[random(#townsfolk.GOTX_TRIVIA)]
+    return { text = line:format(game.name, gotx.title(winner)), game = game }
+  end
+  return nil
+end
+
 -- Villagers start the day on a random grass tile and wander up to WANDER_RADIUS tiles from there.
 -- Starting tiles are at least MIN_SPACING apart, so they spread over town, and START_CLEARANCE
 -- away from the player's start.
@@ -432,6 +482,11 @@ function townsfolk.talk(villager, context)
   local state, random = context.state, context.random
   if next(state.ownedConsoles) == nil then
     return { text = pick(townsfolk.NO_CONSOLE, random) }
+  end
+  local info = context.catalog.gotx
+  if info and random(townsfolk.GOTX_CHANCE) == 1 then
+    local line = gotxLine(info, random)
+    if line then return line end
   end
   local owned = townsfolk.ownedGames(context.catalog)
   local kind = villager.kind

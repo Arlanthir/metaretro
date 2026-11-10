@@ -39,11 +39,13 @@ local function urlEncode(text)
   return (text:gsub("[^%w%-_%.~]", function(c) return ("%%%02X"):format(c:byte()) end))
 end
 
--- Owned games played since the last launch get their achievements checked at the next sync.
+-- Owned (and loaned) games played since the last launch get their achievements checked at the next sync.
 -- Games with only a ROM hash wait for the sync to look up their id.
-function retroachievements.queue(state, played)
+-- `playable(game)` tells owned games and GotX loans apart from the rest (default: owned games).
+function retroachievements.queue(state, played, playable)
+  playable = playable or function(game) return state.owned[game.id] end
   for _, game in ipairs(played) do
-    if not state.owned[game.id] then
+    if not playable(game) then
       log("retroachievements: played %s, not owned", game.name)
     elseif not game.cheevosId and game.cheevosHash then
       log("retroachievements: played %s, queued its ROM hash to look up its id", game.name)

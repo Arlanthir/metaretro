@@ -33,7 +33,7 @@ function Achievements:enter()
     end
     self.totals = achievements.list(progress)
     self.message = #self.totals.list == 0 and "This game has no achievements yet." or nil
-    if app.state.owned[game.id] then
+    if app:canPlay(game) then
       local coins = retroachievements.credit(app, game.cheevosId, progress)
       if coins > 0 then app:announce(("+%d coins from achievements"):format(coins)) end
     end

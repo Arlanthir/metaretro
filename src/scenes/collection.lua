@@ -21,6 +21,20 @@ end
 function Collection.consoles(app)
   local built = app.catalog
   local tabs = {}
+  -- The GotX picks on loan come first, on any console.
+  local loans, seen = {}, {}
+  for _, pick in ipairs(built.gotx.current) do
+    local game = built.gotx.gameOf[pick]
+    if game and built.gotx.loans[game.id] and not seen[game.id] then
+      seen[game.id] = true
+      table.insert(loans, game)
+    end
+  end
+  if #loans > 0 then
+    table.sort(loans, catalog.byName)
+    table.insert(tabs, { name = "GotX loans", games = loans, total = #loans,
+      note = "This month's GotX picks, yours to play for now" })
+  end
   for _, system in ipairs(catalog.ownedSystems(built)) do
     local games = built.bySystem[system.id]
     table.insert(tabs, { name = system.name, games = games.owned, total = #games.owned + #games.locked })
@@ -103,7 +117,7 @@ function Collection:draw()
   ui.setColor("muted")
   love.graphics.setFont(ui.fonts.small)
   local games = tab.games
-  love.graphics.printf(("%s %d/%d  ·  %d/%d owned  ·  %d/%d in all"):format(shelved.tabWord,
+  love.graphics.printf(tab.note or ("%s %d/%d  ·  %d/%d owned  ·  %d/%d in all"):format(shelved.tabWord,
     self.tab, #tabs, #games, tab.total, shelved.owned, shelved.total), 0, ui.HEADER_HEIGHT + 32, ui.WIDTH, "center")
 
   local listTop = ui.HEADER_HEIGHT + 68

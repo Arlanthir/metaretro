@@ -11,8 +11,10 @@ local stores = {}
 -- Games of a category, owned or not, the owned consoles need before its genre store opens.
 stores.MIN_GENRE_GAMES = 30
 
--- The stores open today. With `today` (and `random`, to draw offers not drawn yet), a store whose
--- stock turns out to be all missing ROMs (see stores.offer) doesn't open at all.
+-- The stores open today: one per owned console, a genre store for every category with enough games,
+-- and the GotX store when GotX winners are for sale (see core/gotx; `built.gotx`). With `today` (and
+-- `random`, to draw offers not drawn yet), a store whose stock turns out to be all missing ROMs (see
+-- stores.offer) doesn't open at all.
 function stores.list(state, built, timeline, today, random)
   local list, stocked = {}, {}
   for _, console in ipairs(timeline) do
@@ -33,6 +35,8 @@ function stores.list(state, built, timeline, today, random)
         short = category.short, title = category.name .. " Store" })
     end
   end
+  local gotxStore = { id = "gotx", kind = "gotx", short = "GotX", title = "GotX Store" }
+  if built.gotx and #stores.stock(gotxStore, state, built, timeline) > 0 then table.insert(list, gotxStore) end
   if not today then return list end
   local open = {}
   for _, store in ipairs(list) do
@@ -41,7 +45,8 @@ function stores.list(state, built, timeline, today, random)
   return open
 end
 
--- Games a store has for sale.
+-- Games a store has for sale: a console's, a genre's on the owned consoles, or the GotX winners
+-- on the owned consoles.
 function stores.stock(store, state, built, timeline)
   if store.kind == "console" then
     return built.bySystem[store.console.id].locked
@@ -50,7 +55,7 @@ function stores.stock(store, state, built, timeline)
   for _, console in ipairs(timeline) do
     if state.ownedConsoles[console.id] then
       for _, game in ipairs(built.bySystem[console.id].locked) do
-        if game.category == store.genre.id then
+        if store.kind == "gotx" and built.gotx.winnersOf[game.id] or store.genre and game.category == store.genre.id then
           table.insert(items, game)
         end
       end
@@ -64,7 +69,8 @@ stores.OFFER_SIZE = 5
 -- Stores with at most this many games check them all once a day, for an exact stock count.
 stores.EXACT_STOCK = 50
 
--- A store's daily selection: up to OFFER_SIZE random games from its stock, saved in `state.offers`
+-- A store's daily selection: up to OFFER_SIZE random games from its stock (the GotX store puts the
+-- current picks first), saved in `state.offers`
 -- so it stays put until `today` changes. Bought games just drop out of the day's selection; a game
 -- whose ROM is missing (see core/roms) gives its place to another draw, so the store stays full.
 -- The missing games the draws come across are kept with the offer for the day, and left out of the
@@ -102,6 +108,22 @@ function stores.offer(store, state, built, timeline, today, random)
     for _, id in ipairs(ids) do taken[id] = true end
     for _, game in ipairs(stock) do
       if not taken[game.id] and not missing[game.id] then table.insert(pool, game) end
+    end
+    -- The GotX store's current picks come before any random ones.
+    if rerolled and store.kind == "gotx" then
+      for _, winner in ipairs(built.gotx.current) do
+        local game = built.gotx.gameOf[winner]
+        for i, candidate in ipairs(pool) do
+          if wanted > 0 and game and candidate == game then
+            table.remove(pool, i)
+            if present(game) then
+              table.insert(ids, game.id)
+              wanted = wanted - 1
+            end
+            break
+          end
+        end
+      end
     end
     while wanted > 0 and #pool > 0 do
       local game = table.remove(pool, random(#pool))

@@ -45,7 +45,7 @@ function Shop.store(app, store)
       title = store.title,
       subtitle = ("Today's picks of %d in stock · new ones tomorrow"):format(inStock),
       items = items,
-      showConsole = store.kind == "genre",
+      showConsole = store.kind ~= "console",
     }
   end)
 end
