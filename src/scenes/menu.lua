@@ -1,4 +1,5 @@
 local scenes = require("core.scenes")
+local battery = require("services.battery")
 local ui = require("ui")
 local Confirm = require("scenes.confirm")
 
@@ -37,12 +38,29 @@ function Menu.settings(app)
   end)
 end
 
--- What Start opens, wherever the player walks.
+-- What Start opens, wherever the player walks, with the time and the battery under its options.
 function Menu.pause(app)
-  return Menu.new("Menu", {
+  local menu = Menu.new("Menu", {
     { label = "Settings", run = function() scenes.push(Menu.settings(app)) end },
     { label = "Quit", run = Confirm.quit },
   }, 220, "A: choose   B: back")
+  menu.status = true
+  return menu
+end
+
+local STATUS_HEIGHT = 30
+
+-- The clock on the left and the battery on the right (left out when there's no battery to read).
+local function drawStatus(x, y, width)
+  love.graphics.setFont(ui.fonts.body)
+  ui.setColor("muted")
+  love.graphics.print(os.date("%H:%M"), x, y)
+  local percent, charging = battery.get()
+  if not percent then return end
+  local label = ("%d%%"):format(percent)
+  local labelX = x + width - ui.fonts.body:getWidth(label)
+  love.graphics.print(label, labelX, y)
+  ui.battery(labelX - 30, y + ui.iconOffset(12), percent, charging)
 end
 
 function Menu:leave()
@@ -67,7 +85,7 @@ function Menu:draw()
   love.graphics.rectangle("fill", 0, 0, ui.WIDTH, ui.HEIGHT)
 
   local listHeight = #self.items * ui.LIST_ROW
-  local height = listHeight + 100
+  local height = listHeight + 100 + (self.status and STATUS_HEIGHT or 0)
   local x, y = math.floor((ui.WIDTH - self.width) / 2), math.floor((ui.HEIGHT - height) / 2)
   ui.panel(x, y, self.width, height)
   love.graphics.setFont(ui.fonts.body)
@@ -75,6 +93,8 @@ function Menu:draw()
   love.graphics.printf(self.title, x, y + 16, self.width, "center")
   ui.list(self.items, self.cursor, 0, x + 16, y + 52, self.width - 32, listHeight,
     function(item) return item.label, item.value and item.value() end)
+  -- Down by the bottom of the panel, just above the hint, apart from the options.
+  if self.status then drawStatus(x + 24, y + height - 52, self.width - 48) end
   ui.hintPanel(self.hint, ui.WIDTH / 2, y + height - 18)
 end
 

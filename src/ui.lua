@@ -268,6 +268,22 @@ function ui.truncate(font, text, maxWidth)
 end
 
 -- A small cup silhouette marking games with RetroAchievements.
+-- A battery 24x12 from (x, y), filled to `percent`; orange when low, with a bolt while charging.
+function ui.battery(x, y, percent, charging)
+  ui.setColor("text")
+  love.graphics.rectangle("fill", x, y, 22, 12)
+  love.graphics.rectangle("fill", x + 22, y + 3, 2, 6)
+  ui.setColor("panelFill")
+  love.graphics.rectangle("fill", x + 2, y + 2, 18, 8)
+  local level = math.max(0, math.min(100, percent or 0)) / 100
+  ui.setColor(level <= 0.15 and "highlight" or "coin")
+  love.graphics.rectangle("fill", x + 3, y + 3, math.floor(16 * level + 0.5), 6)
+  if charging then
+    ui.setColor("text")
+    love.graphics.polygon("fill", x + 12, y + 1, x + 7, y + 7, x + 11, y + 7, x + 10, y + 11, x + 15, y + 5, x + 11, y + 5)
+  end
+end
+
 -- The achievements trophy; `gold` for a game whose whole set is unlocked.
 function ui.trophy(x, y, gold)
   ui.setColor(gold and "stars" or "trophy")
