@@ -451,7 +451,7 @@ function townsfolk.talk(villager, context)
     game = pick(townsfolk.forgotten(state, owned), random)
     text = game and pick(villager.suggest, random):format(game.name)
   elseif kind == "storeTip" then
-    local store = pick(stores.list(state, context.catalog, context.timeline), random)
+    local store = pick(stores.list(state, context.catalog, context.timeline, context.today, random), random)
     local offer = store and stores.offer(store, state, context.catalog, context.timeline, context.today, random)
     local tip = offer and pick(offer, random)
     -- A tip points at a store; there's nothing to open from the dialog.

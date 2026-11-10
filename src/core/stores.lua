@@ -11,7 +11,9 @@ local stores = {}
 -- Games of a category, owned or not, the owned consoles need before its genre store opens.
 stores.MIN_GENRE_GAMES = 30
 
-function stores.list(state, built, timeline)
+-- The stores open today. With `today` (and `random`, to draw offers not drawn yet), a store whose
+-- stock turns out to be all missing ROMs (see stores.offer) doesn't open at all.
+function stores.list(state, built, timeline, today, random)
   local list, stocked = {}, {}
   for _, console in ipairs(timeline) do
     if state.ownedConsoles[console.id] then
@@ -31,7 +33,12 @@ function stores.list(state, built, timeline)
         short = category.short, title = category.name .. " Store" })
     end
   end
-  return list
+  if not today then return list end
+  local open = {}
+  for _, store in ipairs(list) do
+    if select(3, stores.offer(store, state, built, timeline, today, random)) > 0 then table.insert(open, store) end
+  end
+  return open
 end
 
 -- Games a store has for sale.
@@ -54,12 +61,17 @@ function stores.stock(store, state, built, timeline)
 end
 
 stores.OFFER_SIZE = 5
+-- Stores with at most this many games check them all once a day, for an exact stock count.
+stores.EXACT_STOCK = 50
 
 -- A store's daily selection: up to OFFER_SIZE random games from its stock, saved in `state.offers`
 -- so it stays put until `today` changes. Bought games just drop out of the day's selection; a game
 -- whose ROM is missing (see core/roms) gives its place to another draw, so the store stays full.
+-- The missing games the draws come across are kept with the offer for the day, and left out of the
+-- stock count. A small store (up to EXACT_STOCK games) has the rest of its stock checked too, so its
+-- count is exact; a big one's count leaves out only the missing games its draws met.
 -- Returns the offered games, whether the selection changed (so the caller can save), and how many
--- games the store has in stock overall.
+-- games the store has in stock.
 function stores.offer(store, state, built, timeline, today, random)
   local stock = stores.stock(store, state, built, timeline)
   local byId = {}
@@ -67,46 +79,67 @@ function stores.offer(store, state, built, timeline, today, random)
 
   local offer = state.offers[store.id]
   local rerolled = not offer or offer.day ~= today
+  local missing = {}
+  for _, id in ipairs(not rerolled and offer.missing or {}) do missing[id] = true end
+  local found = false
+  local function present(game)
+    if missing[game.id] then return false end
+    if roms.present(game) then return true end
+    missing[game.id], found = true, true
+    return false
+  end
+
   local ids, wanted = {}, rerolled and stores.OFFER_SIZE or 0
   for _, id in ipairs(rerolled and {} or offer.ids) do
-    if byId[id] and not roms.present(byId[id]) then
+    if byId[id] and not present(byId[id]) then
       wanted = wanted + 1
     else
       table.insert(ids, id)
     end
   end
-  local changed = rerolled or wanted > 0
   if wanted > 0 then
     local taken, pool = {}, {}
     for _, id in ipairs(ids) do taken[id] = true end
     for _, game in ipairs(stock) do
-      if not taken[game.id] then table.insert(pool, game) end
+      if not taken[game.id] and not missing[game.id] then table.insert(pool, game) end
     end
     while wanted > 0 and #pool > 0 do
       local game = table.remove(pool, random(#pool))
-      if roms.present(game) then
+      if present(game) then
         table.insert(ids, game.id)
         wanted = wanted - 1
       end
     end
+    if rerolled and #stock <= stores.EXACT_STOCK then
+      for _, game in ipairs(pool) do present(game) end
+    end
   end
-  if changed then state.offers[store.id] = { day = today, ids = ids } end
+  local changed = rerolled or found
+  if changed then
+    local missingIds = {}
+    for id in pairs(missing) do table.insert(missingIds, id) end
+    table.sort(missingIds)
+    state.offers[store.id] = { day = today, ids = ids, missing = missingIds }
+  end
 
-  local games = {}
+  local games, inStock = {}, #stock
   for _, id in ipairs(ids) do
     if byId[id] then
       table.insert(games, byId[id])
     end
   end
+  for id in pairs(missing) do
+    if byId[id] then inStock = inStock - 1 end
+  end
   table.sort(games, catalog.byName)
-  return games, changed, #stock
+  return games, changed, inStock
 end
 
 -- Every game in today's store picks, as { game, store }, each game once (under the first store
 -- that offers it). `eligible(game)` optionally filters games; `random` is only used to roll new picks.
 function stores.onSale(state, built, timeline, today, random, eligible)
   local sale, seen = {}, {}
-  for _, store in ipairs(stores.list(state, built, timeline)) do
+  for _, store in ipairs(stores.list(state, built, timeline, today, random)) do
     for _, game in ipairs((stores.offer(store, state, built, timeline, today, random))) do
       if not seen[game.id] and (not eligible or eligible(game)) then
         seen[game.id] = true
@@ -123,7 +156,7 @@ end
 function stores.featured(state, built, timeline, today, count, random, eligible)
   local pickDaily = daily.random("featured " .. today)
   local order = {}
-  for _, store in ipairs(stores.list(state, built, timeline)) do
+  for _, store in ipairs(stores.list(state, built, timeline, today, random)) do
     table.insert(order, pickDaily(#order + 1), store)
   end
   local featured, seen = {}, {}

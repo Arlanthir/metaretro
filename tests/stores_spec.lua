@@ -160,12 +160,13 @@ describe("stores.offer", function()
       local present = { "nes:Game 06", "nes:Game 07", "nes:Game 08", "nes:Game 09", "nes:Game 10" }
       assert.same(present, today)
       assert.same(present, nextDay)
-      assert.equal(10, inStock) -- the stock count still includes the stale entries
+      assert.equal(5, inStock) -- a small store checks all its stock, so the count is exact
     end)
 
     it("offers the one game left: 5 games, 4 deleted", function()
-      local today, nextDay = storeOf(5, 4)
+      local today, nextDay, inStock = storeOf(5, 4)
       assert.same({ "nes:Game 05" }, today)
+      assert.equal(1, inStock)
       assert.same({ "nes:Game 05" }, nextDay)
     end)
 
@@ -173,7 +174,37 @@ describe("stores.offer", function()
       local today, nextDay, inStock = storeOf(5, 5)
       assert.same({}, today)
       assert.same({}, nextDay)
+      assert.equal(0, inStock)
+    end)
+
+    it("keeps the count after a restart the same day, without checking the missing game again", function()
+      local stock = {}
+      for i = 1, 6 do stock[i] = game("nes", ("Game %02d"):format(i), "platform") end
+      missing["nes:Game 01"] = true
+      local storeBuilt = { bySystem = { nes = { owned = {}, locked = stock } } }
+      local state = stateWithNes()
+      local _, _, inStock = stores.offer(nesStore, state, storeBuilt, timeline, "2026-11-05", first)
       assert.equal(5, inStock)
+      -- A new run, with nothing known yet: the offered games are checked again, the missing one isn't.
+      roms.useCheck(function(g)
+        assert.are_not.equal("nes:Game 01", g.id)
+        return true
+      end)
+      local games, changed, again = stores.offer(nesStore, state, storeBuilt, timeline, "2026-11-05", first)
+      assert.equal(5, #games)
+      assert.is_false(changed)
+      assert.equal(5, again)
+    end)
+
+    it("doesn't open a store whose every ROM is gone", function()
+      local state = stateWithNes()
+      state.ownedConsoles.snes = true
+      missing["snes:Mario World"], missing["snes:F-Zero"] = true, true
+      local open = {}
+      for _, store in ipairs(stores.list(state, built, timeline, "2026-11-05", first)) do open[#open + 1] = store.id end
+      assert.same({ "nes" }, open)
+      -- Without a day, it's the stores there could be.
+      assert.equal(2, #stores.list(state, built, timeline))
     end)
 
     it("replaces a game whose ROM went missing during the day", function()

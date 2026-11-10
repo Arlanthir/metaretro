@@ -52,7 +52,8 @@ end
 -- Rebuilds everything derived from the save after it changes.
 function app:rebuild()
   self.catalog = catalog.build(self.backend, self.state, isConsole, self.settings)
-  self.stores = stores.list(self.state, self.catalog, progression.timeline(self.catalog.systems))
+  self.stores = stores.list(self.state, self.catalog, progression.timeline(self.catalog.systems), os.date("%Y-%m-%d"),
+    love.math.random)
 end
 
 -- Rebuilds after the save changes, then saves it.

@@ -313,7 +313,8 @@ end
 function Town:isClosed(building)
   local state = self.app.state
   if building.kind == "dealer" then return not state.giftReceived end
-  return building.kind == "mall" and next(state.ownedConsoles) == nil
+  -- The mall opens with its first store: owning a console, and that store having games to sell.
+  return building.kind == "mall" and #self.app.stores == 0
 end
 
 -- A new game, or Continue, starts at home; walking out leaves the player at Home's door.
