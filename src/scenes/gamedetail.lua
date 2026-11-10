@@ -30,15 +30,30 @@ local function formatPlaytime(seconds)
   return ("%dh %02dm"):format(math.floor(seconds / 3600), math.floor(seconds % 3600 / 60))
 end
 
-function GameDetail:achievementsLine()
+local TROPHY_HEIGHT = 11
+local BEFORE_WIDTH = 18 -- a leading icon (12px) and the gap after it
+
+-- A pixel lower than centred on the capitals (it can't be exact at 11px): it reads better there.
+local function trophy(x, y)
+  ui.trophy(x, y + ui.iconOffset(TROPHY_HEIGHT) + 1)
+end
+
+-- The achievements row: whether the game has any (with the trophy before it), and once it's owned,
+-- the coins they've paid, as a coin icon and the amount.
+function GameDetail:achievementsRow()
   local game = self.game
   if not game.cheevosId then
-    return "Achievements: none known"
+    return { "Achievements: none known" }
   elseif not self.app.state.owned[game.id] then
-    return "Achievements: yes"
+    return { "Achievements: yes", before = trophy }
   end
-  local coins = self.app.state.achievementCoins[tostring(game.cheevosId)]
-  return coins and ("Achievements: %d coins earned"):format(coins) or "Achievements: none yet"
+  -- A game RetroAchievements hasn't been asked about yet has no entry: it's earned nothing either.
+  local coins = self.app.state.achievementCoins[tostring(game.cheevosId)] or 0
+  return { "Achievements:", before = trophy, icon = function(x, y)
+    ui.coin(x, y)
+    ui.setColor("muted")
+    love.graphics.print(("%d earned"):format(coins), x + 24, y)
+  end }
 end
 
 function GameDetail:draw()
@@ -53,26 +68,31 @@ function GameDetail:draw()
   local textX = ui.MARGIN * 2 + 220
   local textWidth = ui.WIDTH - textX - ui.MARGIN
   local rating = tonumber(game.rating)
-  -- One line each; `icon(x, y)` draws right after the line's text.
+  -- One line each; `before(x, y)` draws where the line starts, with its text after it, and `icon(x, y)`
+  -- right after the text
+  -- (`y` is the line's; icons centre themselves on it with ui.iconOffset).
   local rows = {
     { ("Console: %s"):format(console and console.name or game.system) },
     { ("Year: %s"):format(ui.year(game)) },
     { ("Genre: %s"):format(game.genre or "?") },
     { ("Developer: %s"):format(game.developer or "?") },
-    { rating and "Rating:" or "Rating: none", icon = rating and function(x, y) ui.stars(x, y, rating) end },
+    { rating and "Rating:" or "Rating: none", icon = rating and function(x, y) ui.stars(x, y + ui.iconOffset(12), rating) end },
     { ("Played: %d times, %s"):format(tonumber(stats.playcount) or 0, formatPlaytime(stats.gametime)) },
-    { self:achievementsLine(), icon = game.cheevosId and ui.trophy },
+    self:achievementsRow(),
   }
   local lineHeight = ui.LINE
   love.graphics.setFont(ui.fonts.body)
   for i, row in ipairs(rows) do
     local y = top + (i - 1) * lineHeight
-    local text = ui.truncate(ui.fonts.body, row[1], textWidth - (row.icon and 80 or 0))
-    ui.setColor("muted")
-    love.graphics.print(text, textX, y)
-    if row.icon then
-      row.icon(textX + ui.fonts.body:getWidth(text) + 8, y + ui.iconOffset(12))
+    local x = textX
+    if row.before then
+      row.before(x, y)
+      x = x + BEFORE_WIDTH
     end
+    local text = ui.truncate(ui.fonts.body, row[1], textX + textWidth - x - (row.icon and 80 or 0))
+    ui.setColor("muted")
+    love.graphics.print(text, x, y)
+    if row.icon then row.icon(x + ui.fonts.body:getWidth(text) + 8, y) end
   end
 
   local descTop = top + #rows * lineHeight + 16

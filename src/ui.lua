@@ -113,7 +113,17 @@ function ui.panel(x, y, width, height)
   end
 end
 
--- A spinning-coin icon (first frame) followed by the amount, right-aligned to `right`.
+local coinQuad
+
+-- The spinning coin's first frame (20px), from `x`, centred on the capitals of the line printed at `y`.
+function ui.coin(x, y)
+  local coin = image("Coin")
+  coinQuad = coinQuad or love.graphics.newQuad(0, 0, 10, 10, coin:getDimensions())
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.draw(coin, coinQuad, x, y + ui.iconOffset(20), 0, SCALE, SCALE)
+end
+
+-- A coin icon followed by the amount, right-aligned to `right`.
 function ui.coins(amount, right, y)
   local text = tostring(amount)
   local f = ui.fonts.body
@@ -121,10 +131,7 @@ function ui.coins(amount, right, y)
   love.graphics.setFont(f)
   ui.setColor("text")
   love.graphics.print(text, x, y)
-  local coin = image("Coin")
-  local quad = love.graphics.newQuad(0, 0, 10, 10, coin:getDimensions())
-  love.graphics.setColor(1, 1, 1)
-  love.graphics.draw(coin, quad, x - 24, y + (f:getHeight() - 20) / 2, 0, SCALE, SCALE)
+  ui.coin(x - 24, y)
   return x - 24
 end
 
@@ -403,9 +410,12 @@ function ui.coverWithCaption(game, x, y, width, height)
   love.graphics.printf(ui.truncate(f, game.genre or "Unknown genre", width), x, y + height + 6 + ui.LINE, width, "center")
 end
 
--- Vertical offset that centres an icon of `size` pixels on a line of text drawn at y.
+-- A line of body text printed at y has its capitals on rows 8 to 21 below it (measured on Ark Pixel at 20px).
+local CAPS_TOP, CAPS_BOTTOM = 8, 21
+
+-- How far below a line's y to draw an icon `size` pixels tall, so it's centred on the line's capitals.
 function ui.iconOffset(size)
-  return math.floor(ui.fonts.body:getAscent() * 0.65 - size / 2)
+  return math.floor((CAPS_TOP + CAPS_BOTTOM + 1 - size) / 2)
 end
 
 function ui.year(game)
